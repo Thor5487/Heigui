@@ -1,0 +1,24 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "com.iq200.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "client": [
+    "accessors.BeaconBeamAccessor",
+    "mixins.AbstractContainerScreenMixin",
+    "mixins.ClientPacketListenerMixin",
+    "mixins.KeyBindingMixin",
+    "mixins.MinecraftMixin"
+  ],
+  "mixins": [
+    "mixins.ConnectionMixin",
+    "mixins.LevelChunkMixin",
+    "mixins.YggdrasilSignatureIgnoreMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  },
+  "overwrites": {
+    "requireAnnotations": true
+  }
+}
