@@ -36,3 +36,9 @@
 -keep class com.iq200.heigui.你的資料類別所在的資料夾路徑.** {
     *;
 }
+
+-classobfuscationdictionary heigui_dict.txt
+
+-packageobfuscationdictionary heigui_dict.txt
+
+-obfuscationdictionary heigui_dict.txt

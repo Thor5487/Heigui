@@ -1,6 +1,5 @@
 package com.iq200.heigui.features.impl.floor7
 
-import com.iq200.heigui.Heigui
 import com.iq200.heigui.clickgui.settings.impl.BooleanSetting
 import com.iq200.heigui.clickgui.settings.impl.NumberSetting
 import com.iq200.heigui.events.core.on

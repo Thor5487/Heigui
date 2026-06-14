@@ -1,9 +1,11 @@
 package com.iq200.heigui.utils
 
 import com.iq200.heigui.Heigui.mc
+import net.minecraft.client.KeyMapping
 import net.minecraft.client.resources.sounds.SimpleSoundInstance
 import net.minecraft.core.BlockPos
 import net.minecraft.network.chat.Component
+import net.minecraft.network.protocol.game.ServerboundPlayerCommandPacket
 import net.minecraft.network.protocol.game.ServerboundPlayerInputPacket
 import net.minecraft.resources.Identifier
 import net.minecraft.sounds.SoundEvent
@@ -11,6 +13,9 @@ import net.minecraft.sounds.SoundEvents
 import net.minecraft.util.StringUtil
 import net.minecraft.world.entity.player.Input
 import net.minecraft.world.item.Item
+import net.minecraft.world.phys.Vec3
+import kotlin.math.atan2
+import kotlin.math.sqrt
 
 enum class InputKey {
     FORWARD, BACKWARD, LEFT, RIGHT, JUMP, SNEAK, SPRINT
@@ -54,6 +59,7 @@ fun getPositionString(): String {
 // ==========================================
 
 object PlayerUtils {
+    const val SNEAK_EYE_HEIGHT = 1.54
 
     fun findItemInHotbar(vararg itemNames: String): Int? {
         val player = mc.player ?: return null
@@ -86,22 +92,40 @@ object PlayerUtils {
      * @param state true代表按下，false代表鬆開
      */
     fun setKeyState(key: InputKey, state: Boolean) {
+        val options = mc.options
         val player = mc.player ?: return
-        val current = player.input.keyPresses
 
         // 建立一個全新的 Input，繼承舊狀態，唯獨把你指定的 key 替換成新的 state
+        val keyMapping: KeyMapping? = when (key) {
+            InputKey.FORWARD -> options.keyUp
+            InputKey.BACKWARD -> options.keyDown
+            InputKey.LEFT -> options.keyLeft
+            InputKey.RIGHT -> options.keyRight
+            InputKey.JUMP -> options.keyJump
+            InputKey.SNEAK -> options.keyShift
+            InputKey.SPRINT -> options.keySprint
+            // 如果有擴充其他按鍵，可以加在這裡
+            else -> null
+        }
+
+        if (keyMapping != null) {
+            keyMapping.setDown(state)
+        }
+
+        val current = player.input.keyPresses
+
         val newInput = Input(
             if (key == InputKey.FORWARD) state else current.forward,
             if (key == InputKey.BACKWARD) state else current.backward,
             if (key == InputKey.LEFT) state else current.left,
             if (key == InputKey.RIGHT) state else current.right,
             if (key == InputKey.JUMP) state else current.jump,
-            if (key == InputKey.SNEAK) state else current.shift, // 注意底層名稱叫做 shift
+            if (key == InputKey.SNEAK) state else current.shift,
             if (key == InputKey.SPRINT) state else current.sprint
         )
 
-        player.connection.send(ServerboundPlayerInputPacket(newInput))
-
+        player.input.keyPresses = newInput
+        mc.connection?.send(ServerboundPlayerInputPacket(newInput))
         if (key == InputKey.SNEAK) {
             player.isShiftKeyDown = state
         }
@@ -129,5 +153,27 @@ object PlayerUtils {
             }
         }
         return 0
+    }
+
+    fun isMovementKeysPressed(): Boolean {
+        val options = mc.options
+
+        return options.keyUp.isDown ||
+                options.keyDown.isDown ||
+                options.keyLeft.isDown ||
+                options.keyRight.isDown ||
+                options.keyJump.isDown
+    }
+
+    fun getRotationsTo(start: Vec3, target: Vec3): Pair<Float, Float>{
+        val dx = target.x - start.x
+        val dy = target.y - start.y
+        val dz = target.z - start.z
+        val dist = sqrt(dx * dx + dz * dz)
+
+        val yaw = (Math.toDegrees(atan2(dz, dx)) - 90.0).toFloat()
+        val pitch = (-Math.toDegrees(atan2(dy, dist))).toFloat()
+
+        return Pair(yaw, pitch)
     }
 }

@@ -5,10 +5,14 @@
   "compatibilityLevel": "JAVA_21",
   "client": [
     "accessors.BeaconBeamAccessor",
+    "accessors.ILocalPlayer",
     "mixins.AbstractContainerScreenMixin",
     "mixins.ClientPacketListenerMixin",
     "mixins.KeyBindingMixin",
-    "mixins.MinecraftMixin"
+    "mixins.MinecraftMixin",
+    "mixins.MixinEnderPearlItem",
+    "mixins.ClipContextMixin",
+    "mixins.PaneOutLineMixin"
   ],
   "mixins": [
     "mixins.ConnectionMixin",

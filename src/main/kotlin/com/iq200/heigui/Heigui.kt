@@ -19,7 +19,6 @@ import com.iq200.heigui.utils.skyblock.SplitsManager
 import com.iq200.heigui.utils.skyblock.dungeon.DungeonListener
 import com.iq200.heigui.utils.skyblock.dungeon.DungeonUtils
 import com.iq200.heigui.utils.skyblock.dungeon.ScanUtils
-import com.iq200.heigui.BuildConfig
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import net.fabricmc.api.ClientModInitializer

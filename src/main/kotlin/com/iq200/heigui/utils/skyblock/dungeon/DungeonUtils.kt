@@ -1,14 +1,25 @@
 package com.iq200.heigui.utils.skyblock.dungeon
 
 import com.iq200.heigui.Heigui.mc
+import com.iq200.heigui.utils.Vec2
+import com.iq200.heigui.utils.equalsOneOf
 import com.iq200.heigui.utils.rotateAroundNorth
 import com.iq200.heigui.utils.rotateToNorth
 import com.iq200.heigui.utils.skyblock.Island
 import com.iq200.heigui.utils.skyblock.LocationUtils
 import com.iq200.heigui.utils.skyblock.dungeon.tiles.Room
+import com.iq200.heigui.utils.skyblock.dungeon.tiles.Rotations
 import net.minecraft.core.BlockPos
+import net.minecraft.world.level.block.Blocks
+import net.minecraft.world.level.block.SkullBlock
+import net.minecraft.world.level.block.entity.SkullBlockEntity
+import net.minecraft.world.level.block.state.BlockState
+import net.minecraft.world.phys.Vec3
 
 object DungeonUtils {
+
+    private const val WITHER_ESSENCE_ID = "e0f3e929-869e-3dca-9504-54c666ee6f23"
+    private const val REDSTONE_KEY = "fed95410-aba1-39df-9b95-1d4f361eb66e"
 
     /**
      * 判斷玩家目前是否在地下城中 (依賴 LocationUtils 解析 Scoreboard)。
@@ -69,10 +80,49 @@ object DungeonUtils {
     fun Room.getRelativeCoords(pos: BlockPos): BlockPos =
         pos.subtract(clayPos.atY(0)).rotateToNorth(rotation)
 
+
+    fun Room.getRelativeCoords(realPos: Vec3): Vec3 {
+        val pivotX = this.clayPos.x.toDouble() + 0.5
+        val pivotZ = this.clayPos.z.toDouble() + 0.5
+
+        val relativeToPivot = Vec3(realPos.x - pivotX, realPos.y, realPos.z - pivotZ)
+
+        val rotated = relativeToPivot.rotateToNorth(rotation)
+
+        return Vec3(rotated.x + 0.5, rotated.y, rotated.z + 0.5)
+    }
     /**
      * [BloodBlink 核心依賴]
      * 將相對於房間的局部座標，根據房間的旋轉與 Clay 基準點，轉換為世界中的絕對座標。
      */
     fun Room.getRealCoords(pos: BlockPos): BlockPos =
         pos.rotateAroundNorth(rotation).offset(clayPos.x, 0, clayPos.z)
+
+
+    fun Room.getRealCoords(pos: Vec3): Vec3 {
+        val relativeToPivot = Vec3(pos.x - 0.5, pos.y, pos.z - 0.5)
+
+        val rotated = relativeToPivot.rotateAroundNorth(rotation)
+
+        val pivotX = this.clayPos.x.toDouble() + 0.5
+        val pivotZ = this.clayPos.z.toDouble() + 0.5
+
+        return Vec3(rotated.x + pivotX, rotated.y, rotated.z + pivotZ)
+    }
+
+    fun Room.getRealDirection(localDir: Vec3): Vec3 {
+        return localDir.rotateAroundNorth(rotation)
+    }
+
+    fun isSecret(state: BlockState, pos: BlockPos): Boolean {
+        return when {
+            state.block.equalsOneOf(Blocks.CHEST, Blocks.TRAPPED_CHEST, Blocks.LEVER) -> true
+            state.block is SkullBlock ->
+                (mc.level?.getBlockEntity(pos) as? SkullBlockEntity)?.ownerProfile?.partialProfile()?.id
+                    ?.toString()?.equalsOneOf(WITHER_ESSENCE_ID, REDSTONE_KEY) ?: false
+
+            else -> false
+        }
+    }
+
 }

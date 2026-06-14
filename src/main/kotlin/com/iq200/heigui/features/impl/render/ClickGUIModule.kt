@@ -99,7 +99,7 @@ object ClickGUIModule : Module(
             ${getChatBreak()}§r
             
             """.trimIndent(), "")
-            alert("Odin Update Available")
+            alert("Heigui Update Available")
         }
     }
 
@@ -110,9 +110,10 @@ object ClickGUIModule : Module(
     }
 
     private suspend fun checkNewerVersion(currentVersion: String): String? {
-        val newest = fetchJson<Release>("https://api.github.com/repos/odtheking/OdinFabric/releases/latest").getOrElse { return null }
-
-        return if (isSecondNewer(currentVersion, newest.tagName)) newest.tagName else null
+//        val newest = fetchJson<Release>("https://api.github.com/repos/odtheking/OdinFabric/releases/latest").getOrElse { return null }
+//
+//        return if (isSecondNewer(currentVersion, newest.tagName)) newest.tagName else null
+        return null
     }
 
     private fun isSecondNewer(currentVersion: String, previousVersion: String?): Boolean {

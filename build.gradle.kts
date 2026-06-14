@@ -1,5 +1,6 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import proguard.gradle.ProGuardTask
+import net.fabricmc.loom.task.RemapJarTask
 
 buildscript {
     repositories {
@@ -18,17 +19,22 @@ plugins {
 }
 
 group = property("maven_group") as String
-// 1. 讀取你在指令裡傳入的參數 (如果沒傳，預設就是 false / Free 版)
+
+// ====================================================
+// 🌟 1. 雙版本判斷與 BuildConfig 自動生成
+// ====================================================
+// 讀取你在指令裡傳入的參數 (如果沒傳，預設就是 false / Free 版)
 val isAuthBuild = project.hasProperty("auth") && project.property("auth") == "true"
 
-// 2. 根據目前模式，自動幫你的 .jar 檔加上 -Auth 或 -Free 的後綴
-version = if (isAuthBuild) "${property("mod_version")}-Auth" else "${property("mod_version")}-Free"
+// 根據目前模式，自動幫你的 .jar 檔加上 -Auth 或 -Free 的後綴
+val modVersion = project.properties["mod_version"] as String? ?: "1.0.0"
+version = if (isAuthBuild) "${modVersion}-Auth" else "${modVersion}-No-Auth"
 
-// 3. 讓 Gradle 在編譯前，自動寫出一個 BuildConfig.kt 讓你的 Kotlin 讀取
 val generatedSrcDir = layout.buildDirectory.dir("generated/source/buildConfig/main/kotlin").get().asFile
 
 val generateBuildConfig = tasks.register("generateBuildConfig") {
     outputs.dir(generatedSrcDir)
+    outputs.upToDateWhen { false }
     doLast {
         val file = File(generatedSrcDir, "com/iq200/heigui/BuildConfig.kt")
         file.parentFile.mkdirs()
@@ -43,18 +49,38 @@ val generateBuildConfig = tasks.register("generateBuildConfig") {
     }
 }
 
-// 4. 確保每次編譯程式碼之前，都會先執行上面的自動產生任務
 tasks.named("compileKotlin") {
     dependsOn(generateBuildConfig)
 }
 
-// 5. 告訴 Gradle，這個自動產生的資料夾也是我們原始碼的一部分
 sourceSets {
     main {
         kotlin.srcDir(generatedSrcDir)
     }
-} // 🌟 回歸單一版本號，不再加上 -Auth 後綴
+}
 
+// ====================================================
+// 🌟 2. 一鍵雙開魔法：攔截 build 按鈕
+// ====================================================
+if (!isAuthBuild) {
+    val buildAuthTask = tasks.register<Exec>("buildAuthVersion") {
+        group = "build"
+        description = "自動在背景接力編譯 Auth 版"
+
+        val isWindows = System.getProperty("os.name").lowercase().contains("windows")
+        val gradlew = if (isWindows) "${project.rootDir}\\gradlew.bat" else "${project.rootDir}/gradlew"
+
+        commandLine(gradlew, "clean", "build", "-Pauth=true", "--no-daemon")
+    }
+
+    tasks.build {
+        finalizedBy(buildAuthTask)
+    }
+}
+
+// ====================================================
+// 🛡️ 你的依賴庫區塊 (完全未改動，一字不漏！)
+// ====================================================
 repositories {
     mavenCentral()
     maven("https://jitpack.io")
@@ -92,6 +118,7 @@ dependencies {
 
     modCompileOnly("maven.modrinth:iris:${property("iris")}")
 }
+// ====================================================
 
 loom {
     runConfigs.named("client") {
@@ -142,40 +169,72 @@ java {
     toolchain {
         languageVersion.set(JavaLanguageVersion.of(21))
     }
-    // ❌ 保持移除 withSourcesJar()，保護你的原始碼不被玩家輕易解壓縮看到
 }
 
-
+// ====================================================
+// 🌟 3. ProGuard 與自動發布至 releases 資料夾
+// ====================================================
 val proguardTask = tasks.register<ProGuardTask>("proguard") {
-    // 告訴 Gradle：必須等普通的 jar 打包完，才能執行混淆
     dependsOn(tasks.jar)
-
-    // 讀取我們剛剛寫好的 proguard.txt 設定檔
     configuration("proguard-rules.pro")
 
-    // 輸入：抓取原本編譯出來的乾淨 jar 檔
     val inputJar = tasks.jar.get().archiveFile.get().asFile
     injars(inputJar)
 
-    // 輸出：生出一顆檔名帶有 "-obf" 的混淆版 jar 檔
-    val outputJar = file("${layout.buildDirectory.get().asFile}/libs/${base.archivesName.get()}-${project.version}-obf.jar")
+    // 混淆後的暫存檔案名稱
+    val outputJar = file("${layout.buildDirectory.get().asFile}/libs/${base.archivesName.get()}-${project.version}-obf-temp.jar")
     outjars(outputJar)
 
-    // 提供 Java 基礎環境庫給 ProGuard 分析 (避免報錯)
     val javaHome = System.getProperty("java.home")
     libraryjars(
         fileTree("$javaHome/jmods") { include("java.base.jmod") }
     )
-
-    // 最重要的一步：把 Minecraft、Fabric API 等所有依賴庫餵給 ProGuard 讓它對照
     libraryjars(configurations.compileClasspath.get().files)
 }
 
-// 2. 攔截並修改 Fabric Loom 的 remapJar 任務
 tasks.remapJar {
-    // 確保在 remap 之前，我們的混淆任務已經執行完畢
+    // 移除原本覆蓋 inputFile 的邏輯，讓它處理預設的 tasks.jar
+    doLast {
+        val finalJar = archiveFile.get().asFile
+        if (finalJar.exists()) {
+            println("🛡️ [處理中] 正在將【無混淆版】 ${finalJar.name} 移至安全發布區...")
+            val releaseDir = file("${project.rootDir}/releases")
+            releaseDir.mkdirs()
+
+            project.copy {
+                from(finalJar)
+                into(releaseDir)
+            }
+            println("✅ [成功] 無混淆版已發布至：releases/${finalJar.name}")
+        }
+    }
+}
+
+val remapObfJar = tasks.register<RemapJarTask>("remapObfJar") {
     dependsOn(proguardTask)
 
-    // 偷天換日：將輸入來源改成剛剛 ProGuard 吐出來的 "-obf.jar"
-    inputFile.set(file("${layout.buildDirectory.get().asFile}/libs/${base.archivesName.get()}-${project.version}-obf.jar"))
+    // 把 ProGuard 產生的暫存檔當作輸入
+    inputFile.set(file("${layout.buildDirectory.get().asFile}/libs/${base.archivesName.get()}-${project.version}-obf-temp.jar"))
+
+    // 加上 -obf 後綴，避免跟無混淆版本檔名衝突
+    archiveClassifier.set("obf")
+
+    doLast {
+        val finalJar = archiveFile.get().asFile
+        if (finalJar.exists()) {
+            println("🛡️ [處理中] 正在將【混淆版】 ${finalJar.name} 移至安全發布區...")
+            val releaseDir = file("${project.rootDir}/releases")
+            releaseDir.mkdirs()
+
+            project.copy {
+                from(finalJar)
+                into(releaseDir)
+            }
+            println("✅ [成功] 混淆版已發布至：releases/${finalJar.name}")
+        }
+    }
+}
+
+tasks.build {
+    dependsOn(remapObfJar)
 }

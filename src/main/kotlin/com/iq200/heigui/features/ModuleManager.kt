@@ -11,11 +11,15 @@ import com.iq200.heigui.config.ModuleConfig
 import com.iq200.heigui.events.InputEvent
 import com.iq200.heigui.events.core.on
 import com.iq200.heigui.features.ModuleManager.configs
-import com.iq200.heigui.features.impl.dungeon.BloodBlink
-import com.iq200.heigui.features.impl.dungeon.DeathTick
+import com.iq200.heigui.features.impl.dungeon.AutoClose
+import com.iq200.heigui.features.impl.dungeon.SecretAura
+import com.iq200.heigui.features.impl.dungeon.ZPDB
 import com.iq200.heigui.features.impl.floor7.SSTriggerBot
 import com.iq200.heigui.features.impl.floor7.WitherAimBot
+import com.iq200.heigui.features.impl.mining.BigPane
+import com.iq200.heigui.features.impl.mining.Mineshaft
 import com.iq200.heigui.features.impl.render.*
+import com.iq200.heigui.features.impl.skyblock.NoRotate
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry
 import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements
 import net.fabricmc.loader.api.FabricLoader
@@ -56,18 +60,19 @@ object ModuleManager {
     init {
         registerModules(config = ModuleConfig(file = File(Heigui.configFile, "heigui-config.json")),
             // dungeon
-            BloodBlink, DeathTick,
+            SecretAura, AutoClose, ZPDB,
 
             // floor 7
             SSTriggerBot, WitherAimBot,
 
             // render
-            ClickGUIModule
+            ClickGUIModule,
 
-            //skyblock
+            // skyblock
+            NoRotate,
 
-            // nether
-
+            // mining
+            BigPane, Mineshaft
         )
 
         // hashmap, but would need to keep track when setting values change

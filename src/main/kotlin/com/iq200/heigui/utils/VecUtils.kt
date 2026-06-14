@@ -1,5 +1,6 @@
 package com.iq200.heigui.utils
 
+import com.google.gson.JsonObject
 import com.iq200.heigui.Heigui.mc
 import com.iq200.heigui.utils.skyblock.dungeon.tiles.Rotations
 import net.minecraft.core.BlockPos
@@ -9,7 +10,8 @@ import kotlin.math.cos
 import kotlin.math.floor
 import kotlin.math.sin
 
-data class Vec2(val x: Int, val z: Int)
+data class Vec2i(val x: Int, val z: Int)
+data class Vec2(val x: Double, val z: Double)
 
 operator fun Vec3.component1(): Double = x
 operator fun Vec3.component2(): Double = y
@@ -32,6 +34,19 @@ fun Vec3.addVec(x: Number = 0.0, y: Number = 0.0, z: Number = 0.0): Vec3 =
  * @param rotation The rotation to rotate around
  * @return The rotated Vec3
  */
+fun Vec3.rotateAroundNorth(rotation: Rotations): Vec3 =
+    when (rotation) {
+        Rotations.NORTH -> Vec3(-this.x, this.y, -this.z)
+        Rotations.WEST ->  Vec3(-this.z, this.y, this.x)
+        Rotations.SOUTH -> Vec3(this.x, this.y, this.z)
+        Rotations.EAST ->  Vec3(this.z, this.y, -this.x)
+        else -> this
+    }
+
+fun Vec3.toYawPitch(): Pair<Float, Float> {
+    return PlayerUtils.getRotationsTo(Vec3(0.0, 0.0, 0.0), this)
+}
+
 fun BlockPos.rotateAroundNorth(rotation: Rotations): BlockPos =
     when (rotation) {
         Rotations.NORTH -> BlockPos(-this.x, this.y, -this.z)
@@ -41,17 +56,54 @@ fun BlockPos.rotateAroundNorth(rotation: Rotations): BlockPos =
         else -> this
     }
 
+fun Vec3.toBlockPos(): BlockPos {
+    return BlockPos(floor(x).toInt(), floor(y).toInt(), floor(z).toInt())
+}
+
+fun BlockPos.toVec3(): Vec3 {
+    return Vec3(this.x.toDouble(), this.y.toDouble(), this.z.toDouble())
+}
+
+fun BlockPos.toVec3Center(): Vec3 {
+    return Vec3(this.x + 0.5, this.y + 0.5, this.z + 0.5)
+}
+
+fun BlockPos.toVec3TopCenter(): Vec3 {
+    return Vec3(this.x + 0.5, this.y + 1.0, this.z + 0.5)
+}
+
+fun BlockPos.toVec3BottomCenter(): Vec3 {
+    return Vec3(x + 0.5, y.toDouble(), z + 0.5)
+}
 /**
  * Rotates a Vec3 to the given rotation.
  * @param rotation The rotation to rotate to
  * @return The rotated Vec3
  */
+
+fun Vec3.offset(i: Double, j: Double, k: Double): Vec3 {
+    return Vec3(x + i, y + j, z + k)
+}
+
+fun Vec3.offset(vec3: Vec3): Vec3{
+    return Vec3(x + vec3.x, y + vec3.y, z + vec3.z)
+}
+
 fun BlockPos.rotateToNorth(rotation: Rotations): BlockPos =
     when (rotation) {
         Rotations.NORTH -> BlockPos(-this.x, this.y, -this.z)
         Rotations.WEST ->  BlockPos(this.z, this.y, -this.x)
         Rotations.SOUTH -> BlockPos(this.x, this.y, this.z)
         Rotations.EAST ->  BlockPos(-this.z, this.y, this.x)
+        else -> this
+    }
+
+fun Vec3.rotateToNorth(rotation: Rotations): Vec3 =
+    when (rotation) {
+        Rotations.NORTH -> Vec3(-this.x, this.y, -this.z)
+        Rotations.WEST ->  Vec3(this.z, this.y, -this.x)
+        Rotations.SOUTH -> Vec3(this.x, this.y, this.z)
+        Rotations.EAST ->  Vec3(-this.z, this.y, this.x)
         else -> this
     }
 
@@ -100,4 +152,12 @@ private fun Vec3.intermediateWithZValue(goal: Vec3, z: Double): Vec3? {
         this.y + (goal.y - this.y) * t,
         this.z + dz * t
     ) else null
+}
+
+fun Vec3.toJsonObject(): JsonObject {
+    return JsonObject().apply {
+        addProperty("x", this@toJsonObject.x)
+        addProperty("y", this@toJsonObject.y)
+        addProperty("z", this@toJsonObject.z)
+    }
 }

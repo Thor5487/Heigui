@@ -2,6 +2,7 @@ package com.iq200.heigui.utils
 
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
+import com.iq200.heigui.BuildConfig
 import com.iq200.heigui.Heigui.mc
 import net.fabricmc.loader.api.FabricLoader
 import java.io.InputStreamReader
@@ -116,5 +117,13 @@ object AuthManager {
         // Handle both 200 OK and 400/403 Error responses properly
         val stream = if (connection.responseCode in 200..299) connection.inputStream else connection.errorStream
         return JsonParser.parseReader(InputStreamReader(stream, "UTF-8")).asJsonObject
+    }
+
+    fun canUseCommand(): Boolean {
+        if (BuildConfig.REQUIRE_AUTH && !isAuthorized) {
+            modMessage("§cPlease use /hg auth <key> first to unlock this command!")
+            return false
+        }
+        return true
     }
 }
