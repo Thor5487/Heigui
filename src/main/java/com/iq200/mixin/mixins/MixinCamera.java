@@ -36,7 +36,7 @@ public abstract class MixinCamera {
 
     @Inject(method = "setup", at = @At("HEAD"))
     private void onCameraSetup(Level level, Entity entity, boolean bl, boolean bl2, float f, CallbackInfo ci) {
-        new CameraSetupEvent().postAndCatch(); // 沒有 @JvmStatic
+        new CameraSetupEvent().postAndCatch();
     }
 
     @Redirect(method = "setup", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/Camera;setRotation(FF)V"))
@@ -46,6 +46,12 @@ public abstract class MixinCamera {
 
     @Inject(method = "setup", at = @At("TAIL"))
     private void setCameraPos(Level level, Entity entity, boolean bl, boolean bl2, float f, CallbackInfo ci) {
-        this.setPosition(CameraHandler.getPos(new Vec3(this.position.x, this.position.y, this.position.z), this.partialTickTime, this.eyeHeightOld, this.eyeHeight));
+        Vec3 newPos = CameraHandler.getPos(new Vec3(this.position.x, this.position.y, this.position.z), this.partialTickTime, this.eyeHeightOld, this.eyeHeight);
+
+        // 加上這行檢查是否跟原本的 position 不一樣
+        if (newPos.distanceTo(this.position) > 0.1) {
+            System.out.println("[ZPCM-4] MixinCamera 強制改變了相機座標！");
+        }
+        this.setPosition(newPos);
     }
 }

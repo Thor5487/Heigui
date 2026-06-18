@@ -3,6 +3,7 @@ package com.iq200.heigui.utils.camera
 import com.iq200.heigui.Heigui.mc
 import com.iq200.heigui.events.CameraSetupEvent
 import com.iq200.heigui.events.TurnPlayerEvent
+import com.iq200.heigui.events.core.EventBus
 import com.iq200.heigui.events.core.on
 import com.iq200.heigui.utils.RotationUtils
 import net.minecraft.util.Mth
@@ -23,7 +24,7 @@ object ClientRotationHandler : CameraRotationProvider {
     private var lastRotationDeltaYaw = 0f
     private var forwardRemainder = 0f
     private var strafeRemainder = 0f
-    var allowInputs = false
+    var allowInputs = true
         private set
     private var lastPausedState = false
 
@@ -43,6 +44,8 @@ object ClientRotationHandler : CameraRotationProvider {
     }
 
     init {
+        EventBus.subscribe(this)
+
         on<CameraSetupEvent> {
             if (mc.player == null) return@on
 

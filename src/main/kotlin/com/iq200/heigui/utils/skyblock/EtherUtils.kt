@@ -91,6 +91,10 @@ object EtherUtils {
     private val invalidEtherwarpSpaceIds = BitSet(0)
     private val aboveEtherwarpIds = BitSet(0)
 
+    init {
+        initIDs()
+    }
+
     fun initIDs() {
         BuiltInRegistries.BLOCK.forEach(Consumer { block: Block? ->
             val blockId = Block.getId(block!!.defaultBlockState())
@@ -301,7 +305,7 @@ object EtherUtils {
         repeat(1000) {
             pos.set(currentPos[0], currentPos[1], currentPos[2])
 
-            if (!Minecraft.getInstance().level!!.hasChunk(pos.getX() shr 4, pos.getZ() shr 4)) return Pair(null, false)
+            if (!Minecraft.getInstance().level!!.hasChunk(pos.x shr 4, pos.z shr 4)) return Pair(null, false)
             val chunk = world.getChunk(pos)
 
             val blockState = chunk.getBlockState(pos)
@@ -309,18 +313,18 @@ object EtherUtils {
             val currentBlockId = Block.getId(currentBlock.defaultBlockState())
 
             if (aboveEtherwarpIds.get(currentBlockId)) {
-                pos.set(pos.getX(), pos.getY() + 1, pos.getZ())
+                pos.set(pos.x, pos.y + 1, pos.z)
             }
 
             if (!validEtherwarpSpaceIds.get(currentBlockId)) {
                 val footPos = BlockPos(
-                    pos.getX(),
-                    pos.getY() + 1,
-                    pos.getZ()
+                    pos.x,
+                    pos.y + 1,
+                    pos.z
                 )
 
                 val footState = chunk.getBlockState(footPos)
-                val footBlock = footState.getBlock()
+                val footBlock = footState.block
                 val footBlockId = Block.getId(footBlock.defaultBlockState())
 
                 if (!validEtherwarpSpaceIds.get(footBlockId) || invalidEtherwarpSpaceIds.get(footBlockId)) return Pair(

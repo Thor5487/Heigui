@@ -13,6 +13,7 @@ import com.iq200.heigui.utils.*
 import com.iq200.heigui.utils.camera.CameraHandler
 import com.iq200.heigui.utils.camera.CameraPositionProvider
 import com.iq200.heigui.utils.skyblock.EtherUtils
+import com.iq200.heigui.utils.skyblock.dungeon.DungeonUtils
 import com.iq200.heigui.utils.skyblock.dungeon.ScanUtils
 import com.iq200.heigui.utils.skyblock.dungeon.tiles.Room
 import com.iq200.heigui.utils.skyblock.dungeon.tiles.RoomType
@@ -30,7 +31,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo
 
 //From RSM
 object TeleportOptimization : Module (
-    name = "TeleportOptimization",
+    name = "Teleport Optimization",
     description = "NoRotate & Zeroping Camera",
     category = Category.SKYBLOCK
 ), CameraPositionProvider {
@@ -56,7 +57,9 @@ object TeleportOptimization : Module (
     init {
         on<TickEvent.Start> {
             val now = System.currentTimeMillis()
+            val beforeSize = noRotateSent.size
             noRotateSent.removeIf{now - it >= timeOutMs}
+
 
             if (noRotateSent.isEmpty() && renderPos != null) {
                 renderPos = null
@@ -64,7 +67,7 @@ object TeleportOptimization : Module (
         }
 
         on<PlayerInputEvent.Use> {
-            if (!noRotateEnabled || !isRoomAllowed()) return@on
+            if (!noRotateEnabled || !isRoomAllowed() || (DungeonUtils.isFloor(7) && DungeonUtils.inBoss)) return@on
             val stack = mc.player?.mainHandItem ?: return@on
 
             if (!isTpItem(stack)) return@on
@@ -80,7 +83,7 @@ object TeleportOptimization : Module (
         }
 
         on<PacketEvent.Send> {
-            if (!noRotateEnabled || !isRoomAllowed()) return@on
+            if (!noRotateEnabled || !isRoomAllowed() || (DungeonUtils.isFloor(7) && DungeonUtils.inBoss)) return@on
 
             if (packet is ServerboundUseItemPacket) {
                 val stack = mc.player?.getItemInHand(packet.hand) ?: return@on
@@ -222,7 +225,7 @@ object TeleportOptimization : Module (
             target = resolveZptpTarget(target) ?: return
 
             // 如果位置沒變，直接 return
-            if (target.distanceToSqr(currentPos) < 1.0) return
+            if (target.toBlockPos() == currentPos.toBlockPos()) return
 
             renderPos = target
             CameraHandler.registerProvider(this)
@@ -230,6 +233,7 @@ object TeleportOptimization : Module (
 
             if (wimp) lastWIMP = now
         }
+
     }
 
 
@@ -295,10 +299,6 @@ object TeleportOptimization : Module (
     // CameraPositionProvider 介面實作區
     // ==========================================
 
-    override fun isActive(): Boolean {
-        return shouldOverridePosition()
-    }
-
     override fun shouldOverridePosition(): Boolean {
         // 嚴格遵守條件：必須開啟 ZPCM + 開啟 NoRotate + 已經有算好預判座標
         return enabled && zpcmEnabled && renderPos != null
@@ -310,11 +310,33 @@ object TeleportOptimization : Module (
 
     override fun shouldOverrideHitPos(): Boolean {
         // 讓你在預判的相機位置可以左鍵/右鍵方塊與實體
-        return zpcmEnabled && renderPos != null
+        return zpcmEnabled && renderPos != null && !shouldBlockZeroPingInteract()
     }
 
     override fun shouldOverrideHitRot(): Boolean {
         return false
+    }
+
+    private fun shouldBlockZeroPingInteract() : Boolean {
+        if (mc.player == null || mc.level == null) return false
+
+        val held: ItemStack = mc.player!!.mainHandItem
+        if (!isCaseFromTpRange(held)) return false
+
+        val hitResult = mc.hitResult
+
+        if (hitResult is BlockHitResult) {
+            return !mc.level!!.getBlockState(hitResult.blockPos).isAir
+        }
+
+        return false
+    }
+
+    private fun isCaseFromTpRange(item: ItemStack?): Boolean {
+        return when (item?.itemId) {
+            "ASPECT_OF_THE_END", "ASPECT_OF_THE_VOID", "ASPECT_OF_THE_LEECH_1", "ASPECT_OF_THE_LEECH_2", "ASPECT_OF_THE_LEECH_3", "NECRON_BLADE", "SCYLLA", "HYPERION", "VALKYRIE", "ASTRAEA" -> true
+            else -> false
+        }
     }
 
     override fun shouldBlockKeyboardMovement(): Boolean {

@@ -16,6 +16,7 @@ import com.iq200.heigui.features.impl.dungeon.AutoClose
 import com.iq200.heigui.features.impl.dungeon.SecretAura
 import com.iq200.heigui.features.impl.dungeon.Triggerbot
 import com.iq200.heigui.features.impl.dungeon.ZPDB
+import com.iq200.heigui.features.impl.floor7.LBHelper
 import com.iq200.heigui.features.impl.floor7.SSTriggerBot
 import com.iq200.heigui.features.impl.floor7.WitherAimBot
 import com.iq200.heigui.features.impl.mining.BigPane
@@ -67,7 +68,7 @@ object ModuleManager {
             SecretAura, AutoClose, ZPDB, Triggerbot, AutoClick,
 
             // floor 7
-            SSTriggerBot, WitherAimBot,
+            SSTriggerBot, WitherAimBot, LBHelper,
 
             // render
             ClickGUIModule,
