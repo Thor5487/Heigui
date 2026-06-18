@@ -1,9 +1,0 @@
-# 忽略所有外部依賴庫的警告，我們只管混淆自己的代碼！
--dontwarn net.minecraft.**
--dontwarn net.fabricmc.**
--dontwarn org.spongepowered.**
--dontwarn com.mojang.**
--dontwarn org.slf4j.**
--dontwarn org.lwjgl.**
--dontwarn io.netty.**
--dontwarn it.unimi.dsi.fastutil.**

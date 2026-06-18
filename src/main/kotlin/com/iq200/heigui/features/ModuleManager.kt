@@ -11,15 +11,19 @@ import com.iq200.heigui.config.ModuleConfig
 import com.iq200.heigui.events.InputEvent
 import com.iq200.heigui.events.core.on
 import com.iq200.heigui.features.ModuleManager.configs
+import com.iq200.heigui.features.impl.dungeon.AutoClick
 import com.iq200.heigui.features.impl.dungeon.AutoClose
 import com.iq200.heigui.features.impl.dungeon.SecretAura
+import com.iq200.heigui.features.impl.dungeon.Triggerbot
 import com.iq200.heigui.features.impl.dungeon.ZPDB
 import com.iq200.heigui.features.impl.floor7.SSTriggerBot
 import com.iq200.heigui.features.impl.floor7.WitherAimBot
 import com.iq200.heigui.features.impl.mining.BigPane
+import com.iq200.heigui.features.impl.mining.GdragEggEsp
 import com.iq200.heigui.features.impl.mining.Mineshaft
 import com.iq200.heigui.features.impl.render.*
-import com.iq200.heigui.features.impl.skyblock.NoRotate
+import com.iq200.heigui.features.impl.skyblock.Freecam
+import com.iq200.heigui.features.impl.skyblock.TeleportOptimization
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry
 import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements
 import net.fabricmc.loader.api.FabricLoader
@@ -60,7 +64,7 @@ object ModuleManager {
     init {
         registerModules(config = ModuleConfig(file = File(Heigui.configFile, "heigui-config.json")),
             // dungeon
-            SecretAura, AutoClose, ZPDB,
+            SecretAura, AutoClose, ZPDB, Triggerbot, AutoClick,
 
             // floor 7
             SSTriggerBot, WitherAimBot,
@@ -69,14 +73,16 @@ object ModuleManager {
             ClickGUIModule,
 
             // skyblock
-            NoRotate,
+            TeleportOptimization,
 
             // mining
-            BigPane, Mineshaft
+            BigPane, Mineshaft, GdragEggEsp
         )
 
         // hashmap, but would need to keep track when setting values change
         on<InputEvent> {
+            if (!isPress) return@on
+
             for (setting in keybindSettingsCache) {
                 if (setting.value.value == key.value) setting.onPress?.invoke()
             }

@@ -11,6 +11,7 @@ import net.minecraft.resources.Identifier
 import net.minecraft.sounds.SoundEvent
 import net.minecraft.sounds.SoundEvents
 import net.minecraft.util.StringUtil
+import net.minecraft.world.InteractionHand
 import net.minecraft.world.entity.player.Input
 import net.minecraft.world.item.Item
 import net.minecraft.world.phys.Vec3
@@ -130,6 +131,18 @@ object PlayerUtils {
             player.isShiftKeyDown = state
         }
     }
+
+    fun leftClick() {
+        val player = mc.player ?: return
+        val target = mc.crosshairPickEntity
+
+        if (target != null) {
+            mc.gameMode?.attack(player, target)
+        }
+
+        player.swing(InteractionHand.MAIN_HAND)
+    }
+
 
     /**
      * @param yaw 左右旋轉角度 (Y軸)

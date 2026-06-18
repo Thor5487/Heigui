@@ -220,7 +220,6 @@ object SecretAura : Module (
             }
         }
 
-
         val aabb = AABB(0.25, 0.0, 0.25, 0.75, 0.5, 0.75)
 
         val centerPos = Vec3.atLowerCornerOf(blockPos).add(

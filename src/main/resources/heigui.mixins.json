@@ -6,18 +6,24 @@
   "client": [
     "accessors.BeaconBeamAccessor",
     "accessors.ILocalPlayer",
-    "mixins.AbstractContainerScreenMixin",
-    "mixins.ClientPacketListenerMixin",
-    "mixins.KeyBindingMixin",
-    "mixins.MinecraftMixin",
+    "accessors.KeyMappingAccessor",
+    "mixins.MixinAbstractContainerScreen",
+    "mixins.MixinClientPacketListener",
+    "mixins.MixinKeyboardHandler",
+    "mixins.MixinMouseHandler",
+    "mixins.MixinMinecraft",
     "mixins.MixinEnderPearlItem",
-    "mixins.ClipContextMixin",
-    "mixins.PaneOutLineMixin"
+    "mixins.MixinClipContext",
+    "mixins.MixinPaneOutLine",
+    "mixins.MixinCamera",
+    "mixins.MixinEntity",
+    "mixins.MixinLocalPlayer",
+    "mixins.MixinKeyboardInput"
   ],
   "mixins": [
-    "mixins.ConnectionMixin",
-    "mixins.LevelChunkMixin",
-    "mixins.YggdrasilSignatureIgnoreMixin"
+    "mixins.MixinConnection",
+    "mixins.MixinLevelChunk",
+    "mixins.MixinYggdrasilSignatureIgnore"
   ],
   "injectors": {
     "defaultRequire": 1

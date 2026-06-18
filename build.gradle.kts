@@ -1,16 +1,4 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
-import proguard.gradle.ProGuardTask
-import net.fabricmc.loom.task.RemapJarTask
-
-buildscript {
-    repositories {
-        mavenCentral()
-    }
-    dependencies {
-        // 🌟 載入官方的 ProGuard 插件
-        classpath("com.guardsquare:proguard-gradle:7.6.0")
-    }
-}
 
 plugins {
     id("fabric-loom")
@@ -19,64 +7,7 @@ plugins {
 }
 
 group = property("maven_group") as String
-
-// ====================================================
-// 🌟 1. 雙版本判斷與 BuildConfig 自動生成
-// ====================================================
-// 讀取你在指令裡傳入的參數 (如果沒傳，預設就是 false / Free 版)
-val isAuthBuild = project.hasProperty("auth") && project.property("auth") == "true"
-
-// 根據目前模式，自動幫你的 .jar 檔加上 -Auth 或 -Free 的後綴
-val modVersion = project.properties["mod_version"] as String? ?: "1.0.0"
-version = if (isAuthBuild) "${modVersion}-Auth" else "${modVersion}-No-Auth"
-
-val generatedSrcDir = layout.buildDirectory.dir("generated/source/buildConfig/main/kotlin").get().asFile
-
-val generateBuildConfig = tasks.register("generateBuildConfig") {
-    outputs.dir(generatedSrcDir)
-    outputs.upToDateWhen { false }
-    doLast {
-        val file = File(generatedSrcDir, "com/iq200/heigui/BuildConfig.kt")
-        file.parentFile.mkdirs()
-        file.writeText("""
-            package com.iq200.heigui
-
-            object BuildConfig {
-                // 這個值會在每次打包時，自動變成 true 或 false！
-                const val REQUIRE_AUTH = $isAuthBuild
-            }
-        """.trimIndent())
-    }
-}
-
-tasks.named("compileKotlin") {
-    dependsOn(generateBuildConfig)
-}
-
-sourceSets {
-    main {
-        kotlin.srcDir(generatedSrcDir)
-    }
-}
-
-// ====================================================
-// 🌟 2. 一鍵雙開魔法：攔截 build 按鈕
-// ====================================================
-if (!isAuthBuild) {
-    val buildAuthTask = tasks.register<Exec>("buildAuthVersion") {
-        group = "build"
-        description = "自動在背景接力編譯 Auth 版"
-
-        val isWindows = System.getProperty("os.name").lowercase().contains("windows")
-        val gradlew = if (isWindows) "${project.rootDir}\\gradlew.bat" else "${project.rootDir}/gradlew"
-
-        commandLine(gradlew, "clean", "build", "-Pauth=true", "--no-daemon")
-    }
-
-    tasks.build {
-        finalizedBy(buildAuthTask)
-    }
-}
+version = property("mod_version") as String
 
 // ====================================================
 // 🛡️ 你的依賴庫區塊 (完全未改動，一字不漏！)
@@ -163,78 +94,28 @@ tasks {
         options.encoding = "UTF-8"
         options.compilerArgs.addAll(listOf("-Xlint:deprecation", "-Xlint:unchecked"))
     }
+
+    remapJar {
+        // 保留你原本實用的發布功能，將編譯好的檔案移至 releases 資料夾
+        doLast {
+            val finalJar = archiveFile.get().asFile
+            if (finalJar.exists()) {
+                println("🛡️ [處理中] 正在將編譯完成的 ${finalJar.name} 移至安全發布區...")
+                val releaseDir = file("${project.rootDir}/releases")
+                releaseDir.mkdirs()
+
+                project.copy {
+                    from(finalJar)
+                    into(releaseDir)
+                }
+                println("✅ [成功] 模組已發布至：releases/${finalJar.name}")
+            }
+        }
+    }
 }
 
 java {
     toolchain {
         languageVersion.set(JavaLanguageVersion.of(21))
     }
-}
-
-// ====================================================
-// 🌟 3. ProGuard 與自動發布至 releases 資料夾
-// ====================================================
-val proguardTask = tasks.register<ProGuardTask>("proguard") {
-    dependsOn(tasks.jar)
-    configuration("proguard-rules.pro")
-
-    val inputJar = tasks.jar.get().archiveFile.get().asFile
-    injars(inputJar)
-
-    // 混淆後的暫存檔案名稱
-    val outputJar = file("${layout.buildDirectory.get().asFile}/libs/${base.archivesName.get()}-${project.version}-obf-temp.jar")
-    outjars(outputJar)
-
-    val javaHome = System.getProperty("java.home")
-    libraryjars(
-        fileTree("$javaHome/jmods") { include("java.base.jmod") }
-    )
-    libraryjars(configurations.compileClasspath.get().files)
-}
-
-tasks.remapJar {
-    // 移除原本覆蓋 inputFile 的邏輯，讓它處理預設的 tasks.jar
-    doLast {
-        val finalJar = archiveFile.get().asFile
-        if (finalJar.exists()) {
-            println("🛡️ [處理中] 正在將【無混淆版】 ${finalJar.name} 移至安全發布區...")
-            val releaseDir = file("${project.rootDir}/releases")
-            releaseDir.mkdirs()
-
-            project.copy {
-                from(finalJar)
-                into(releaseDir)
-            }
-            println("✅ [成功] 無混淆版已發布至：releases/${finalJar.name}")
-        }
-    }
-}
-
-val remapObfJar = tasks.register<RemapJarTask>("remapObfJar") {
-    dependsOn(proguardTask)
-
-    // 把 ProGuard 產生的暫存檔當作輸入
-    inputFile.set(file("${layout.buildDirectory.get().asFile}/libs/${base.archivesName.get()}-${project.version}-obf-temp.jar"))
-
-    // 加上 -obf 後綴，避免跟無混淆版本檔名衝突
-    archiveClassifier.set("obf")
-
-    doLast {
-        val finalJar = archiveFile.get().asFile
-        if (finalJar.exists()) {
-            println("🛡️ [處理中] 正在將【混淆版】 ${finalJar.name} 移至安全發布區...")
-            val releaseDir = file("${project.rootDir}/releases")
-            releaseDir.mkdirs()
-
-            project.copy {
-                from(finalJar)
-                into(releaseDir)
-            }
-            println("✅ [成功] 混淆版已發布至：releases/${finalJar.name}")
-        }
-    }
-}
-
-tasks.build {
-    dependsOn(remapObfJar)
 }

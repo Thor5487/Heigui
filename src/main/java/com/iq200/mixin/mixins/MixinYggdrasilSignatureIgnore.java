@@ -8,7 +8,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(value = YggdrasilServicesKeyInfo.class, remap = false)
-public class YggdrasilSignatureIgnoreMixin {
+public class MixinYggdrasilSignatureIgnore {
 
     @Inject(method = "validateProperty", at = @At("HEAD"), cancellable = true, remap = false)
     public void validate(Property property, CallbackInfoReturnable<Boolean> cir) {

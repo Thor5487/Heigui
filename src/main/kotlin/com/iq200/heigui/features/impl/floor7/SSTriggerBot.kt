@@ -83,7 +83,7 @@ object SSTriggerBot : Module(
         }
 
         on<RenderEvent.Extract> {
-            if (!SSTriggerBot.toggled|| !triggerBotClock.hasTimePassed(triggerBotDelay) || mc.screen != null) return@on
+            if (!toggled|| !triggerBotClock.hasTimePassed(triggerBotDelay) || mc.screen != null) return@on
 
             // 如果還沒有解答，或者已經點完了，就跳出
             if (clickInOrder.isEmpty() || clickNeeded >= clickInOrder.size) return@on
@@ -109,7 +109,7 @@ object SSTriggerBot : Module(
             triggerBotClock.update()
             val player = mc.player ?: return@on
             mc.gameMode?.useItemOn(player, InteractionHand.MAIN_HAND, hitResult)
-            mc.player?.swing(InteractionHand.MAIN_HAND)
+            player.swing(InteractionHand.MAIN_HAND)
         }
 
     }

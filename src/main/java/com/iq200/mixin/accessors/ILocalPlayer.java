@@ -8,8 +8,8 @@ import org.spongepowered.asm.mixin.gen.Accessor;
 public interface ILocalPlayer {
 
     @Accessor("yRotLast")
-    void setLastYaw(float yaw);
+    void setYRotLast(float yaw);
 
     @Accessor("xRotLast")
-    void setLastPitch(float pitch);
+    void setXRotLast(float pitch);
 }

@@ -11,7 +11,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(LevelChunk.class)
-public abstract class LevelChunkMixin {
+public abstract class MixinLevelChunk {
     @Shadow
     public abstract BlockState getBlockState(BlockPos pos);
 

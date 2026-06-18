@@ -4,7 +4,6 @@ import com.iq200.heigui.commands.mainCommand
 import com.iq200.heigui.events.EventDispatcher
 import com.iq200.heigui.events.core.EventBus
 import com.iq200.heigui.features.ModuleManager
-import com.iq200.heigui.utils.AuthManager
 import com.iq200.heigui.utils.DeathTickUtil
 import com.iq200.heigui.utils.IrisCompatability
 import com.iq200.heigui.utils.ServerUtils
@@ -68,19 +67,9 @@ object Heigui : ClientModInitializer {
             ItemStateRenderer(context.vertexConsumers())
         }
 
-        // 🌟 2. 執行 HWID 驗證機制
-        if (BuildConfig.REQUIRE_AUTH) {
-            logger.info("Initializing Auth...")
 
-            // 嘗試使用儲存的密鑰驗證
-            AuthManager.verifySavedKey {
-                // 只有伺服器回傳 authorized: true，才會進來執行這裡的程式碼！
-                logger.info("[Heigui] Loading Features")
-                loadCoreFeatures()
-            }
-        } else {
-            loadCoreFeatures()
-        }
+        logger.info("[Heigui] Loading Features")
+        loadCoreFeatures()
     }
 
     /**

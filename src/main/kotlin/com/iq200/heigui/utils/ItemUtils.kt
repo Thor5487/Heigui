@@ -1,11 +1,11 @@
 package com.iq200.heigui.utils
 
 import com.google.common.collect.ImmutableMultimap
+import com.iq200.heigui.Heigui.mc
+import com.iq200.heigui.utils.network.hypixelapi.HypixelData
 import com.mojang.authlib.GameProfile
 import com.mojang.authlib.properties.Property
 import com.mojang.authlib.properties.PropertyMap
-import com.iq200.heigui.Heigui.mc
-import com.iq200.heigui.utils.network.hypixelapi.HypixelData
 import net.minecraft.core.component.DataComponents
 import net.minecraft.nbt.CompoundTag
 import net.minecraft.network.chat.Component
@@ -102,11 +102,17 @@ fun createSkullStack(textureHash: String): ItemStack {
     return stack
 }
 
-fun ItemStack.isEtherwarpItem(): CompoundTag? =
-    customData.takeIf { it.getInt("ethermerge").orElse(0) == 1 || it.itemId == "ETHERWARP_CONDUIT" }
+fun ItemStack.getTunerDistance(): Int =
+    customData.getIntOr("tuned_transmission", 0)
+
+
+fun ItemStack.isEtherwarpItem(): Boolean =
+    customData.getIntOr("ethermerge", 0) == 1 || ("ETHERWARP_CONDUIT" == itemId);
 
 fun ItemStack.hasGlint(): Boolean =
     componentsPatch.get(DataComponents.ENCHANTMENT_GLINT_OVERRIDE)?.isPresent == true
 
 fun EquipmentSlot.isItem(itemId: String): Boolean =
     mc.player?.getItemBySlot(this)?.itemId == itemId
+
+
