@@ -12,8 +12,8 @@ import net.minecraft.client.input.MouseButtonEvent
 import net.minecraft.network.chat.Component
 import org.lwjgl.glfw.GLFW
 import kotlin.math.sign
-import com.iq200.heigui.utils.ui.mouseX as odinMouseX
-import com.iq200.heigui.utils.ui.mouseY as odinMouseY
+import com.iq200.heigui.utils.ui.mouseX as heiguiMouseX
+import com.iq200.heigui.utils.ui.mouseY as heiguiMouseY
 
 object HudManager : Screen(Component.literal("HUD Manager")) {
 
@@ -36,8 +36,8 @@ object HudManager : Screen(Component.literal("HUD Manager")) {
         super.render(context, mouseX, mouseY, deltaTicks)
 
         dragging?.let {
-            it.x = (odinMouseX + deltaX).coerceIn(0f, (mc.window.screenWidth - (it.width * it.scale))).toInt()
-            it.y = (odinMouseY + deltaY).coerceIn(0f, (mc.window.screenHeight - (it.height * it.scale))).toInt()
+            it.x = (heiguiMouseX + deltaX).coerceIn(0f, (mc.window.screenWidth - (it.width * it.scale))).toInt()
+            it.y = (heiguiMouseY + deltaY).coerceIn(0f, (mc.window.screenHeight - (it.height * it.scale))).toInt()
         }
 
         context.pose().pushMatrix()
@@ -76,8 +76,8 @@ object HudManager : Screen(Component.literal("HUD Manager")) {
         hudSettingsCache.firstOrNull { it.isEnabled && it.value.isHovered() }?.let { hovered ->
             dragging = hovered.value
 
-            deltaX = (hovered.value.x - odinMouseX)
-            deltaY = (hovered.value.y - odinMouseY)
+            deltaX = (hovered.value.x - heiguiMouseX)
+            deltaY = (hovered.value.y - heiguiMouseY)
             return true
         }
 

@@ -36,7 +36,7 @@ object EventBus {
         val invoker = invokers[eventClass] ?: return
 
         val profiler = Profiler.get()
-        val profilerName = profilerNameCache.getOrPut(eventClass) { "Odin: ${eventClass.simpleName}" }
+        val profilerName = profilerNameCache.getOrPut(eventClass) { "Heigui: ${eventClass.simpleName}" }
         profiler.push(profilerName)
         try {
             invoker.invoke(event, profiler)

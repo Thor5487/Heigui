@@ -38,7 +38,6 @@ object ClickGUIModule : Module(
     val roundedPanelBottom by BooleanSetting("Rounded Panel Bottoms", true, desc = "Whether to extend panels to make them rounded at the bottom.")
 
     val hypixelApiUrl by StringSetting("API URL", "https://api.odtheking.com/hypixel/", 128, "The Hypixel API server to connect to.").hide()
-    val webSocketUrl by StringSetting("WebSocket URL", "wss://api.odtheking.com/ws/", 128, "The Websocket server to connect to.").hide()
 
     private val action by ActionSetting("Open HUD Editor", desc = "Opens the HUD editor when clicked.") { mc.setScreen(HudManager) }
     val devMessage by BooleanSetting("Developer Message", false, desc = "Sends development related messages to the chat.")
@@ -65,43 +64,6 @@ object ClickGUIModule : Module(
         }
     }
 
-    private const val RELEASE_LINK = "https://github.com/odtheking/OdinFabric/releases/latest"
-    private const val MODRINTH_LINK = "https://modrinth.com/mod/odin/versions"
-    private var latestVersionNumber: String? = null
-    private var hasSentUpdateMessage = false
-
-    init {
-        Heigui.scope.launch {
-            latestVersionNumber = checkNewerVersion(Heigui.version.toString())
-        }
-
-        on<WorldEvent.Load> {
-            if (hasSentUpdateMessage || latestVersionNumber == null) return@on
-            hasSentUpdateMessage = true
-
-            modMessage("""
-            ${getChatBreak()}
-                
-            §3Odin update available: §f$latestVersionNumber
-            """.trimIndent(), "")
-
-            modMessage(Component.literal("§b$RELEASE_LINK").withStyle {
-                it.withClickEvent(ClickEvent.OpenUrl(URI(RELEASE_LINK)))
-                    .withHoverEvent(HoverEvent.ShowText(Component.literal(RELEASE_LINK)))
-            }, "")
-            modMessage(Component.literal("§b$MODRINTH_LINK").withStyle {
-                it.withClickEvent(ClickEvent.OpenUrl(URI(MODRINTH_LINK)))
-                    .withHoverEvent(HoverEvent.ShowText(Component.literal(MODRINTH_LINK)))
-            }, "")
-
-            modMessage("""
-            
-            ${getChatBreak()}§r
-            
-            """.trimIndent(), "")
-            alert("Heigui Update Available")
-        }
-    }
 
     fun getStandardGuiScale(): Float {
         val verticalScale = (mc.window.screenHeight.toFloat() / 1080f) / NVGRenderer.devicePixelRatio()
@@ -109,32 +71,4 @@ object ClickGUIModule : Module(
         return round(max(verticalScale, horizontalScale).coerceIn(1f, 3f) * 10f) / 10f
     }
 
-    private suspend fun checkNewerVersion(currentVersion: String): String? {
-//        val newest = fetchJson<Release>("https://api.github.com/repos/odtheking/OdinFabric/releases/latest").getOrElse { return null }
-//
-//        return if (isSecondNewer(currentVersion, newest.tagName)) newest.tagName else null
-        return null
-    }
-
-    private fun isSecondNewer(currentVersion: String, previousVersion: String?): Boolean {
-        if (currentVersion.isEmpty() || previousVersion.isNullOrEmpty()) return false
-
-        val (major, minor, patch) = currentVersion.split(".").mapNotNull { it.toIntOrNull() }
-        val (major2, minor2, patch2) = previousVersion.split(".").mapNotNull { it.toIntOrNull() }
-
-        return when {
-            major > major2 -> false
-            major < major2 -> true
-            minor > minor2 -> false
-            minor < minor2 -> true
-            patch > patch2 -> false
-            patch < patch2 -> true
-            else -> false // equal, or something went wrong, either way it's best to assume it's false.
-        }
-    }
-
-    private data class Release(
-        @SerializedName("tag_name")
-        val tagName: String
-    )
 }

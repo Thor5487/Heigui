@@ -3,6 +3,7 @@ package com.iq200.heigui.utils.skyblock.dungeon
 import com.iq200.heigui.Heigui.mc
 import com.iq200.heigui.utils.Vec2
 import com.iq200.heigui.utils.equalsOneOf
+import com.iq200.heigui.utils.romanToInt
 import com.iq200.heigui.utils.rotateAroundNorth
 import com.iq200.heigui.utils.rotateToNorth
 import com.iq200.heigui.utils.skyblock.Island
@@ -15,6 +16,8 @@ import net.minecraft.world.level.block.SkullBlock
 import net.minecraft.world.level.block.entity.SkullBlockEntity
 import net.minecraft.world.level.block.state.BlockState
 import net.minecraft.world.phys.Vec3
+import kotlin.math.ceil
+import kotlin.math.floor
 
 object DungeonUtils {
 
@@ -42,6 +45,31 @@ object DungeonUtils {
      */
     inline val floor: Floor?
         get() = DungeonListener.floor
+
+    inline val secretPercentage: Float
+        get() = DungeonListener.dungeonStats.secretsPercent
+
+    inline val totalSecrets: Int
+        get() = if (secretCount == 0 || secretPercentage == 0f) 0 else floor(100 / secretPercentage * secretCount + 0.5).toInt()
+
+    inline val secretCount: Int
+        get() = DungeonListener.dungeonStats.secretsFound
+
+    inline val cryptCount: Int
+        get() = DungeonListener.dungeonStats.crypts
+
+
+    inline val mimicKilled: Boolean
+        get() = DungeonListener.dungeonStats.mimicKilled
+
+    inline val princeKilled: Boolean
+        get() = DungeonListener.dungeonStats.princeKilled
+
+    inline val deathCount: Int
+        get() = DungeonListener.dungeonStats.deaths
+
+    inline val dungeonTeammates: List<DungeonPlayer>
+        get() = DungeonListener.dungeonTeammates
 
     /**
      * 檢查當前樓層是否符合指定的樓層之一。
@@ -125,4 +153,55 @@ object DungeonUtils {
         }
     }
 
+    inline val getBonusScore: Int
+        get() {
+            var score = cryptCount.coerceAtMost(5)
+            if (mimicKilled) score += 2
+            if (princeKilled) score += 1
+            return score
+        }
+
+    inline val neededSecretsAmount: Int
+        get() =
+            DungeonListener.floor?.let {
+                ceil(
+                    (totalSecrets * it.requiredPercentage) * (40 - getBonusScore + (deathCount * 2 - 1).coerceAtLeast(0)) / 40.0
+                ).toInt()
+            } ?: 0
+
+
+    inline val remainingSecrets: Int
+        get() {
+            if (totalSecrets == 0) return 999
+
+            return neededSecretsAmount - secretCount
+        }
+
+    private val tablistRegex = Regex("^\\[(\\d+)] (?:\\[\\w+] )*(\\w+) .*?\\((\\w+)(?: (\\w+))*\\)$")
+
+
+    fun getDungeonTeammates(previousTeammates: ArrayList<DungeonPlayer>, tabList: List<String>): ArrayList<DungeonPlayer> {
+        for (line in tabList) {
+            val (_, name, clazz, clazzLevel) = tablistRegex.find(line)?.destructured ?: continue
+
+            previousTeammates.find { it.name == name }?.let { player ->
+                if (player.clazz == DungeonClass.EMPTY) {
+                    player.clazz = DungeonClass.entries.find { it.name.equals(clazz, ignoreCase = true) } ?: DungeonClass.EMPTY
+                    player.clazzLvl = romanToInt(clazzLevel)
+                }
+
+                player.isDead = clazz == "DEAD"
+            } ?: run {
+                val player = mc.connection?.getPlayerInfo(name) ?: continue
+                previousTeammates.add(
+                    DungeonPlayer(
+                        name, DungeonClass.entries.find { it.name.equals(clazz, ignoreCase = true) } ?: continue,
+                        if (clazzLevel.isEmpty()) -1 else romanToInt(clazzLevel), player.skin,
+                        entity = mc.level?.getPlayerByUUID(player.profile.id)
+                    )
+                )
+            }
+        }
+        return previousTeammates
+    }
 }

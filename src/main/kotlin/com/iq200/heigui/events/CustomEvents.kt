@@ -87,7 +87,7 @@ abstract class PlayerInputEvent : CancellableEvent() {
     ) : PlayerInputEvent()
 
     class Use(
-        val result : HitResult,
+        val result : HitResult?,
         val yRot : Float,
         val xRot : Float
     ) : PlayerInputEvent()

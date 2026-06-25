@@ -17,7 +17,7 @@ import com.iq200.heigui.utils.skyblock.dungeon.DungeonUtils
 import com.iq200.heigui.utils.skyblock.dungeon.ScanUtils
 import com.iq200.heigui.utils.skyblock.dungeon.tiles.Room
 import com.iq200.heigui.utils.skyblock.dungeon.tiles.RoomType
-import com.iq200.mixin.accessors.ILocalPlayer
+import com.iq200.mixin.accessors.LocalPlayerAccessor
 import net.minecraft.core.BlockPos
 import net.minecraft.network.Connection
 import net.minecraft.network.protocol.game.*
@@ -38,6 +38,7 @@ object TeleportOptimization : Module (
 
     private val noRotateEnabled by BooleanSetting("NoRotate", false, "No Rotation after TP (Hype/AOTV/Etherwarp)")
     private val zpcmEnabled by BooleanSetting("Zeroping Camera", false, "Visually 0 Ping on TP (Hype/AOTV/Etherwarp) Note: Require NoRotate Enabled").withDependency { noRotateEnabled }
+    private val hypeZpcm by BooleanSetting("Zeroping Camera Hyperion", false, "zpcm for hype").withDependency { zpcmEnabled }
     private val timeOutMs by NumberSetting("Timeout", 500, 100, 1000, 50, unit = "ms", desc = "timeout for zeroping camera").withDependency { zpcmEnabled }
 
     private val noRotatePackets = mutableListOf<ClientboundPlayerPositionPacket>()
@@ -57,7 +58,6 @@ object TeleportOptimization : Module (
     init {
         on<TickEvent.Start> {
             val now = System.currentTimeMillis()
-            val beforeSize = noRotateSent.size
             noRotateSent.removeIf{now - it >= timeOutMs}
 
 
@@ -103,7 +103,6 @@ object TeleportOptimization : Module (
         on<PacketEvent.Receive> {
             if (!noRotateEnabled || packet !is ClientboundPlayerPositionPacket) return@on
             val player = mc.player ?: return@on
-            val connection = mc.connection ?: return@on
 
             val startPos = PositionMoveRotation.of(player)
             val newPos = PositionMoveRotation.calculateAbsolute(startPos, packet.change(), packet.relatives())
@@ -143,7 +142,7 @@ object TeleportOptimization : Module (
         connection.send(ServerboundAcceptTeleportationPacket(packet.id))
         connection.send(ServerboundMovePlayerPacket.PosRot(player.x, player.y, player.z, newPos.yRot(), newPos.xRot(), false, false))
 
-        val accessor = player as ILocalPlayer
+        val accessor = player as LocalPlayerAccessor
         accessor.setYRotLast(newPos.yRot())
         accessor.setXRotLast(newPos.xRot())
 
@@ -211,6 +210,7 @@ object TeleportOptimization : Module (
             zpcmSent.add(renderPos!!)
         } else if (!sneaking && zpcmEnabled) {
             val wimp = isWitherImpactItem(stack)
+            if (wimp && !hypeZpcm) return
             val now = System.currentTimeMillis()
             if (wimp && (now - lastWIMP < 125L)) return
 

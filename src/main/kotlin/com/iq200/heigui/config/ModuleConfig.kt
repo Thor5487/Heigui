@@ -18,7 +18,6 @@ class ModuleConfig internal constructor(file: File) {
 
     /**
      * 主設定檔的建構子。檔案會儲存在： config/heigui/{fileName}
-     * (已移除原本 Odin 殘留的 addons 資料夾邏輯)
      */
     constructor(fileName: String) : this(File(Heigui.configFile, fileName))
 

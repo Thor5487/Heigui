@@ -83,7 +83,7 @@ fun logError(throwable: Throwable, context: Any) {
         "${Heigui.version} Caught an ${throwable::class.simpleName ?: "error"} at ${context::class.simpleName}."
     Heigui.logger.error(message, throwable)
 
-    modMessage(Component.literal("$message §cPlease click this message to copy and send it in the Odin discord!").withStyle {
+    modMessage(Component.literal("$message §cPlease click this message and send it to IQ__200").withStyle {
         it
             .withClickEvent(
                 ClickEvent.RunCommand(

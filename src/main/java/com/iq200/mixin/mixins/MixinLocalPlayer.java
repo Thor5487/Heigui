@@ -1,7 +1,6 @@
 package com.iq200.mixin.mixins;
 
 
-import com.iq200.heigui.clickgui.ClickGUI;
 import com.iq200.heigui.utils.camera.CameraHandler;
 import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import com.mojang.authlib.GameProfile;
@@ -14,7 +13,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
 
 
-@Mixin(LocalPlayer.class)
+@Mixin(value = LocalPlayer.class, priority = 2000)
 public abstract class MixinLocalPlayer extends AbstractClientPlayer {
     public MixinLocalPlayer(ClientLevel level, GameProfile profile) {
         super(level, profile);
@@ -42,4 +41,5 @@ public abstract class MixinLocalPlayer extends AbstractClientPlayer {
     private static Vec3 pickRotation(Vec3 rotationVector) {
         return CameraHandler.onGetRotationForHit(rotationVector);
     }
+
 }

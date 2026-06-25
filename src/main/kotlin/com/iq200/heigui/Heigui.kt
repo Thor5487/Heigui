@@ -11,6 +11,7 @@ import com.iq200.heigui.utils.handlers.TickTasks
 import com.iq200.heigui.utils.ui.rendering.NVGPIPRenderer
 import com.iq200.heigui.utils.render.ItemStateRenderer
 import com.iq200.heigui.utils.render.RenderBatchManager
+import com.iq200.heigui.utils.skyblock.ActionBarParser
 import com.iq200.heigui.utils.skyblock.LocationUtils
 import com.iq200.heigui.utils.skyblock.PartyUtils
 import com.iq200.heigui.utils.skyblock.SkyblockPlayer
@@ -83,7 +84,7 @@ object Heigui : ClientModInitializer {
             DungeonListener, PartyUtils,
             ScanUtils, DungeonUtils, SplitsManager,
             IrisCompatability, RenderBatchManager,
-            ModuleManager, DeathTickUtil
+            ModuleManager, DeathTickUtil, ActionBarParser
         ).forEach { EventBus.subscribe(it) }
 
         logger.info("[Heigui] All Features Loaded！")

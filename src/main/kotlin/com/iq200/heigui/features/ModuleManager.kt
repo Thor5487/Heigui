@@ -14,10 +14,13 @@ import com.iq200.heigui.features.ModuleManager.configs
 import com.iq200.heigui.features.impl.dungeon.AutoClick
 import com.iq200.heigui.features.impl.dungeon.AutoClose
 import com.iq200.heigui.features.impl.dungeon.SecretAura
+import com.iq200.heigui.features.impl.dungeon.SecretDone
+import com.iq200.heigui.features.impl.dungeon.SkipSecrets
 import com.iq200.heigui.features.impl.dungeon.Triggerbot
 import com.iq200.heigui.features.impl.dungeon.ZPDB
+import com.iq200.heigui.features.impl.floor7.AutoCrit
 import com.iq200.heigui.features.impl.floor7.LBHelper
-import com.iq200.heigui.features.impl.floor7.SSTriggerBot
+import com.iq200.heigui.features.impl.floor7.SimonSays
 import com.iq200.heigui.features.impl.floor7.WitherAimBot
 import com.iq200.heigui.features.impl.mining.BigPane
 import com.iq200.heigui.features.impl.mining.GdragEggEsp
@@ -42,7 +45,6 @@ import java.io.File
 object ModuleManager {
 
     /**
-     * Map containing all modules in Odin,
      * where the key is the modules name in lowercase.
      */
     val modules: HashMap<String, Module> = linkedMapOf()
@@ -52,9 +54,6 @@ object ModuleManager {
      */
     val modulesByCategory: HashMap<Category, ArrayList<Module>> = hashMapOf()
 
-    /**
-     * List of all configurations handled by Odin.
-     */
     val configs: ArrayList<ModuleConfig> = arrayListOf()
 
     val keybindSettingsCache: ArrayList<KeybindSetting> = arrayListOf()
@@ -65,10 +64,10 @@ object ModuleManager {
     init {
         registerModules(config = ModuleConfig(file = File(Heigui.configFile, "heigui-config.json")),
             // dungeon
-            SecretAura, AutoClose, ZPDB, Triggerbot, AutoClick,
+            SecretAura, AutoClose, ZPDB, Triggerbot, AutoClick, SecretDone, SkipSecrets,
 
             // floor 7
-            SSTriggerBot, WitherAimBot, LBHelper,
+            SimonSays, WitherAimBot, LBHelper, AutoCrit,
 
             // render
             ClickGUIModule,

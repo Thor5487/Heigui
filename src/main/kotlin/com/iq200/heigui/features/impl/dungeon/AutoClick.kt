@@ -65,6 +65,7 @@ object AutoClick : Module (
                     val cpsDelay = 1000L / cps
                     if (now - lastClickTime >= cpsDelay) {
                         if (checkItem()) {
+                            mc.missTime = 0
                             PlayerUtils.leftClick()
                             lastClickTime = now
                         }

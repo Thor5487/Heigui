@@ -2,6 +2,7 @@ package com.iq200.heigui.utils.camera
 
 import net.minecraft.world.phys.Vec3
 
+
 //From RSM
 interface CameraProvider {
     val priority: Int

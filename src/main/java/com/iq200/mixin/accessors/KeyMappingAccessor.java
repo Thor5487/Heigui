@@ -10,4 +10,11 @@ import org.spongepowered.asm.mixin.gen.Accessor;
 public interface KeyMappingAccessor {
     @Accessor("key")
     InputConstants.Key getKey();
+
+    @Accessor("clickCount")
+    int getClickCount();
+
+    @Accessor("clickCount")
+    void setClickCount(int count);
+
 }

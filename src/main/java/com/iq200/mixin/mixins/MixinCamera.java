@@ -34,6 +34,8 @@ public abstract class MixinCamera {
     @Shadow
     private float eyeHeight;
 
+
+
     @Inject(method = "setup", at = @At("HEAD"))
     private void onCameraSetup(Level level, Entity entity, boolean bl, boolean bl2, float f, CallbackInfo ci) {
         new CameraSetupEvent().postAndCatch();

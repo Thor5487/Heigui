@@ -1,17 +1,16 @@
 package com.iq200.heigui.utils
 
 import com.iq200.heigui.Heigui.mc
+import com.iq200.mixin.accessors.KeyMappingAccessor
 import net.minecraft.client.KeyMapping
 import net.minecraft.client.resources.sounds.SimpleSoundInstance
 import net.minecraft.core.BlockPos
 import net.minecraft.network.chat.Component
-import net.minecraft.network.protocol.game.ServerboundPlayerCommandPacket
 import net.minecraft.network.protocol.game.ServerboundPlayerInputPacket
 import net.minecraft.resources.Identifier
 import net.minecraft.sounds.SoundEvent
 import net.minecraft.sounds.SoundEvents
 import net.minecraft.util.StringUtil
-import net.minecraft.world.InteractionHand
 import net.minecraft.world.entity.player.Input
 import net.minecraft.world.item.Item
 import net.minecraft.world.phys.Vec3
@@ -22,9 +21,6 @@ enum class InputKey {
     FORWARD, BACKWARD, LEFT, RIGHT, JUMP, SNEAK, SPRINT
 }
 
-// ==========================================
-// 來自原本 Odin 的 Top-Level 函式
-// ==========================================
 
 fun playSoundSettings(soundSettings: Triple<String, Float, Float>) {
     val (soundName, volume, pitch) = soundSettings
@@ -55,9 +51,6 @@ fun getPositionString(): String {
 }
 
 
-// ==========================================
-// 來自原本 OdinAddon-IQ 的 PlayerUtils 物件
-// ==========================================
 
 object PlayerUtils {
     const val SNEAK_EYE_HEIGHT = 1.54
@@ -110,7 +103,7 @@ object PlayerUtils {
         }
 
         if (keyMapping != null) {
-            keyMapping.setDown(state)
+            keyMapping.isDown = state
         }
 
         val current = player.input.keyPresses
@@ -133,16 +126,14 @@ object PlayerUtils {
     }
 
     fun leftClick() {
-        val player = mc.player ?: return
-        val target = mc.crosshairPickEntity
-
-        if (target != null) {
-            mc.gameMode?.attack(player, target)
-        }
-
-        player.swing(InteractionHand.MAIN_HAND)
+        val key = mc.options.keyAttack
+        (key as KeyMappingAccessor).clickCount++
     }
 
+    fun rightClick() {
+        val key = mc.options.keyUse
+        (key as KeyMappingAccessor).clickCount++
+    }
 
     /**
      * @param yaw 左右旋轉角度 (Y軸)

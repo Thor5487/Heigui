@@ -19,8 +19,8 @@ import net.minecraft.client.input.KeyEvent
 import net.minecraft.client.input.MouseButtonEvent
 import net.minecraft.network.chat.Component
 import kotlin.math.sign
-import com.iq200.heigui.utils.ui.mouseX as odinMouseX
-import com.iq200.heigui.utils.ui.mouseY as odinMouseY
+import com.iq200.heigui.utils.ui.mouseX as heiguiMouseX
+import com.iq200.heigui.utils.ui.mouseY as heiguiMouseY
 
 /**
  * Renders all the modules.
@@ -38,8 +38,8 @@ object ClickGUI : Screen(Component.literal("Click GUI")) {
 
     override fun render(context: GuiGraphics, mouseX: Int, mouseY: Int, deltaTicks: Float) {
         NVGPIPRenderer.draw(context, 0, 0, context.guiWidth(), context.guiHeight()) {
-            val scaledMouseX = odinMouseX / ClickGUIModule.getStandardGuiScale()
-            val scaledMouseY = odinMouseY / ClickGUIModule.getStandardGuiScale()
+            val scaledMouseX = heiguiMouseX / ClickGUIModule.getStandardGuiScale()
+            val scaledMouseY = heiguiMouseY / ClickGUIModule.getStandardGuiScale()
 
             NVGRenderer.scale(ClickGUIModule.getStandardGuiScale(), ClickGUIModule.getStandardGuiScale())
 
@@ -89,8 +89,8 @@ object ClickGUI : Screen(Component.literal("Click GUI")) {
         mouseButtonEvent: MouseButtonEvent,
         bl: Boolean
     ): Boolean {
-        val scaledMouseX = odinMouseX / ClickGUIModule.getStandardGuiScale()
-        val scaledMouseY = odinMouseY / ClickGUIModule.getStandardGuiScale()
+        val scaledMouseX = heiguiMouseX / ClickGUIModule.getStandardGuiScale()
+        val scaledMouseY = heiguiMouseY / ClickGUIModule.getStandardGuiScale()
         SearchBar.mouseClicked(scaledMouseX, scaledMouseY, mouseButtonEvent)
         for (i in panels.size - 1 downTo 0) {
             if (panels[i].mouseClicked(scaledMouseX, scaledMouseY, mouseButtonEvent)) return true

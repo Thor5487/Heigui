@@ -5,7 +5,7 @@
   "compatibilityLevel": "JAVA_21",
   "client": [
     "accessors.BeaconBeamAccessor",
-    "accessors.ILocalPlayer",
+    "accessors.LocalPlayerAccessor",
     "accessors.KeyMappingAccessor",
     "mixins.MixinAbstractContainerScreen",
     "mixins.MixinClientPacketListener",
