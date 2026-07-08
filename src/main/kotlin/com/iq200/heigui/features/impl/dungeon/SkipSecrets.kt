@@ -30,7 +30,7 @@ object SkipSecrets : Module (
             return@HUD textDim("§7Skippable: §eLoading...", 0, 0)
         }
 
-        val maxSkippable = DungeonUtils.totalSecrets - DungeonUtils.neededSecretsAmount
+        val maxSkippable = DungeonUtils.totalSecrets - DungeonUtils.idealNeededSecretsAmoount
 
         // 🌟 直接將 Map 裡面所有的 values 加總，就是目前的總 Skipped 數量！
         val totalSkippedSecrets = skippedRoomsMap.values.sum()

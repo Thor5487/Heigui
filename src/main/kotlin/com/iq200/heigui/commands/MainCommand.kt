@@ -12,5 +12,5 @@ val mainCommand = Commodore("heigui", "hg") {
         schedule(0) { mc.setScreen(ClickGUI) }
     }
 
-    setupDebugCommand()
+    setupAutoCroesusCommand()
 }

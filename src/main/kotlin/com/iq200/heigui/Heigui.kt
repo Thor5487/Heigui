@@ -1,6 +1,7 @@
 package com.iq200.heigui
 
 import com.iq200.heigui.commands.mainCommand
+import com.iq200.heigui.config.AutoCroesusConfig
 import com.iq200.heigui.events.EventDispatcher
 import com.iq200.heigui.events.core.EventBus
 import com.iq200.heigui.features.ModuleManager
@@ -23,6 +24,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import net.fabricmc.api.ClientModInitializer
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback // 🌟 引入 Fabric 指令註冊
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents
 import net.fabricmc.fabric.api.client.rendering.v1.SpecialGuiElementRegistry
 import net.fabricmc.loader.api.FabricLoader
 import net.fabricmc.loader.api.Version
@@ -49,6 +51,9 @@ object Heigui : ClientModInitializer {
         }
     }
 
+    val autoCroesusConfig = AutoCroesusConfig()
+
+
     const val MOD_ID = "heigui"
 
     val version: Version by lazy { FabricLoader.getInstance().getModContainer(MOD_ID).orElseThrow().metadata.version }
@@ -56,6 +61,14 @@ object Heigui : ClientModInitializer {
 
     override fun onInitializeClient() {
         logger.info("Heigui Mod is initializing... Version: $version")
+
+        autoCroesusConfig.load()
+
+        ClientLifecycleEvents.CLIENT_STOPPING.register {
+            logger.info("[Heigui] Saving configurations before shutdown...")
+            ModuleManager.saveConfigurations() // 存 ModuleConfig
+            autoCroesusConfig.save()           // 存 AutoCroesusConfig
+        }
 
         ClientCommandRegistrationCallback.EVENT.register { dispatcher, _ ->
             arrayOf(mainCommand).forEach { it.register(dispatcher) }

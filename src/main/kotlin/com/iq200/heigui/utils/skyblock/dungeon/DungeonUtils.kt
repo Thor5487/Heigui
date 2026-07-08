@@ -170,6 +170,15 @@ object DungeonUtils {
             } ?: 0
 
 
+    inline val idealNeededSecretsAmoount: Int
+        get() =
+            DungeonListener.floor?.let {
+                ceil(
+                    (totalSecrets * it.requiredPercentage) * (40 - 7 - if (princeKilled) 1 else 0) / 40.0
+                ).toInt()
+            } ?: 0
+
+
     inline val remainingSecrets: Int
         get() {
             if (totalSecrets == 0) return 999

@@ -13,6 +13,8 @@ import com.iq200.heigui.events.core.on
 import com.iq200.heigui.features.ModuleManager.configs
 import com.iq200.heigui.features.impl.dungeon.AutoClick
 import com.iq200.heigui.features.impl.dungeon.AutoClose
+import com.iq200.heigui.features.impl.dungeon.AutoCroesus
+import com.iq200.heigui.features.impl.dungeon.SATpFix
 import com.iq200.heigui.features.impl.dungeon.SecretAura
 import com.iq200.heigui.features.impl.dungeon.SecretDone
 import com.iq200.heigui.features.impl.dungeon.SkipSecrets
@@ -26,7 +28,6 @@ import com.iq200.heigui.features.impl.mining.BigPane
 import com.iq200.heigui.features.impl.mining.GdragEggEsp
 import com.iq200.heigui.features.impl.mining.Mineshaft
 import com.iq200.heigui.features.impl.render.*
-import com.iq200.heigui.features.impl.skyblock.Freecam
 import com.iq200.heigui.features.impl.skyblock.TeleportOptimization
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry
 import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements
@@ -64,7 +65,7 @@ object ModuleManager {
     init {
         registerModules(config = ModuleConfig(file = File(Heigui.configFile, "heigui-config.json")),
             // dungeon
-            SecretAura, AutoClose, ZPDB, Triggerbot, AutoClick, SecretDone, SkipSecrets,
+            SecretAura, AutoClose, ZPDB, Triggerbot, AutoClick, SecretDone, SkipSecrets, SATpFix, AutoCroesus,
 
             // floor 7
             SimonSays, WitherAimBot, LBHelper, AutoCrit,
