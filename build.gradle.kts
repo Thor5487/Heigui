@@ -1,13 +1,18 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
-    id("fabric-loom")
+    id("net.fabricmc.fabric-loom")
     kotlin("jvm")
     `maven-publish`
 }
 
 group = property("maven_group") as String
-version = property("mod_version") as String
+// 利用 Kotlin 的字串插值，把兩個版本號用 "-" 串接起來
+version = "${property("mod_version")}-${property("minecraft_version")}"
+
+base {
+    archivesName.set(property("archives_base_name") as String)
+}
 
 // ====================================================
 // 🛡️ 你的依賴庫區塊 (完全未改動，一字不漏！)
@@ -22,11 +27,10 @@ repositories {
 
 dependencies {
     minecraft("com.mojang:minecraft:${property("minecraft_version")}")
-    mappings(loom.officialMojangMappings())
-    modImplementation("net.fabricmc:fabric-loader:${property("loader_version")}")
-    modImplementation("net.fabricmc:fabric-language-kotlin:${property("fabric_kotlin_version")}")
-    modImplementation("net.fabricmc.fabric-api:fabric-api:${property("fabric_api_version")}")
-    modRuntimeOnly("me.djtheredstoner:DevAuth-fabric:${property("devauth_version")}")
+    implementation("net.fabricmc:fabric-loader:${property("loader_version")}")
+    implementation("net.fabricmc:fabric-language-kotlin:${property("fabric_kotlin_version")}")
+    implementation("net.fabricmc.fabric-api:fabric-api:${property("fabric_api_version")}")
+    runtimeOnly("me.djtheredstoner:DevAuth-fabric:${property("devauth_version")}")
 
     // 🌟 關鍵：使用 include 將指令系統打包進你的 jar
     property("commodore_version").let {
@@ -34,24 +38,25 @@ dependencies {
         include("com.github.stivais:Commodore:$it")
     }
 
-    modCompileOnly("com.terraformersmc:modmenu:${property("modmenu_version")}")
+    compileOnly("com.terraformersmc:modmenu:${property("modmenu_version")}")
 
     // 🌟 關鍵：使用 include 將 NanoVG UI 渲染引擎打包進你的 jar
     property("minecraft_lwjgl_version").let { lwjglVersion ->
-        modImplementation("org.lwjgl:lwjgl-nanovg:$lwjglVersion")
+        implementation("org.lwjgl:lwjgl-nanovg:$lwjglVersion")
         include("org.lwjgl:lwjgl-nanovg:$lwjglVersion")
 
         listOf("windows", "linux", "macos", "macos-arm64").forEach { os ->
-            modImplementation("org.lwjgl:lwjgl-nanovg:$lwjglVersion:natives-$os")
+            implementation("org.lwjgl:lwjgl-nanovg:$lwjglVersion:natives-$os")
             include("org.lwjgl:lwjgl-nanovg:$lwjglVersion:natives-$os")
         }
     }
 
-    modCompileOnly("maven.modrinth:iris:${property("iris")}")
+    compileOnly("maven.modrinth:iris:${property("iris")}")
 }
 // ====================================================
 
 loom {
+    accessWidenerPath = file("src/main/resources/heigui.accesswidener")
     runConfigs.named("client") {
         isIdeConfigGenerated = true
         vmArgs.addAll(
@@ -83,39 +88,22 @@ tasks {
 
     compileKotlin {
         compilerOptions {
-            jvmTarget = JvmTarget.JVM_21
+            jvmTarget = JvmTarget.JVM_25
             freeCompilerArgs.add("-Xlambdas=class")
         }
     }
 
     compileJava {
-        sourceCompatibility = "21"
-        targetCompatibility = "21"
+        sourceCompatibility = "25"
+        targetCompatibility = "25"
         options.encoding = "UTF-8"
         options.compilerArgs.addAll(listOf("-Xlint:deprecation", "-Xlint:unchecked"))
     }
 
-    remapJar {
-        // 保留你原本實用的發布功能，將編譯好的檔案移至 releases 資料夾
-        doLast {
-            val finalJar = archiveFile.get().asFile
-            if (finalJar.exists()) {
-                println("🛡️ [處理中] 正在將編譯完成的 ${finalJar.name} 移至安全發布區...")
-                val releaseDir = file("${project.rootDir}/releases")
-                releaseDir.mkdirs()
-
-                project.copy {
-                    from(finalJar)
-                    into(releaseDir)
-                }
-                println("✅ [成功] 模組已發布至：releases/${finalJar.name}")
-            }
-        }
-    }
 }
 
 java {
     toolchain {
-        languageVersion.set(JavaLanguageVersion.of(21))
+        languageVersion.set(JavaLanguageVersion.of(25))
     }
 }

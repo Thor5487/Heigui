@@ -110,7 +110,7 @@ fun ItemStack.isEtherwarpItem(): Boolean =
     customData.getIntOr("ethermerge", 0) == 1 || ("ETHERWARP_CONDUIT" == itemId);
 
 fun ItemStack.hasGlint(): Boolean =
-    componentsPatch.get(DataComponents.ENCHANTMENT_GLINT_OVERRIDE)?.isPresent == true
+    components.get(DataComponents.ENCHANTMENT_GLINT_OVERRIDE) != null
 
 fun EquipmentSlot.isItem(itemId: String): Boolean =
     mc.player?.getItemBySlot(this)?.itemId == itemId

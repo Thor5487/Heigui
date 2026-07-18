@@ -1,8 +1,9 @@
 package com.iq200.heigui.utils
 
 import com.iq200.heigui.utils.render.drawLine
+import com.mojang.blaze3d.systems.RenderSystem
 import net.minecraft.client.Minecraft
-import net.minecraft.client.gui.GuiGraphics
+import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.world.phys.Vec3
 import org.joml.Matrix4f
 import org.joml.Vector2f
@@ -22,7 +23,7 @@ object Render2DUtils {
      */
 
     fun drawHollowCircle(
-        guiGraphics: GuiGraphics,
+        graphics: GuiGraphicsExtractor,
         centerX: Float,
         centerY: Float,
         radius: Float,
@@ -41,7 +42,7 @@ object Render2DUtils {
             val x2 = centerX + (radius * cos(angle2)).toFloat()
             val y2 = centerY + (radius * sin(angle2)).toFloat()
 
-            guiGraphics.drawLine(x1, y1, x2, y2, color, thickness)
+            graphics.drawLine(x1, y1, x2, y2, color, thickness)
         }
     }
 
@@ -56,8 +57,15 @@ object Render2DUtils {
         val relY = (worldPos.y - camPos.y).toFloat()
         val relZ = (worldPos.z - camPos.z).toFloat()
 
-        val viewMatrix = Matrix4f().rotation(camera.rotation()).invert()
-        val projMatrix = gameRenderer.getProjectionMatrix(mc.options.fov().get().toFloat())
+        val viewMatrix = Matrix4f(RenderSystem.getModelViewMatrix())
+        val fov = mc.options.fov().get().toDouble()
+        val fovRadians = Math.toRadians(fov).toFloat()
+        val window = mc.window
+        val aspectRatio = window.screenWidth.toFloat() / window.screenHeight.toFloat()
+        val farPlane = mc.options.renderDistance().get() * 16f * 4.0f
+
+        // 這行就是 26.1+ 版本的解答
+        val projMatrix = Matrix4f().setPerspective(fovRadians, aspectRatio, 0.05f, farPlane)
 
         val clipPos = Vector4f(relX, relY, relZ, 1.0f)
 
@@ -69,7 +77,6 @@ object Render2DUtils {
         val ndcX = clipPos.x / clipPos.w
         val ndcY = clipPos.y / clipPos.w
 
-        val window = mc.window
         val screenX = (ndcX + 1f) / 2f * window.guiScaledWidth
         val screenY = (1f - ndcY) / 2f * window.guiScaledHeight
 

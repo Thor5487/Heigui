@@ -25,8 +25,6 @@ public abstract class MixinCamera {
     @Shadow
     private Vec3 position;
 
-    @Shadow
-    private float partialTickTime;
 
     @Shadow
     private float eyeHeightOld;
@@ -36,19 +34,19 @@ public abstract class MixinCamera {
 
 
 
-    @Inject(method = "setup", at = @At("HEAD"))
-    private void onCameraSetup(Level level, Entity entity, boolean bl, boolean bl2, float f, CallbackInfo ci) {
+    @Inject(method = "alignWithEntity", at = @At("HEAD"))
+    private void onCameraSetup(float f, CallbackInfo ci) {
         new CameraSetupEvent().postAndCatch();
     }
 
-    @Redirect(method = "setup", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/Camera;setRotation(FF)V"))
+    @Redirect(method = "alignWithEntity", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/Camera;setRotation(FF)V"))
     private void setCameraYawPitch(Camera camera, float yaw, float pitch) {
         this.setRotation(CameraHandler.getYaw(yaw), CameraHandler.getPitch(pitch));
     }
 
-    @Inject(method = "setup", at = @At("TAIL"))
-    private void setCameraPos(Level level, Entity entity, boolean bl, boolean bl2, float f, CallbackInfo ci) {
-        Vec3 newPos = CameraHandler.getPos(new Vec3(this.position.x, this.position.y, this.position.z), this.partialTickTime, this.eyeHeightOld, this.eyeHeight);
+    @Inject(method = "alignWithEntity", at = @At("TAIL"))
+    private void setCameraPos(float f, CallbackInfo ci) {
+        Vec3 newPos = CameraHandler.getPos(new Vec3(this.position.x, this.position.y, this.position.z), f, this.eyeHeightOld, this.eyeHeight);
 
         // 加上這行檢查是否跟原本的 position 不一樣
         if (newPos.distanceTo(this.position) > 0.1) {

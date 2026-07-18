@@ -17,7 +17,7 @@ import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen
 import net.minecraft.world.InteractionHand
 import net.minecraft.world.entity.decoration.ArmorStand
 import net.minecraft.world.entity.player.Player
-import net.minecraft.world.inventory.ClickType
+import net.minecraft.world.inventory.ContainerInput
 import net.minecraft.world.item.ItemStack
 import net.minecraft.world.phys.EntityHitResult
 import net.minecraft.world.phys.HitResult
@@ -113,7 +113,7 @@ object AutoCroesus : Module(
                 }
 
                 modMessage("§a[AutoCroesus] 找到未開啟的局數 (Slot $i)，正在點擊...")
-                mc.gameMode?.handleInventoryMouseClick(menu.containerId, i, 0, ClickType.PICKUP, player)
+                mc.gameMode?.handleContainerInput(menu.containerId, i, 0, ContainerInput.PICKUP, player)
 
                 currentState = CroesusState.WAITING_FOR_CHEST_MENU
                 lastActionTime = currentTime
@@ -128,7 +128,7 @@ object AutoCroesus : Module(
 
             if (nextItemName.contains("Next Page")) {
                 modMessage("§e[AutoCroesus] 當前頁面已掃描完畢，點擊下一頁...")
-                mc.gameMode?.handleInventoryMouseClick(menu.containerId, 53, 0, ClickType.PICKUP, player)
+                mc.gameMode?.handleContainerInput(menu.containerId, 53, 0, ContainerInput.PICKUP, player)
 
                 currentState = CroesusState.WAITING_FOR_MENU
                 lastActionTime = currentTime

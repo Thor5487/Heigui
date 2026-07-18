@@ -1,7 +1,7 @@
 package com.iq200.heigui.events
 
 import com.iq200.heigui.events.core.CancellableEvent
-import net.minecraft.client.gui.GuiGraphics
+import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.client.gui.screens.Screen
 import net.minecraft.client.input.KeyEvent
 import net.minecraft.client.input.MouseButtonEvent
@@ -25,13 +25,12 @@ abstract class GuiEvent(val screen: Screen) : CancellableEvent() {
 
     class KeyPress(screen: Screen, val input: KeyEvent) : GuiEvent(screen)
 
-    class Draw(screen: Screen, val guiGraphics: GuiGraphics, val mouseX: Int, val mouseY: Int) : GuiEvent(screen)
+    class Draw(screen: Screen, val guiGraphics: GuiGraphicsExtractor, val mouseX: Int, val mouseY: Int) : GuiEvent(screen)
 
-    class DrawBackground(screen: Screen, val guiGraphics: GuiGraphics, val mouseX: Int, val mouseY: Int) : GuiEvent(screen)
+    class DrawBackground(screen: Screen, val guiGraphics: GuiGraphicsExtractor, val mouseX: Int, val mouseY: Int) : GuiEvent(screen)
 
-    class DrawSlot(screen: Screen, val guiGraphics: GuiGraphics, val slot: Slot) : GuiEvent(screen)
+    class DrawSlot(screen: Screen, val guiGraphics: GuiGraphicsExtractor, val slot: Slot) : GuiEvent(screen)
 
-    class CustomTermGuiClick(screen: Screen, val slot: Int, val button: Int) : GuiEvent(screen)
 
-    class DrawTooltip(screen: Screen, val guiGraphics: GuiGraphics, val mouseX: Int, val mouseY: Int) : GuiEvent(screen)
+    class DrawTooltip(screen: Screen, val guiGraphics: GuiGraphicsExtractor, val mouseX: Int, val mouseY: Int) : GuiEvent(screen)
 }

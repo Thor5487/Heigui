@@ -79,8 +79,3 @@ fun LiteralNode.setupAutoCroesusCommand() {
         }
     }
 }
-
-// 內部輔助函數，保持主邏輯乾淨
-private fun sendChat(message: String) {
-    Heigui.mc.player?.displayClientMessage(Component.literal(message), false)
-}

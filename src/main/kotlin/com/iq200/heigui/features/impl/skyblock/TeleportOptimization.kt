@@ -12,6 +12,7 @@ import com.iq200.heigui.features.Module
 import com.iq200.heigui.utils.*
 import com.iq200.heigui.utils.camera.CameraHandler
 import com.iq200.heigui.utils.camera.CameraPositionProvider
+import com.iq200.heigui.utils.skyblock.ActionBarParser
 import com.iq200.heigui.utils.skyblock.EtherUtils
 import com.iq200.heigui.utils.skyblock.dungeon.DungeonUtils
 import com.iq200.heigui.utils.skyblock.dungeon.ScanUtils
@@ -72,6 +73,8 @@ object TeleportOptimization : Module (
 
             if (!isTpItem(stack)) return@on
 
+            if (!hasEnoughMana(stack)) return@on
+
             if (result is BlockHitResult) {
                 val hitBlock = mc.level?.getBlockState(result.blockPos)?.block
                 if (hitBlock != null && isIgnored(hitBlock)) return@on
@@ -87,14 +90,14 @@ object TeleportOptimization : Module (
 
             if (packet is ServerboundUseItemPacket) {
                 val stack = mc.player?.getItemInHand(packet.hand) ?: return@on
-                if (isTpItem(stack)) {
+                if (isTpItem(stack) && hasEnoughMana(stack)) {
                     noRotateSent.add(System.currentTimeMillis())
                 }
             } else if (packet is ServerboundUseItemOnPacket) {
                 val stack = mc.player?.getItemInHand(packet.hand) ?: return@on
                 val level = mc.level ?: return@on
                 val block = level.getBlockState(packet.hitResult.blockPos).block
-                if (!isIgnored(block) && isTpItem(stack)) {
+                if (!isIgnored(block) && isTpItem(stack) && hasEnoughMana(stack)) {
                     noRotateSent.add(System.currentTimeMillis())
                 }
             }
@@ -293,6 +296,23 @@ object TeleportOptimization : Module (
 
     private fun isRoomAllowing(room: Room?): Boolean {
         return room == null || !room.data.name.containsOneOf("Teleport Maze", "Boulder")
+    }
+
+    private fun hasEnoughMana(stack: ItemStack): Boolean {
+        val currentMana = ActionBarParser.currentMana
+        val id = stack.itemId
+
+        return when {
+            // Wither Impact 武器系列 (設定為 >= 150，對應終極明智 V)
+            id.containsOneOf("NECRON_BLADE", "SCYLLA", "HYPERION", "VALKYRIE", "ASTRAEA") -> {
+                currentMana >= 150
+            }
+            // AOTE / AOTV 傳送系列 (設定為 >= 50)
+            id.containsOneOf("ASPECT_OF_THE_END", "ASPECT_OF_THE_VOID", "ETHERWARP_CONDUIT", "ASPECT_OF_THE_LEECH_1", "ASPECT_OF_THE_LEECH_2", "ASPECT_OF_THE_LEECH_3") -> {
+                currentMana >= 50
+            }
+            else -> true // 其他未知傳送物品預設放行，避免誤擋
+        }
     }
 
     // ==========================================

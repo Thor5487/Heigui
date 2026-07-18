@@ -5,9 +5,9 @@ import com.iq200.heigui.events.core.Event
 import com.iq200.heigui.utils.render.RenderConsumer
 import com.iq200.heigui.utils.skyblock.dungeon.tiles.Room
 import com.mojang.blaze3d.platform.InputConstants
-import net.fabricmc.fabric.api.client.rendering.v1.world.AbstractWorldRenderContext
-import net.fabricmc.fabric.api.client.rendering.v1.world.WorldExtractionContext
-import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderContext
+import net.fabricmc.fabric.api.client.rendering.v1.level.AbstractLevelRenderContext
+import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext
+import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.client.multiplayer.ClientLevel
 import net.minecraft.core.BlockPos
 import net.minecraft.network.chat.Component
@@ -67,9 +67,9 @@ interface WorldEvent : Event {
     object Unload : WorldEvent
 }
 
-abstract class RenderEvent(open val context: AbstractWorldRenderContext) : Event {
-    class Extract(override val context: WorldExtractionContext, val consumer: RenderConsumer) : RenderEvent(context)
-    class Last(override val context: WorldRenderContext) : RenderEvent(context)
+abstract class RenderEvent(open val context: AbstractLevelRenderContext) : Event {
+    class Extract(override val context: LevelRenderContext, val consumer: RenderConsumer) : RenderEvent(context)
+    class Last(override val context: LevelRenderContext) : RenderEvent(context)
 }
 
 abstract class PartyEvent(val members: List<String>) : Event {
@@ -92,3 +92,5 @@ abstract class PlayerInputEvent : CancellableEvent() {
         val xRot : Float
     ) : PlayerInputEvent()
 }
+
+class HudRenderEvent(val graphics: GuiGraphicsExtractor) : Event

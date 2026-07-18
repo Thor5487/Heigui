@@ -1,12 +1,12 @@
 package com.iq200.mixin.mixins;
 
 import com.iq200.heigui.events.GuiEvent;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
-import net.minecraft.world.inventory.ClickType;
+import net.minecraft.world.inventory.ContainerInput;
 import net.minecraft.world.inventory.Slot;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -27,23 +27,19 @@ public class MixinAbstractContainerScreen {
         if (new GuiEvent.Close((Screen) (Object) this).postAndCatch()) ci.cancel();
     }
 
-    @Inject(method = "render", at = @At("HEAD"), cancellable = true)
-    protected void onRender(GuiGraphics context, int mouseX, int mouseY, float deltaTicks, CallbackInfo ci) {
-        if (new GuiEvent.Draw((Screen) (Object) this, context, mouseX, mouseY).postAndCatch()) ci.cancel();
+    @Inject(method = "extractRenderState", at = @At("HEAD"), cancellable = true)
+    protected void onRender(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float deltaTicks, CallbackInfo ci) {
+        if (new GuiEvent.Draw((Screen) (Object) this, graphics, mouseX, mouseY).postAndCatch()) ci.cancel();
     }
 
-    @Inject(method = "renderBackground", at = @At("HEAD"), cancellable = true)
-    protected void onRenderBackground(GuiGraphics context, int mouseX, int mouseY, float deltaTicks, CallbackInfo ci) {
-        if (new GuiEvent.DrawBackground((Screen) (Object) this, context, mouseX, mouseY).postAndCatch()) ci.cancel();
-    }
 
-    @Inject(method = "renderSlot", at = @At("HEAD"), cancellable = true)
-    private void onDrawSlot(GuiGraphics guiGraphics, Slot slot, int i, int j, CallbackInfo ci) {
-        if (new GuiEvent.DrawSlot((Screen) (Object) this, guiGraphics, slot).postAndCatch()) ci.cancel();
+    @Inject(method = "extractSlot", at = @At("HEAD"), cancellable = true)
+    private void onDrawSlot(GuiGraphicsExtractor graphics, Slot slot, int i, int j, CallbackInfo ci) {
+        if (new GuiEvent.DrawSlot((Screen) (Object) this, graphics, slot).postAndCatch()) ci.cancel();
     }
 
     @Inject(method = "slotClicked", at = @At("HEAD"), cancellable = true)
-    public void onMouseClickedSlot(Slot slot, int slotId, int button, ClickType actionType, CallbackInfo ci) {
+    public void onMouseClickedSlot(Slot slot, int slotId, int button, ContainerInput containerInput, CallbackInfo ci) {
         if (new GuiEvent.SlotClick((Screen) (Object) this, slotId, button).postAndCatch()) ci.cancel();
     }
 
@@ -64,9 +60,9 @@ public class MixinAbstractContainerScreen {
         if (new GuiEvent.KeyPress((Screen) (Object) this, input).postAndCatch()) cir.cancel();
     }
 
-    @Inject(method = "renderTooltip", at = @At("HEAD"), cancellable = true)
-    public void onDrawMouseoverTooltip(GuiGraphics context, int mouseX, int mouseY, CallbackInfo ci) {
-        if (new GuiEvent.DrawTooltip((Screen) (Object) this, context, mouseX, mouseY).postAndCatch()) {
+    @Inject(method = "extractTooltip", at = @At("HEAD"), cancellable = true)
+    public void onDrawMouseoverTooltip(GuiGraphicsExtractor graphics, int mouseX, int mouseY, CallbackInfo ci) {
+        if (new GuiEvent.DrawTooltip((Screen) (Object) this, graphics, mouseX, mouseY).postAndCatch()) {
             ci.cancel();
         }
     }

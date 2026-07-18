@@ -7,7 +7,7 @@ import com.iq200.heigui.features.Category
 import com.iq200.heigui.features.Module
 import com.iq200.heigui.utils.Colors
 import com.iq200.heigui.utils.render.textDim
-import net.minecraft.world.inventory.ClickType
+import net.minecraft.world.inventory.ContainerInput
 
 object Mineshaft : Module (
     name = "Mineshaft",
@@ -44,11 +44,11 @@ object Mineshaft : Module (
 
                     val containerId = player.containerMenu.containerId
 
-                    gameMode.handleInventoryMouseClick(
+                    gameMode.handleContainerInput(
                         containerId,
                         pickSlot,
                         0,
-                        ClickType.PICKUP,
+                        ContainerInput.PICKUP,
                         player
                     )
                 }

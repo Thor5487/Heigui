@@ -2,7 +2,7 @@
   "required": true,
   "minVersion": "0.8",
   "package": "com.iq200.mixin",
-  "compatibilityLevel": "JAVA_21",
+  "compatibilityLevel": "JAVA_25",
   "client": [
     "accessors.BeaconBeamAccessor",
     "accessors.KeyMappingAccessor",
@@ -19,7 +19,9 @@
     "mixins.MixinMinecraft",
     "mixins.MixinMouseHandler",
     "mixins.MixinMultiplayerGameMode",
-    "mixins.MixinPaneOutLine"
+    "mixins.MixinPaneOutLine",
+    "mixins.MixinScreen",
+    "mixins.MixinGui"
   ],
   "mixins": [
     "mixins.MixinConnection",

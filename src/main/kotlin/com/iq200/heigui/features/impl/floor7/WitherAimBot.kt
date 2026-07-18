@@ -5,15 +5,17 @@ import com.iq200.heigui.clickgui.settings.Setting.Companion.withDependency
 import com.iq200.heigui.clickgui.settings.impl.BooleanSetting
 import com.iq200.heigui.clickgui.settings.impl.ColorSetting
 import com.iq200.heigui.clickgui.settings.impl.NumberSetting
+import com.iq200.heigui.events.HudRenderEvent
+import com.iq200.heigui.events.RenderEvent
+import com.iq200.heigui.events.core.on
 import com.iq200.heigui.features.Category
 import com.iq200.heigui.features.Module
 import com.iq200.heigui.utils.Colors
 import com.iq200.heigui.utils.skyblock.SplitsManager
-import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback
-import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents
 import net.minecraft.world.entity.Entity
 import net.minecraft.world.entity.boss.wither.WitherBoss
 import net.minecraft.world.phys.Vec3
+import org.joml.Matrix4f
 import kotlin.math.atan2
 import kotlin.math.sqrt
 
@@ -38,7 +40,7 @@ object WitherAimBot : Module(
     private var isHoldingCorrectWeapon = false
 
     init {
-        HudRenderCallback.EVENT.register { guiGraphics, tickDelta ->
+        on<HudRenderEvent> {
 
             if (enabled && circleToggled) {
                 val window = mc.window
@@ -47,7 +49,7 @@ object WitherAimBot : Module(
                 val centerY = window.guiScaledHeight / 2f
 
                 Render2DUtils.drawHollowCircle(
-                    guiGraphics,
+                    graphics,
                     centerX,
                     centerY,
                     fovRadius,
@@ -58,33 +60,33 @@ object WitherAimBot : Module(
 
         }
 
-        WorldRenderEvents.END_EXTRACTION.register{ context ->
+        on<RenderEvent.Extract>{
             val player = mc.player
             val level = mc.level
             val (times, tickTimes, currentIndex) = SplitsManager.getAndUpdateSplitsTimes(SplitsManager.currentSplits)
 
             if (!enabled || level == null || player == null) {
                 currentTarget = null
-                return@register
+                return@on
             }
             if (!allWithers) {
 
                 if ((currentIndex == -1 || currentIndex >= SplitsManager.currentSplits.splits.size)) {
-                    return@register
+                    return@on
                 }
 
                 val currentSplit = SplitsManager.currentSplits.splits[currentIndex]
 
                 when (currentSplit.name) {
-                    "§5Maxor" -> if (!maxor) return@register
-                    "§3Storm" -> if (!storm || tickTimes[currentIndex] / 20f < 34f) return@register
-                    "§7Goldor" -> if (!goldor) return@register
-                    "§cNecron" -> if (!necron) return@register
-                    else -> return@register
+                    "§5Maxor" -> if (!maxor) return@on
+                    "§3Storm" -> if (!storm || tickTimes[currentIndex] / 20f < 34f) return@on
+                    "§7Goldor" -> if (!goldor) return@on
+                    "§cNecron" -> if (!necron) return@on
+                    else -> return@on
                 }
             }
 
-            val partialTick = context.tickCounter().getGameTimeDeltaPartialTick(true)
+            val partialTick =  context.gameRenderer().mainCamera.getCameraEntityPartialTicks(mc.deltaTracker)
 
             val window = mc.window
             val centerX = window.guiScaledWidth / 2f
@@ -93,6 +95,7 @@ object WitherAimBot : Module(
 
             var closestDistanceSq = Float.MAX_VALUE
             var bestTarget: Entity? = null
+
 
             level.entitiesForRendering().forEach { entity ->
                 if (entity is WitherBoss && entity.isAlive && entity.invulnerableTicks < 800) {
@@ -118,14 +121,14 @@ object WitherAimBot : Module(
             currentTarget = bestTarget
 
             if (bestTarget != null) {
-                if (!mc.options.keyAttack.isDown) return@register
+                if (!mc.options.keyAttack.isDown) return@on
 
                 val mainHandItem = player.mainHandItem
                 val itemName = mainHandItem.hoverName.string
                 isHoldingCorrectWeapon = itemName.contains("Hyperion", ignoreCase = true) ||
                         itemName.contains("Claymore", ignoreCase = true)
 
-                if (!isHoldingCorrectWeapon) return@register
+                if (!isHoldingCorrectWeapon) return@on
 
                 val playerLerpedPos = player.getPosition(partialTick)
                 val playerEyePos = Vec3(playerLerpedPos.x, playerLerpedPos.y + player.eyeHeight, playerLerpedPos.z)

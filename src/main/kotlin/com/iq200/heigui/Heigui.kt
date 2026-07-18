@@ -25,7 +25,7 @@ import kotlinx.coroutines.SupervisorJob
 import net.fabricmc.api.ClientModInitializer
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback // 🌟 引入 Fabric 指令註冊
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents
-import net.fabricmc.fabric.api.client.rendering.v1.SpecialGuiElementRegistry
+import net.fabricmc.fabric.api.client.rendering.v1.PictureInPictureRendererRegistry
 import net.fabricmc.loader.api.FabricLoader
 import net.fabricmc.loader.api.Version
 import net.minecraft.client.Minecraft
@@ -74,11 +74,11 @@ object Heigui : ClientModInitializer {
             arrayOf(mainCommand).forEach { it.register(dispatcher) }
         }
 
-        SpecialGuiElementRegistry.register { context ->
-            NVGPIPRenderer(context.vertexConsumers())
+        PictureInPictureRendererRegistry.register { context ->
+            NVGPIPRenderer(context.bufferSource())
         }
-        SpecialGuiElementRegistry.register { context ->
-            ItemStateRenderer(context.vertexConsumers())
+        PictureInPictureRendererRegistry.register { context ->
+            ItemStateRenderer(context.bufferSource())
         }
 
 

@@ -14,7 +14,7 @@ import com.iq200.heigui.utils.sendCommand
 import com.mojang.blaze3d.platform.InputConstants
 import net.minecraft.client.KeyMapping
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen
-import net.minecraft.world.inventory.ClickType
+import net.minecraft.world.inventory.ContainerInput
 
 object AutoCrit : Module (
     name = "Auto Crit",
@@ -104,7 +104,8 @@ object AutoCrit : Module (
                     val screen = mc.screen as? AbstractContainerScreen<*> ?: return@on
                     if (!screen.title.string.contains("Wardrobe")) return@on
 
-                    mc.gameMode?.handleInventoryMouseClick(screen.menu.containerId, (35 + slotIndex).toInt(), 0, ClickType.PICKUP, player)
+                    mc.gameMode?.handleContainerInput(screen.menu.containerId, (35 + slotIndex).toInt(), 0,
+                        ContainerInput.PICKUP, player)
                     reset()
                 }
 

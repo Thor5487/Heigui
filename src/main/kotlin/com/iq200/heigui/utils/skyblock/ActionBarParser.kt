@@ -13,7 +13,22 @@ object ActionBarParser {
         private set
 
 
+    // Stats
+    var currentHealth: Int = 0
+        private set
+    var maxHealth: Int = 0
+        private set
+    var defense: Int = 0
+        private set
+    var currentMana: Int = 0
+        private set
+    var maxMana: Int = 0
+        private set
+
     private val secretRegex = Regex("""(\d+)/(\d+) Secrets""")
+    private val healthRegex = Regex("""(\d+)/(\d+)\uE010""")
+    private val defenseRegex = Regex("""(\d+)\uE008 Defense""")
+    private val manaRegex = Regex("""(\d+)/(\d+)\uE003 Mana""")
 
     init {
         on<WorldEvent.Load> {
@@ -38,15 +53,36 @@ object ActionBarParser {
     }
 
     private fun parseSecrets(text: String) {
-        val matchResult = secretRegex.find(text)
-        if (matchResult != null) {
-            currentSecrets = matchResult.groupValues[1].toIntOrNull() ?: currentSecrets
-            maxSecrets = matchResult.groupValues[2].toIntOrNull() ?: maxSecrets
+        secretRegex.find(text)?.let {
+            currentSecrets = it.groupValues[1].toIntOrNull() ?: currentSecrets
+            maxSecrets = it.groupValues[2].toIntOrNull() ?: maxSecrets
+        }
+
+        // 解析血量 (Health)
+        healthRegex.find(text)?.let {
+            currentHealth = it.groupValues[1].toIntOrNull() ?: currentHealth
+            maxHealth = it.groupValues[2].toIntOrNull() ?: maxHealth
+        }
+
+        // 解析防禦 (Defense)
+        defenseRegex.find(text)?.let {
+            defense = it.groupValues[1].toIntOrNull() ?: defense
+        }
+
+        // 解析魔力 (Mana)
+        manaRegex.find(text)?.let {
+            currentMana = it.groupValues[1].toIntOrNull() ?: currentMana
+            maxMana = it.groupValues[2].toIntOrNull() ?: maxMana
         }
     }
 
     fun reset() {
         currentSecrets = 0
         maxSecrets = 0
+        currentHealth = 0
+        maxHealth = 0
+        defense = 0
+        currentMana = 0
+        maxMana = 0
     }
 }

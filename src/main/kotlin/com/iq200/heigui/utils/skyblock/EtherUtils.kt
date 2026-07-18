@@ -83,7 +83,7 @@ object EtherUtils {
 
     private val SPECIAL_BLOCKS: MutableSet<Class<out Block?>?> = HashSet<Class<out Block?>?>(
         listOf<Class<out Block?>?>(
-            LadderBlock::class.java, WaterlilyBlock::class.java
+            LadderBlock::class.java, LilyPadBlock::class.java
         )
     )
 
