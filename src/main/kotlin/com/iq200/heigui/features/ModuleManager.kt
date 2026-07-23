@@ -25,7 +25,6 @@ import com.iq200.heigui.features.impl.floor7.LBHelper
 import com.iq200.heigui.features.impl.floor7.SimonSays
 import com.iq200.heigui.features.impl.floor7.WitherAimBot
 import com.iq200.heigui.features.impl.mining.BigPane
-import com.iq200.heigui.features.impl.mining.GdragEggEsp
 import com.iq200.heigui.features.impl.mining.Mineshaft
 import com.iq200.heigui.features.impl.render.*
 import com.iq200.heigui.features.impl.skyblock.TeleportOptimization
@@ -63,7 +62,7 @@ object ModuleManager {
     private val HUD_LAYER: Identifier = fromNamespaceAndPath(Heigui.MOD_ID, "heigui_hud")
 
     init {
-        registerModules(config = ModuleConfig(file = File(Heigui.configFile, "heigui-config.json")),
+        registerModules(config = ModuleConfig(file = File(Heigui.configDir, "heigui-config.json")),
             // dungeon
             SecretAura, AutoClose, ZPDB, Triggerbot, AutoClick, SecretDone, SkipSecrets, SATpFix, AutoCroesus,
 
@@ -77,7 +76,7 @@ object ModuleManager {
             TeleportOptimization,
 
             // mining
-            BigPane, Mineshaft, GdragEggEsp
+            BigPane, Mineshaft
         )
 
         // hashmap, but would need to keep track when setting values change

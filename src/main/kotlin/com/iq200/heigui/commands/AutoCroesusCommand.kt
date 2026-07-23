@@ -36,8 +36,8 @@ fun LiteralNode.setupAutoCroesusCommand() {
                 runs { item: GreedyString ->
                     val internalId = item.toString().trim().replace(" ", "_").uppercase()
 
-                    if (AutoCroesus.ignoreList.add(internalId)) {
-                        Heigui.autoCroesusConfig.save()
+                    if (!AutoCroesus.ignoreList.contains(internalId)) {
+                        AutoCroesus.config.update { it.ignoreList.add(internalId) }
                         modMessage("§aSuccessfully added §e'$internalId' §ato the ignore list!")
                     } else {
                         modMessage("§c'$internalId' is already in the ignore list.")
@@ -51,11 +51,11 @@ fun LiteralNode.setupAutoCroesusCommand() {
                     val internalId = item.toString().trim().replace(" ", "_").uppercase()
 
                     if (internalId.isEmpty()) {
-                        modMessage("Please Enter Valid Item Namee")
+                        return@runs modMessage("Please Enter Valid Item Namee")
                     }
 
-                    if (AutoCroesus.ignoreList.remove(internalId)) {
-                        Heigui.autoCroesusConfig.save()
+                    if (AutoCroesus.ignoreList.contains(internalId)) {
+                        AutoCroesus.config.update { it.ignoreList.remove(internalId) }
                         modMessage("§aSuccessfully removed §e'$internalId' §afrom the ignore list!")
                     } else {
                         modMessage("§c'$internalId' was not found in the ignore list.")

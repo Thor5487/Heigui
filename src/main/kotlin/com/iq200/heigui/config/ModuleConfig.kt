@@ -19,7 +19,7 @@ class ModuleConfig internal constructor(file: File) {
     /**
      * 主設定檔的建構子。檔案會儲存在： config/heigui/{fileName}
      */
-    constructor(fileName: String) : this(File(Heigui.configFile, fileName))
+    constructor(fileName: String) : this(File(Heigui.configDir, fileName))
 
     // key 是小寫的模組名稱
     internal val modules: HashMap<String, Module> = hashMapOf()

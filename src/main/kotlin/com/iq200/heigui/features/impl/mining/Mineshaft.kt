@@ -56,22 +56,22 @@ object Mineshaft : Module (
         }
     }
 
-    private val timerHud by HUD("Mineshaft CD Hud", "Shows cooldown for mineshaft") {
+    private val timerHud by HUD("Mineshaft CD Hud", "Shows cooldown for mineshaft") { example ->
         val currentTime = System.currentTimeMillis()
         val timePassed = currentTime - triggerTime
         val timeLeft = cooldownDuration - timePassed
 
         if (!enabled) 0 to 0
 
-        if (it) {
-            textDim("§bMineshaft CD: §a30.0s", 0, 0, Colors.WHITE)
+        if (!example) {
+            return@HUD textDim("§bMineshaft CD: §a30.0s", 0, 0, Colors.WHITE)
         }
-        else if (timeLeft > 0) {
+        if (timeLeft > 0) {
             val secondsLeft = String.format("%.1f", timeLeft / 1000f)
-            textDim("§bMineshaft CD: §a${secondsLeft}s", 0, 0, Colors.WHITE)
+            return@HUD textDim("§bMineshaft CD: §a${secondsLeft}s", 0, 0, Colors.WHITE)
         }
-        else {
-            0 to 0
-        }
+
+        0 to 0
+
     }
 }

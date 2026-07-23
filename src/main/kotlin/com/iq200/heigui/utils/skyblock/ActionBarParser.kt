@@ -27,8 +27,8 @@ object ActionBarParser {
 
     private val secretRegex = Regex("""(\d+)/(\d+) Secrets""")
     private val healthRegex = Regex("""(\d+)/(\d+)\uE010""")
-    private val defenseRegex = Regex("""(\d+)\uE008 Defense""")
-    private val manaRegex = Regex("""(\d+)/(\d+)\uE003 Mana""")
+    private val defenseRegex = Regex("""(\d+)\uE008""")
+    private val manaRegex = Regex("""(\d+)/(\d+)\uE003""")
 
     init {
         on<WorldEvent.Load> {

@@ -1,9 +1,10 @@
 package com.iq200.heigui.features.impl.dungeon
 
-import com.iq200.heigui.Heigui
+import com.google.gson.reflect.TypeToken
 import com.iq200.heigui.clickgui.settings.Setting.Companion.withDependency
 import com.iq200.heigui.clickgui.settings.impl.BooleanSetting
 import com.iq200.heigui.clickgui.settings.impl.NumberSetting
+import com.iq200.heigui.config.JsonConfig
 import com.iq200.heigui.events.InputEvent
 import com.iq200.heigui.events.TickEvent
 import com.iq200.heigui.events.core.on
@@ -23,6 +24,10 @@ import net.minecraft.world.phys.EntityHitResult
 import net.minecraft.world.phys.HitResult
 
 
+data class AutoCroesusData(
+    var ignoreList: MutableSet<String> = mutableSetOf()
+)
+
 object AutoCroesus : Module(
     name = "Auto Croesus",
     description = "Automatically opens and claims rare or profitable loot from Croesus.",
@@ -32,8 +37,14 @@ object AutoCroesus : Module(
     private val useKismets by BooleanSetting("Kismet", true, "use kismets or not")
     private val targetProfit by NumberSetting("Target Profit", 5, 1, 100, 1, "rerolls the chest if current profit is below this value", "m").withDependency { useKismets }
 
+    val config = JsonConfig(
+        fileName = "autocroesus.json",
+        typeToken = object : TypeToken<AutoCroesusData>() {}.type,
+        defaultData = { AutoCroesusData() }
+    )
+
     val ignoreList: MutableSet<String>
-        get() = Heigui.autoCroesusConfig.ignoreList
+        get() = config.data.ignoreList
 
     var isWorking = false
         private set
@@ -54,6 +65,8 @@ object AutoCroesus : Module(
 
 
     init {
+        config.load()
+
         on<InputEvent> {
             if (!isWorking) return@on
             if (isPress) {

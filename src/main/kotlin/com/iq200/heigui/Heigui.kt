@@ -1,7 +1,6 @@
 package com.iq200.heigui
 
 import com.iq200.heigui.commands.mainCommand
-import com.iq200.heigui.config.AutoCroesusConfig
 import com.iq200.heigui.events.EventDispatcher
 import com.iq200.heigui.events.core.EventBus
 import com.iq200.heigui.features.ModuleManager
@@ -34,6 +33,8 @@ import org.apache.logging.log4j.Logger
 import java.io.File
 import kotlin.coroutines.EmptyCoroutineContext
 
+
+
 object Heigui : ClientModInitializer {
 
     val logger: Logger = LogManager.getLogger("Heigui")
@@ -41,7 +42,7 @@ object Heigui : ClientModInitializer {
     @JvmStatic
     val mc: Minecraft = Minecraft.getInstance()
 
-    val configFile: File = File(mc.gameDirectory, "config/heigui/").apply {
+    val configDir: File = File(mc.gameDirectory, "config/heigui/").apply {
         try {
             if (isFile) delete()
             if (!exists()) mkdirs()
@@ -51,7 +52,6 @@ object Heigui : ClientModInitializer {
         }
     }
 
-    val autoCroesusConfig = AutoCroesusConfig()
 
 
     const val MOD_ID = "heigui"
@@ -62,12 +62,9 @@ object Heigui : ClientModInitializer {
     override fun onInitializeClient() {
         logger.info("Heigui Mod is initializing... Version: $version")
 
-        autoCroesusConfig.load()
-
         ClientLifecycleEvents.CLIENT_STOPPING.register {
             logger.info("[Heigui] Saving configurations before shutdown...")
             ModuleManager.saveConfigurations() // 存 ModuleConfig
-            autoCroesusConfig.save()           // 存 AutoCroesusConfig
         }
 
         ClientCommandRegistrationCallback.EVENT.register { dispatcher, _ ->

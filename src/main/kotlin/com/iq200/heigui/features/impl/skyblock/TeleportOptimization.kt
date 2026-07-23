@@ -330,7 +330,7 @@ object TeleportOptimization : Module (
 
     override fun shouldOverrideHitPos(): Boolean {
         // 讓你在預判的相機位置可以左鍵/右鍵方塊與實體
-        return zpcmEnabled && renderPos != null && !shouldBlockZeroPingInteract()
+        return false
     }
 
     override fun shouldOverrideHitRot(): Boolean {
