@@ -63,7 +63,7 @@ object Mineshaft : Module (
 
         if (!enabled) 0 to 0
 
-        if (!example) {
+        if (example) {
             return@HUD textDim("§bMineshaft CD: §a30.0s", 0, 0, Colors.WHITE)
         }
         if (timeLeft > 0) {

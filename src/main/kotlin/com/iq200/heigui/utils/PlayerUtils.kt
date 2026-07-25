@@ -1,6 +1,10 @@
 package com.iq200.heigui.utils
 
 import com.iq200.heigui.Heigui.mc
+import com.iq200.heigui.events.RenderEvent
+import com.iq200.heigui.events.TickEvent
+import com.iq200.heigui.events.core.EventBus
+import com.iq200.heigui.events.core.on
 import com.iq200.mixin.accessors.KeyMappingAccessor
 import net.minecraft.client.KeyMapping
 import net.minecraft.client.resources.sounds.SimpleSoundInstance
@@ -10,10 +14,12 @@ import net.minecraft.network.protocol.game.ServerboundPlayerInputPacket
 import net.minecraft.resources.Identifier
 import net.minecraft.sounds.SoundEvent
 import net.minecraft.sounds.SoundEvents
+import net.minecraft.util.Mth
 import net.minecraft.util.StringUtil
 import net.minecraft.world.entity.player.Input
 import net.minecraft.world.item.Item
 import net.minecraft.world.phys.Vec3
+import kotlin.math.abs
 import kotlin.math.atan2
 import kotlin.math.sqrt
 
@@ -179,5 +185,99 @@ object PlayerUtils {
         val pitch = (-Math.toDegrees(atan2(dy, dist))).toFloat()
 
         return Pair(yaw, pitch)
+    }
+
+
+    // 用來記錄旋轉狀態的內部變數
+    var isRotating = false
+    private var targetYaw: Float? = null
+    private var targetPitch: Float? = null
+    private var rotationSpeed: Float = 0f // 這裡的單位現在是「度 / 秒」
+    private var lastRenderTime: Long = 0  // 用來計算 Delta Time
+
+    init {
+        EventBus.subscribe(this)
+
+        on<RenderEvent.Extract> {
+            if (isRotating && mc.player != null) {
+                handleRotationFrame()
+            }
+        }
+    }
+
+    /**
+     * 啟動平滑旋轉
+     * @param yaw 目標水平視角，傳入 null 表示保持當前 yaw
+     * @param pitch 目標俯仰視角，傳入 null 表示保持當前 pitch
+     * @param speed 旋轉速度 (每 tick 移動的度數)
+     */
+    fun smoothRotate(yaw: Float?, pitch: Float?, speed: Float) {
+        if (yaw == null && pitch == null) {
+            isRotating = false
+            return
+        }
+
+        targetYaw = yaw?.let { Mth.wrapDegrees(it) }
+        targetPitch = pitch?.coerceIn(-90f, 90f)
+        rotationSpeed = speed
+        lastRenderTime = System.currentTimeMillis()
+        isRotating = true
+    }
+
+    private fun handleRotationFrame() {
+        val player = mc.player ?: return
+
+        val currentTime = System.currentTimeMillis()
+        // 計算時間差經過了「多少個 Tick」 (1 Tick = 50 毫秒)
+        val dtTicks = (currentTime - lastRenderTime) / 50f
+        lastRenderTime = currentTime
+
+        // 防卡頓機制：限制單幀最多只補 1 個 Tick 的進度，避免卡頓後瞬間暴衝
+        val cappedDtTicks = dtTicks.coerceAtMost(1f)
+
+        // 當前幀允許轉動的最大角度 = (度 / Tick) * (經過了幾個 Tick)
+        val maxStep = rotationSpeed * cappedDtTicks
+
+        var yawDone = true
+        var pitchDone = true
+
+        targetYaw?.let { tYaw ->
+            val currentYaw = player.yRot
+            // Mth.approachDegrees 會自動走最短路徑逼近
+            val newYaw = Mth.approachDegrees(currentYaw, tYaw, maxStep)
+
+            player.yRot = newYaw
+            player.yRotO = newYaw
+
+            if (abs(Mth.wrapDegrees(tYaw - newYaw)) > 0.01f) {
+                yawDone = false
+            } else {
+                player.yRot = tYaw
+                player.yRotO = tYaw
+            }
+        }
+
+        targetPitch?.let { tPitch ->
+            val currentPitch = player.xRot
+            val newPitch = Mth.approach(currentPitch, tPitch, maxStep)
+
+            player.xRot = newPitch
+            player.xRotO = newPitch
+
+            if (abs(tPitch - newPitch) > 0.01f) {
+                pitchDone = false
+            } else {
+                player.xRot = tPitch
+                player.xRotO = tPitch
+            }
+        }
+
+        if (yawDone && pitchDone) {
+            isRotating = false
+        }
+    }
+
+    fun stopRotation() {
+        isRotating = false
     }
 }

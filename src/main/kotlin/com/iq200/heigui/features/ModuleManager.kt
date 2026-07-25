@@ -28,6 +28,7 @@ import com.iq200.heigui.features.impl.mining.BigPane
 import com.iq200.heigui.features.impl.mining.Mineshaft
 import com.iq200.heigui.features.impl.render.*
 import com.iq200.heigui.features.impl.skyblock.TeleportOptimization
+import com.iq200.heigui.features.impl.skyblock.Vampire
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry
 import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements
 import net.fabricmc.loader.api.FabricLoader
@@ -73,7 +74,7 @@ object ModuleManager {
             ClickGUIModule,
 
             // skyblock
-            TeleportOptimization,
+            TeleportOptimization, Vampire,
 
             // mining
             BigPane, Mineshaft
