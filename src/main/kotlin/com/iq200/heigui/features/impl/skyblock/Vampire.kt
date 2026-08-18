@@ -1,9 +1,11 @@
 package com.iq200.heigui.features.impl.skyblock
 
 import com.iq200.heigui.clickgui.settings.Setting.Companion.withDependency
+import com.iq200.heigui.clickgui.settings.Setting.Companion.withLock
 import com.iq200.heigui.clickgui.settings.impl.BooleanSetting
 import com.iq200.heigui.clickgui.settings.impl.ColorSetting
 import com.iq200.heigui.clickgui.settings.impl.NumberSetting
+import com.iq200.heigui.config.BuildConfig
 import com.iq200.heigui.events.HudRenderEvent
 import com.iq200.heigui.events.InputEvent
 import com.iq200.heigui.events.PacketEvent
@@ -53,18 +55,18 @@ object Vampire : Module(
     description = "Useful QOL for Vampire Slayer",
     category = Category.SKYBLOCK
 ), ClientRotationProvider {
-    private val autoImpel by BooleanSetting("Auto Impel", false, "Auto Do Impel")
+    private val autoImpel by BooleanSetting("Auto Impel", false, "Auto Do Impel").withLock { BuildConfig.isPrivate }
     private val rotationSpeed by NumberSetting("Speed", 40, 0, 100, 10,
-        unit = "°/t", desc = "Rotation Speed For Click Up/Down").withDependency { autoImpel }
+        unit = "°/t", desc = "Rotation Speed For Click Up/Down").withDependency { autoImpel }.withLock { BuildConfig.isPrivate }
     private  val IMPEL_TIMEOUT_MS by NumberSetting("Impel Timeout", 200, 100, 500, 50,
-        unit = "ms", desc = "Timeout For Impel To Be Considered Finished").withDependency { autoImpel }
-    private val autoIce by BooleanSetting("Auto Ice", false, "Auto use Holy Ice on Twinclaws")
-    private val autoMelon by BooleanSetting("Auto Melon", false, "Auto use Healing Melon on low HP")
+        unit = "ms", desc = "Timeout For Impel To Be Considered Finished").withDependency { autoImpel }.withLock { BuildConfig.isPrivate }
+    private val autoIce by BooleanSetting("Auto Ice", false, "Auto use Holy Ice on Twinclaws").withLock { BuildConfig.isPrivate }
+    private val autoMelon by BooleanSetting("Auto Melon", false, "Auto use Healing Melon on low HP").withLock { BuildConfig.isPrivate }
     private val melonHealth by NumberSetting("Melon Health", 12, 4, 26, 1,
-        desc = "Health threshold for Auto Melon").withDependency { autoMelon }
+        desc = "Health threshold for Auto Melon").withDependency { autoMelon }.withLock { BuildConfig.isPrivate }
     private val ichorEsp by BooleanSetting("Ichor ESP", false, "Highlight Blood Ichor")
     private val ichorTracer by BooleanSetting("Ichor Tracer", false, "Draw line to Blood Ichor").withDependency { ichorEsp }
-    private val autoKillerSpring by BooleanSetting("Auto Killer Spring", false, "Auto left/right click when aiming at Killer Spring")
+    private val autoKillerSpring by BooleanSetting("Auto Killer Spring", false, "Auto left/right click when aiming at Killer Spring").withLock { BuildConfig.isPrivate }
     private val killerSpringTracer by BooleanSetting("Killer Spring Tracer", false, "Draw a line to  Killer Spring")
     private val bossEsp by BooleanSetting("Boss ESP", false, "Highlight your boss with a solid box")
     private val bossArrow by BooleanSetting("Boss Arrow", false, "Draw an arrow pointing to the boss")
@@ -83,8 +85,8 @@ object Vampire : Module(
         0 to 0
     }
     private val maniaHighlight by BooleanSetting("Mania Highlight", false, "Useful when encountering a griefer or wanting to be a griefer")
-    private val autoTuba by BooleanSetting("Auto Tuba", false, "Auto Use Tuba at The End of Mania")
-    private val autoSteak by BooleanSetting("Auto Steak", false, "Auto swap to Steak when boss HP <= 20%")
+    private val autoTuba by BooleanSetting("Auto Tuba", false, "Auto Use Tuba at The End of Mania").withLock { BuildConfig.isPrivate }
+    private val autoSteak by BooleanSetting("Auto Steak", false, "Auto swap to Steak when boss HP <= 20%").withLock { BuildConfig.isPrivate }
 
     private const val BLOOD_ICHOR_TEXTURE = "ewogICJ0aW1lc3RhbXAiIDogMTYxNTg4ODAwMDU1MywKICAicHJvZmlsZUlkIiA6ICI5ZDIyZGRhOTVmZGI0MjFmOGZhNjAzNTI1YThkZmE4ZCIsCiAgInByb2ZpbGVOYW1lIiA6ICJTYWZlRHJpZnQ0OCIsCiAgInNpZ25hdHVyZVJlcXVpcmVkIiA6IHRydWUsCiAgInRleHR1cmVzIiA6IHsKICAgICJTS0lOIiA6IHsKICAgICAgInVybCIgOiAiaHR0cDovL3RleHR1cmVzLm1pbmVjcmFmdC5uZXQvdGV4dHVyZS9jMDM0MDkyM2E2ZGU0ODI1YTE3NjgxM2QxMzM1MDNlZmYxODZkYjA4OTZlMzJiNjcwNDkyOGMyYTJiZjY4NDIyIgogICAgfQogIH0KfQ=="
     private const val KILLER_SPRING_B64 = "ewogICJ0aW1lc3RhbXAiIDogMTcxOTU5NDQxNjY5NywKICAicHJvZmlsZUlkIiA6ICJjY2MxNGM2ZDUwMDE0MjBmYmMxYjkyMTM2Y2JmOWU4MSIsCiAgInByb2ZpbGVOYW1lIiA6ICJXaGlybGluZ0F0b2w5NDQiLAogICJzaWduYXR1cmVSZXF1aXJlZCIgOiB0cnVlLAogICJ0ZXh0dXJlcyIgOiB7CiAgICAiU0tJTiIgOiB7CiAgICAgICJ1cmwiIDogImh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNzdmN2E3YmM4YWM4NmYyM2NhN2JmOThhZmViNzY5NjAyMjdlMTgzMmZlMjA5YTMwMjZmNmNlYjhiZGU3NGY1NCIsCiAgICAgICJtZXRhZGF0YSIgOiB7CiAgICAgICAgIm1vZGVsIiA6ICJzbGltIgogICAgICB9CiAgICB9CiAgfQp9"
