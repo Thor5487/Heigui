@@ -4,6 +4,7 @@ import com.iq200.heigui.Heigui.mc
 import com.iq200.heigui.utils.Color
 import com.iq200.heigui.utils.Colors
 import net.minecraft.client.gui.GuiGraphicsExtractor
+import net.minecraft.network.chat.Component
 import net.minecraft.util.FormattedCharSequence
 import org.joml.Matrix3x2f
 import kotlin.math.atan2
@@ -23,6 +24,17 @@ fun GuiGraphicsExtractor.textDim(text: String, x: Int, y: Int, color: Color = Co
 fun GuiGraphicsExtractor.text(text: FormattedCharSequence, x: Int, y: Int, color: Color = Colors.WHITE, shadow: Boolean = true) {
     text(mc.font, text, x, y, color.rgba, shadow)
 }
+
+fun GuiGraphicsExtractor.text(text: Component, x: Int, y: Int, color: Color = Colors.WHITE, shadow: Boolean = true) {
+    text(mc.font, text.visualOrderText, x, y, color.rgba, shadow)
+}
+
+// 讓 textDim() 同樣支援 Component 物件（如果需要的話）
+fun GuiGraphicsExtractor.textDim(text: Component, x: Int, y: Int, color: Color = Colors.WHITE, shadow: Boolean = true): Pair<Int, Int> {
+    text(text, x, y, color, shadow)
+    return mc.font.width(text) to mc.font.lineHeight
+}
+
 
 fun getStringWidth(text: String): Int = mc.font.width(text)
 

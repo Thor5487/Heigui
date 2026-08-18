@@ -16,6 +16,6 @@ public abstract class MixinGui {
     // 如果編譯時報錯找不到 extractRenderState，請將 method 名稱改為 "render"
     @Inject(method = "extractRenderState", at = @At("RETURN"))
     private void onRenderHud(GuiGraphicsExtractor graphics, DeltaTracker deltaTracker, CallbackInfo ci) {
-        new HudRenderEvent(graphics).postAndCatch();
+        new HudRenderEvent(graphics, deltaTracker).postAndCatch();
     }
 }

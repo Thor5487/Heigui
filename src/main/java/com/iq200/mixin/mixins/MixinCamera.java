@@ -48,10 +48,6 @@ public abstract class MixinCamera {
     private void setCameraPos(float f, CallbackInfo ci) {
         Vec3 newPos = CameraHandler.getPos(new Vec3(this.position.x, this.position.y, this.position.z), f, this.eyeHeightOld, this.eyeHeight);
 
-        // 加上這行檢查是否跟原本的 position 不一樣
-        if (newPos.distanceTo(this.position) > 0.1) {
-            System.out.println("[ZPCM-4] MixinCamera 強制改變了相機座標！");
-        }
         this.setPosition(newPos);
     }
 }

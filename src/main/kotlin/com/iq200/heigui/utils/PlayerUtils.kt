@@ -1,7 +1,6 @@
 package com.iq200.heigui.utils
 
 import com.iq200.heigui.Heigui.mc
-import com.iq200.heigui.events.RenderEvent
 import com.iq200.heigui.events.TickEvent
 import com.iq200.heigui.events.core.EventBus
 import com.iq200.heigui.events.core.on
@@ -189,95 +188,156 @@ object PlayerUtils {
 
 
     // 用來記錄旋轉狀態的內部變數
-    var isRotating = false
+    enum class RotationMode {
+        INACTIVE,
+        NORMAL, // 正常模式，直接修改 player 視角
+        BODY_ONLY // 只更新內部變數，等待 Mixin 注入
+    }
+
+    private var rotationMode = RotationMode.INACTIVE
+    var isRotating: Boolean
+        get() = rotationMode != RotationMode.INACTIVE
+        private set(value) {
+            if (!value) rotationMode = RotationMode.INACTIVE
+        }
+
     private var targetYaw: Float? = null
     private var targetPitch: Float? = null
-    private var rotationSpeed: Float = 0f // 這裡的單位現在是「度 / 秒」
-    private var lastRenderTime: Long = 0  // 用來計算 Delta Time
+    private var rotationSpeed: Float = 0f
+    private var isFirstTick = true
 
+    // 內部儲存的身體邏輯視角
+    private var bodyYaw: Float = 0f
+    private var bodyPitch: Float = 0f
+    // 新增：一個可以提供動態目標的函式
+    private var targetProvider: (() -> Pair<Float?, Float?>)? = null
+
+
+    /**
+     * 啟動平滑旋轉
+     * @param bodyOnly 如果為 true，則啟用安全模式，避免與渲染衝突
+     */
+    fun smoothRotate(
+        yaw: Float?,
+        pitch: Float?,
+        speed: Float,
+        bodyOnly: Boolean = false,
+        targetProvider: (() -> Pair<Float?, Float?>)? = null
+    ) {
+        val player = mc.player ?: return
+        if (yaw == null && pitch == null && targetProvider == null) {
+            stopRotation()
+            return
+        }
+
+        // 儲存目標提供者和旋轉速度
+        this.targetProvider = targetProvider
+        this.rotationSpeed = speed
+
+        // 如果不是動態目標，才設定靜態目標
+        if (targetProvider == null) {
+            this.targetYaw = yaw?.let { Mth.wrapDegrees(it) }
+            this.targetPitch = pitch?.coerceIn(-90f, 90f)
+        }
+        else {
+            // 【重要修正】：如果使用了動態目標 (targetProvider)，
+            // 必須把殘留的靜態目標清空，確保 Tick 1 能正確與真實視角同步！
+            this.targetYaw = null
+            this.targetPitch = null
+        }
+
+        // 設定旋轉模式
+        rotationMode = if (bodyOnly) RotationMode.BODY_ONLY else RotationMode.NORMAL
+
+        this.isFirstTick = true
+
+        // 初始化時，從當前玩家視角開始
+        bodyYaw = player.yRot
+        bodyPitch = player.xRot
+    }
+
+    fun stopRotation() {
+        rotationMode = RotationMode.INACTIVE
+        targetProvider = null
+    }
+
+    // 這個方法將由 MixinLocalPlayer 在每個 Tick 的最開始呼叫
+    fun onAiStep() {
+        if (rotationMode != RotationMode.BODY_ONLY) return
+        val player = mc.player ?: return
+
+        handleRotationLogic()
+
+        // 在最早的時機更新玩家的邏輯視角
+        if (targetYaw != null) {
+            player.yRot = bodyYaw
+        } else {
+            // 如果沒指定目標，把內部的 bodyYaw 與真實視角同步
+            bodyYaw = player.yRot
+        }
+
+        // 【修正點】：同理，處理 pitch
+        if (targetPitch != null) {
+            player.xRot = bodyPitch
+        } else {
+            bodyPitch = player.xRot
+        }
+    }
+
+    // 在 on<TickEvent.Start> 中，我們只處理 NORMAL 模式
     init {
         EventBus.subscribe(this)
+        on<TickEvent.Start> {
+            if (rotationMode != RotationMode.NORMAL) return@on
+            val player = mc.player ?: return@on
 
-        on<RenderEvent.Extract> {
-            if (isRotating && mc.player != null) {
-                handleRotationFrame()
+            handleRotationLogic()
+
+            // NORMAL 模式下一樣的判斷
+            if (targetYaw != null) {
+                player.yRot = bodyYaw
+            } else {
+                bodyYaw = player.yRot
+            }
+
+            if (targetPitch != null) {
+                player.xRot = bodyPitch
+            } else {
+                bodyPitch = player.xRot
             }
         }
     }
 
-    /**
-     * 啟動平滑旋轉
-     * @param yaw 目標水平視角，傳入 null 表示保持當前 yaw
-     * @param pitch 目標俯仰視角，傳入 null 表示保持當前 pitch
-     * @param speed 旋轉速度 (每 tick 移動的度數)
-     */
-    fun smoothRotate(yaw: Float?, pitch: Float?, speed: Float) {
-        if (yaw == null && pitch == null) {
-            isRotating = false
-            return
+    private fun handleRotationLogic() {
+        if (isFirstTick) {
+            isFirstTick = false // 消耗掉旗標
+            return              // 直接返回，不做任何旋轉計算
         }
 
-        targetYaw = yaw?.let { Mth.wrapDegrees(it) }
-        targetPitch = pitch?.coerceIn(-90f, 90f)
-        rotationSpeed = speed
-        lastRenderTime = System.currentTimeMillis()
-        isRotating = true
-    }
+        targetProvider?.let {
+            val (dynamicYaw, dynamicPitch) = it()
+            targetYaw = dynamicYaw
+            targetPitch = dynamicPitch
+        }
 
-    private fun handleRotationFrame() {
-        val player = mc.player ?: return
 
-        val currentTime = System.currentTimeMillis()
-        // 計算時間差經過了「多少個 Tick」 (1 Tick = 50 毫秒)
-        val dtTicks = (currentTime - lastRenderTime) / 50f
-        lastRenderTime = currentTime
-
-        // 防卡頓機制：限制單幀最多只補 1 個 Tick 的進度，避免卡頓後瞬間暴衝
-        val cappedDtTicks = dtTicks.coerceAtMost(1f)
-
-        // 當前幀允許轉動的最大角度 = (度 / Tick) * (經過了幾個 Tick)
-        val maxStep = rotationSpeed * cappedDtTicks
-
+        val maxStep = rotationSpeed
         var yawDone = true
         var pitchDone = true
 
         targetYaw?.let { tYaw ->
-            val currentYaw = player.yRot
-            // Mth.approachDegrees 會自動走最短路徑逼近
-            val newYaw = Mth.approachDegrees(currentYaw, tYaw, maxStep)
-
-            player.yRot = newYaw
-            player.yRotO = newYaw
-
-            if (abs(Mth.wrapDegrees(tYaw - newYaw)) > 0.01f) {
-                yawDone = false
-            } else {
-                player.yRot = tYaw
-                player.yRotO = tYaw
-            }
+            bodyYaw = Mth.approachDegrees(bodyYaw, tYaw, maxStep)
+            if (abs(Mth.wrapDegrees(tYaw - bodyYaw)) > 0.01f) yawDone = false
         }
 
         targetPitch?.let { tPitch ->
-            val currentPitch = player.xRot
-            val newPitch = Mth.approach(currentPitch, tPitch, maxStep)
-
-            player.xRot = newPitch
-            player.xRotO = newPitch
-
-            if (abs(tPitch - newPitch) > 0.01f) {
-                pitchDone = false
-            } else {
-                player.xRot = tPitch
-                player.xRotO = tPitch
-            }
+            bodyPitch = Mth.approach(bodyPitch, tPitch, maxStep)
+            if (abs(tPitch - bodyPitch) > 0.01f) pitchDone = false
         }
 
         if (yawDone && pitchDone) {
-            isRotating = false
+            stopRotation()
         }
     }
 
-    fun stopRotation() {
-        isRotating = false
-    }
 }

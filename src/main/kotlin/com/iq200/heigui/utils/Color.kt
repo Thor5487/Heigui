@@ -19,6 +19,8 @@ class Color(hue: Float, saturation: Float, brightness: Float, alpha: Float = 1f)
         hex.substring(6, 8).toInt(16) / 255f
     )
 
+    constructor(r: Int, g: Int, b: Int, a: Int) : this(r, g, b, a / 255f)
+
     var hue = hue
         set(value) {
             field = value

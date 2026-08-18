@@ -50,7 +50,7 @@ interface CameraRotationProvider : CameraProvider {
 interface ClientRotationProvider {
     fun isClientRotationActive(): Boolean
     fun allowClientKeyInputs(): Boolean
-
+    fun shouldAdjustMovement(): Boolean = true
     fun isDesyncPaused(): Boolean = false
     fun onDesyncDisable() {}
     fun onDesyncPause() {}

@@ -10,7 +10,6 @@ import com.iq200.heigui.clickgui.settings.impl.KeybindSetting
 import com.iq200.heigui.config.ModuleConfig
 import com.iq200.heigui.events.InputEvent
 import com.iq200.heigui.events.core.on
-import com.iq200.heigui.features.ModuleManager.configs
 import com.iq200.heigui.features.impl.dungeon.AutoClick
 import com.iq200.heigui.features.impl.dungeon.AutoClose
 import com.iq200.heigui.features.impl.dungeon.AutoCroesus
@@ -25,10 +24,14 @@ import com.iq200.heigui.features.impl.floor7.LBHelper
 import com.iq200.heigui.features.impl.floor7.SimonSays
 import com.iq200.heigui.features.impl.floor7.WitherAimBot
 import com.iq200.heigui.features.impl.mining.BigPane
+import com.iq200.heigui.features.impl.mining.MSB
 import com.iq200.heigui.features.impl.mining.Mineshaft
 import com.iq200.heigui.features.impl.render.*
+import com.iq200.heigui.features.impl.skyblock.ManiaHighlight
+import com.iq200.heigui.features.impl.skyblock.SafariEsp
 import com.iq200.heigui.features.impl.skyblock.TeleportOptimization
 import com.iq200.heigui.features.impl.skyblock.Vampire
+import com.iq200.heigui.features.impl.skyblock.VampireTracker
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry
 import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements
 import net.fabricmc.loader.api.FabricLoader
@@ -74,10 +77,10 @@ object ModuleManager {
             ClickGUIModule,
 
             // skyblock
-            TeleportOptimization, Vampire,
+            TeleportOptimization, ManiaHighlight, VampireTracker, SafariEsp,
 
             // mining
-            BigPane, Mineshaft
+            BigPane, Mineshaft, MSB
         )
 
         // hashmap, but would need to keep track when setting values change

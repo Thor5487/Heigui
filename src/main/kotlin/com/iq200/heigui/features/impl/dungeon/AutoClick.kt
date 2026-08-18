@@ -10,6 +10,7 @@ import com.iq200.heigui.events.WorldEvent
 import com.iq200.heigui.events.core.on
 import com.iq200.heigui.features.Category
 import com.iq200.heigui.features.Module
+import com.iq200.heigui.features.impl.skyblock.Vampire
 import com.iq200.heigui.utils.PlayerUtils
 import com.iq200.heigui.utils.itemUUID
 import com.iq200.heigui.utils.modMessage
@@ -41,6 +42,8 @@ object AutoClick : Module (
     )
 
     init {
+        config.load()
+
         on<WorldEvent.Load> {
             isHolding = false
         }
@@ -72,6 +75,10 @@ object AutoClick : Module (
             }
 
             if (mc.screen != null) return@on
+
+            if (Vampire.enabled && Vampire.isHandlingKillerSpring) {
+                return@on
+            }
 
             if (isHolding) {
                 val now = System.currentTimeMillis()

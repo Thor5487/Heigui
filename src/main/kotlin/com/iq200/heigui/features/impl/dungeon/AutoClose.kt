@@ -22,7 +22,7 @@ object AutoClose : Module (
             if (packet is ClientboundOpenScreenPacket) {
                 val menuTitle = packet.title.string.lowercase()
 
-                if (!menuTitle.contains("chest")) return@on
+                if (menuTitle != "chest") return@on
 
                 val id = packet.containerId
 

@@ -37,7 +37,7 @@ fun LiteralNode.setupAutoCroesusCommand() {
                     val internalId = item.toString().trim().replace(" ", "_").uppercase()
 
                     if (!AutoCroesus.ignoreList.contains(internalId)) {
-                        AutoCroesus.config.update { it.ignoreList.add(internalId) }
+                        AutoCroesus.ignoreConfig.update { it.ignoreList.add(internalId) }
                         modMessage("§aSuccessfully added §e'$internalId' §ato the ignore list!")
                     } else {
                         modMessage("§c'$internalId' is already in the ignore list.")
@@ -55,7 +55,7 @@ fun LiteralNode.setupAutoCroesusCommand() {
                     }
 
                     if (AutoCroesus.ignoreList.contains(internalId)) {
-                        AutoCroesus.config.update { it.ignoreList.remove(internalId) }
+                        AutoCroesus.ignoreConfig.update { it.ignoreList.remove(internalId) }
                         modMessage("§aSuccessfully removed §e'$internalId' §afrom the ignore list!")
                     } else {
                         modMessage("§c'$internalId' was not found in the ignore list.")
@@ -75,6 +75,52 @@ fun LiteralNode.setupAutoCroesusCommand() {
                         }
                     }
                 }
+            }
+        }
+
+        literal("loot") {
+            literal("reset") {
+                runs {
+                    modMessage("§c[AutoCroesus] Usage: /hg ac loot reset <floor> (e.g. m6, f7)")
+                }
+
+                runs { floor: String ->
+                    val targetFloor = floor.lowercase().trim()
+                    val floorRegex = Regex("^[fm][1-7]$")
+
+                    if (!floorRegex.matches(targetFloor)) {
+                        modMessage("§c[AutoCroesus] Usage: /hg ac loot reset <floor> (e.g. m6, f7)")
+                        return@runs
+                    }
+
+                    // 呼叫我們剛剛在 AutoCroesus 寫好的重置函式
+                    AutoCroesus.resetFloorData(targetFloor)
+                }
+            }
+
+            runs {
+                modMessage("§c[AutoCroesus] Usage: /hg ac loot <floor> (e.g. m6, f7)")
+            }
+
+            runs { floor: String ->
+                val targetFloor = floor.lowercase().trim()
+                val floorRegex = Regex("^[fm][1-7]$")
+
+                // 檢查格式是否正確
+                if (!floorRegex.matches(targetFloor)) {
+                    modMessage("§c[AutoCroesus] Usage: /hg ac loot <floor> (e.g. m6, f7)")
+                    return@runs
+                }
+
+                // 檢查該樓層是否有紀錄
+                val floorData = AutoCroesus.trackerConfig.data.floors[targetFloor]
+                if (floorData == null || floorData.runsOpened == 0) {
+                    modMessage("§c[AutoCroesus] Error: No data found for floor '§e${targetFloor.uppercase()}§c'")
+                    return@runs
+                }
+
+                // 正常執行顯示
+                AutoCroesus.displayHoverLootTracker(targetFloor)
             }
         }
     }

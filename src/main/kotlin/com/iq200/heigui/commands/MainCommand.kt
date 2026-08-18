@@ -14,5 +14,4 @@ val mainCommand = Commodore("heigui", "hg") {
 
     setupAutoCroesusCommand()
     setupCustomAC()
-    setupRotationCommand()
 }

@@ -28,7 +28,6 @@ object AutoCrit : Module (
 
     private enum class State {
         IDLE,
-        GFS,
         SHOOT,
         SWAP_SWORD,
         OPEN_WORDRABE,
@@ -46,9 +45,10 @@ object AutoCrit : Module (
             if (state != State.IDLE) return@on
             if (mc.screen != null) return@on
 
-            if (key.value != InputConstants.MOUSE_BUTTON_LEFT || !isHoldingSulphurBow()) return@on
+            if (key.value != InputConstants.MOUSE_BUTTON_LEFT || !isHoldingDeathBow()) return@on
 
-            state = State.GFS
+            state = State.SHOOT
+            KeyMapping.set(mc.options.keyUse.defaultKey, true)
             cancel()
         }
 
@@ -56,25 +56,11 @@ object AutoCrit : Module (
             val player = mc.player ?: return@on
 
             when (state) {
-                State.GFS -> {
-                    sendCommand("gfs sulphur")
-                    KeyMapping.set(mc.options.keyUse.defaultKey, true)
-                    state = State.SHOOT
-                }
-
                 State.SHOOT -> {
                     val heldTicks = player.useItem.getUseDuration(player) - player.useItemRemainingTicks
                     if (heldTicks < 20) return@on
 
                     KeyMapping.set(mc.options.keyUse.defaultKey, false)
-                    val slot = (0..8).firstOrNull { index -> player.inventory.getItem(index).itemId == "DEATH_BOW" }
-
-                    if (slot == null) {
-                        reset()
-                        return@on
-                    }
-
-                    player.inventory.selectedSlot = slot
 
                     state = State.SWAP_SWORD
                 }
@@ -91,7 +77,7 @@ object AutoCrit : Module (
                 }
 
                 State.OPEN_WORDRABE -> {
-                    sendCommand("wd")
+                    sendCommand("loadout")
                     state = State.SWAP_ARMOR
                 }
 
@@ -102,9 +88,16 @@ object AutoCrit : Module (
                     }
 
                     val screen = mc.screen as? AbstractContainerScreen<*> ?: return@on
-                    if (!screen.title.string.contains("Wardrobe")) return@on
+                    if (!screen.title.string.contains("Loadouts")) return@on
 
-                    mc.gameMode?.handleContainerInput(screen.menu.containerId, (35 + slotIndex).toInt(), 0,
+                    val zeroBasedIndex = slotIndex - 1
+
+                    val row = zeroBasedIndex / 3 + 1
+                    val col = zeroBasedIndex % 3
+
+                    val targetSlot = (row * 9) + col + 5
+
+                    mc.gameMode?.handleContainerInput(screen.menu.containerId, targetSlot.toInt(), 0,
                         ContainerInput.PICKUP, player)
                     reset()
                 }
@@ -119,11 +112,11 @@ object AutoCrit : Module (
         KeyMapping.set(mc.options.keyUse.defaultKey, false)
     }
 
-    private fun isHoldingSulphurBow() : Boolean {
+    private fun isHoldingDeathBow() : Boolean {
         val player = mc.player ?: return false
 
         val itemName = player.mainHandItem.hoverName.string.lowercase()
 
-        return itemName.contains("sulphur bow")
+        return itemName.contains("death bow")
     }
 }

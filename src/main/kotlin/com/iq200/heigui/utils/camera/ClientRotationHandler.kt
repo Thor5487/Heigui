@@ -28,7 +28,6 @@ object ClientRotationHandler : CameraRotationProvider {
         private set
     private var lastPausedState = false
 
-
     fun setYaw(yaw: Float) {
         clientYaw = yaw
     }
@@ -49,7 +48,6 @@ object ClientRotationHandler : CameraRotationProvider {
         on<CameraSetupEvent> {
             if (mc.player == null) return@on
 
-            // 移除不活躍的 provider 並觸發 Disable 事件
             providers.removeAll {
                 val inactive = !it.isClientRotationActive()
                 if (inactive) it.onDesyncDisable()
@@ -69,14 +67,12 @@ object ClientRotationHandler : CameraRotationProvider {
             }
 
             if (isNotPaused && !desynced) {
-                // 剛啟動脫鉤，記錄目前的真實視角
                 if (clientYaw.isNaN()) clientYaw = mc.player!!.yRot
                 if (clientPitch.isNaN()) clientPitch = mc.player!!.xRot
                 CameraHandler.registerProvider(this@ClientRotationHandler)
             }
 
             if (!isNotPaused && desynced) {
-                // 關閉脫鉤，將視角平滑還原
                 mc.player!!.yRotO = clientYaw
                 mc.player!!.xRotO = clientPitch
                 clientYaw = Float.NaN
@@ -87,20 +83,27 @@ object ClientRotationHandler : CameraRotationProvider {
 
         on<TurnPlayerEvent> {
             if (!isActive()) return@on
-
             handleTurnPlayer(d, dx, dy, smoothTurnX!!, smoothTurnY!!)
             cancel()
         }
     }
 
-    // 這個是給 Mixin 攔截玩家移動輸入用的 (解決按 W 卻往旁邊走的問題)
     @JvmStatic
     fun adjustInputsForRotation(inputs: Input): Input {
+        // 1. 檢查是否要完全禁用鍵盤
         if (!allowInputs) return Input(false, false, false, false, false, false, false)
+
+        // 2. 檢查是否有任何 Provider 不希望我們調整移動方向
+        val shouldAdjust = providers.all { it.shouldAdjustMovement() }
+        if (!shouldAdjust) {
+            // 如果不調整，就直接回傳原始的輸入，這樣移動就會跟隨本體
+            return inputs
+        }
+
+        // 3. 如果以上都通過了，才執行原本的視角跟隨移動邏輯
         val player = mc.player ?: return inputs
         if (!desynced || clientYaw.isNaN()) return inputs
 
-        // 計算原始的移動向量 (前/後 = x, 左/右 = y)
         val moveVector: Vec2 = RotationUtils.constructMovementVector(inputs)
         if (moveVector.x == 0f && moveVector.y == 0f) {
             forwardRemainder = 0f
@@ -109,11 +112,9 @@ object ClientRotationHandler : CameraRotationProvider {
             return inputs
         }
 
-
         val currentDeltaYaw = clientYaw - player.yRot
         val deltaYaw = currentDeltaYaw - lastRotationDeltaYaw
         if (deltaYaw != 0f) {
-            // Rotate the remainders to the new yaw
             val newRemainder: Vec2 = RotationUtils.rotateVector(forwardRemainder, strafeRemainder, deltaYaw)
             forwardRemainder = newRemainder.x
             strafeRemainder = newRemainder.y
@@ -144,14 +145,12 @@ object ClientRotationHandler : CameraRotationProvider {
         )
     }
 
-    // 處理滑鼠滑動時的視角更新
     fun handleTurnPlayer(d: Double, dx: Double, dy: Double, smoothTurnX: SmoothDouble, smoothTurnY: SmoothDouble) {
         val player = mc.player ?: return
         val options = mc.options
         val e = options.sensitivity().get() * 0.6 + 0.2
         val f = e * e * e
         val g = f * 8.0
-
         val j: Double
         val k: Double
 
@@ -169,16 +168,13 @@ object ClientRotationHandler : CameraRotationProvider {
             j = dx * g
             k = dy * g
         }
-
         turn(if (options.invertMouseX().get()) -j else j, if (options.invertMouseY().get()) -k else k)
     }
 
     fun turn(d: Double, e: Double) {
         if (clientYaw.isNaN() || clientPitch.isNaN()) return
-
         val f = (e * 0.15).toFloat()
         val g = (d * 0.15).toFloat()
-
         setPitch(Mth.clamp(clientPitch + f, -90.0f, 90.0f))
         setYaw(clientYaw + g)
     }
@@ -190,10 +186,20 @@ object ClientRotationHandler : CameraRotationProvider {
         player.xRot = clientPitch
     }
 
-    // --- 實作 CameraRotationProvider 介面 ---
     override fun shouldOverrideYaw() = desynced
     override fun shouldOverridePitch() = desynced
     override fun getYaw() = clientYaw
     override fun getPitch() = clientPitch
     override fun shouldBlockMouseMovement() = false
+
+    fun reset() {
+        clientYaw = Float.NaN
+        clientPitch = Float.NaN
+        desynced = false
+        lastRotationDeltaYaw = 0f
+        forwardRemainder = 0f
+        strafeRemainder = 0f
+        lastPausedState = false
+        // 我們不需要手動清除 providers，因為 CameraHandler 會自動處理
+    }
 }

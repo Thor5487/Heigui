@@ -7,6 +7,7 @@ import com.iq200.heigui.utils.skyblock.dungeon.tiles.Room
 import com.mojang.blaze3d.platform.InputConstants
 import net.fabricmc.fabric.api.client.rendering.v1.level.AbstractLevelRenderContext
 import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext
+import net.minecraft.client.DeltaTracker
 import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.client.multiplayer.ClientLevel
 import net.minecraft.core.BlockPos
@@ -93,4 +94,4 @@ abstract class PlayerInputEvent : CancellableEvent() {
     ) : PlayerInputEvent()
 }
 
-class HudRenderEvent(val graphics: GuiGraphicsExtractor) : Event
+class HudRenderEvent(val graphics: GuiGraphicsExtractor, val dt: DeltaTracker) : Event

@@ -2,11 +2,13 @@ package com.iq200.heigui.features.impl.dungeon
 
 import com.iq200.heigui.clickgui.settings.impl.BooleanSetting
 import com.iq200.heigui.clickgui.settings.impl.NumberSetting
+import com.iq200.heigui.events.PlayerInputEvent
 import com.iq200.heigui.events.RenderEvent
 import com.iq200.heigui.events.WorldEvent
 import com.iq200.heigui.events.core.on
 import com.iq200.heigui.features.Category
 import com.iq200.heigui.features.Module
+import com.iq200.heigui.utils.modMessage
 import com.iq200.heigui.utils.skyblock.dungeon.DungeonUtils
 import com.iq200.heigui.utils.skyblock.dungeon.ScanUtils
 import net.minecraft.core.BlockPos
@@ -80,7 +82,7 @@ object Triggerbot : Module (
         }
     }
 
-    private val SECRET_SKULL_UUID = UUID.fromString("e0f3e929-869e-3dca-9504-54c666ee6f23")
+    private val SECRET_SKULL_UUID = UUID.fromString("2865274b-3097-394e-8149-ec629c72d850")
 
     fun handleTriggerBot(hitResult: BlockHitResult) {
         val pos = hitResult.blockPos

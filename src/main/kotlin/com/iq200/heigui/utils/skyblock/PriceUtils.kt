@@ -18,8 +18,8 @@ object PriceUtils {
     fun fetchPrices(notifyPlayer: Boolean = false, onComplete: ((Boolean) -> Unit)? = null) {
         Heigui.scope.launch(Dispatchers.IO) {
             try {
-                if (notifyPlayer) modMessage("§eFetching latest prices from ODTheKing API...")
-                Heigui.logger.info("[PriceUtils] Fetching prices from ODTheKing API...")
+                if (notifyPlayer) modMessage("§eFetching latest prices from Odin API...")
+                Heigui.logger.info("[PriceUtils] Fetching prices from Odin API...")
 
                 val jsonString = URI.create("https://api.odtheking.com/lb/averages/7day").toURL().readText()
                 val jsonObject = JsonParser.parseString(jsonString).asJsonObject
