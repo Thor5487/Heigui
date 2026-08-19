@@ -53,6 +53,5 @@ object LocationUtils {
     }
 
     fun isCurrentArea(vararg areas: Island): Boolean =
-        if (currentArea == Island.SinglePlayer) true
-        else areas.any { currentArea == it }
+        currentArea == Island.SinglePlayer || areas.any { currentArea == it }
 }

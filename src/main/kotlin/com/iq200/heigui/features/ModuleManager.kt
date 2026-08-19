@@ -10,6 +10,7 @@ import com.iq200.heigui.clickgui.settings.impl.KeybindSetting
 import com.iq200.heigui.config.ModuleConfig
 import com.iq200.heigui.events.InputEvent
 import com.iq200.heigui.events.core.on
+import com.iq200.heigui.features.impl.dev.DevMode
 import com.iq200.heigui.features.impl.dungeon.AutoClick
 import com.iq200.heigui.features.impl.dungeon.AutoClose
 import com.iq200.heigui.features.impl.dungeon.AutoCroesus
@@ -24,6 +25,7 @@ import com.iq200.heigui.features.impl.floor7.LBHelper
 import com.iq200.heigui.features.impl.floor7.SimonSays
 import com.iq200.heigui.features.impl.floor7.WitherAimBot
 import com.iq200.heigui.features.impl.mining.BigPane
+import com.iq200.heigui.features.impl.mining.GDragonEggScanner
 import com.iq200.heigui.features.impl.mining.MSB
 import com.iq200.heigui.features.impl.mining.Mineshaft
 import com.iq200.heigui.features.impl.render.*
@@ -79,7 +81,10 @@ object ModuleManager {
             TeleportOptimization, Vampire, VampireTracker, SafariEsp,
 
             // mining
-            BigPane, Mineshaft, MSB
+            BigPane, Mineshaft, MSB, GDragonEggScanner,
+
+            // dev
+            DevMode
         )
 
         // hashmap, but would need to keep track when setting values change

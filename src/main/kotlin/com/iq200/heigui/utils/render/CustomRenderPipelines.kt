@@ -42,4 +42,16 @@ object CustomRenderPipelines {
             .withColorTargetState(ColorTargetState(BlendFunction.TRANSLUCENT))
             .build()
     )
+
+    val BEACON_ESP: RenderPipeline = RenderPipelines.register(
+        RenderPipeline.builder(RenderPipelines.MATRICES_FOG_SNIPPET)
+            .withVertexShader("core/rendertype_beacon_beam")
+            .withFragmentShader("core/rendertype_beacon_beam")
+            .withSampler("Sampler0")
+            .withVertexFormat(DefaultVertexFormat.BLOCK, VertexFormat.Mode.QUADS)
+            .withColorTargetState(ColorTargetState(BlendFunction.TRANSLUCENT)) // 必備：貼圖半透明不變黑
+            .withDepthStencilState(Optional.empty()) // 穿牆透視
+            .withLocation("heigui/beacon_esp")
+            .build()
+    )
 }

@@ -4,7 +4,6 @@
   "package": "com.iq200.mixin",
   "compatibilityLevel": "JAVA_25",
   "client": [
-    "accessors.BeaconBeamAccessor",
     "accessors.KeyMappingAccessor",
     "accessors.LocalPlayerAccessor",
     "mixins.MixinAbstractContainerScreen",

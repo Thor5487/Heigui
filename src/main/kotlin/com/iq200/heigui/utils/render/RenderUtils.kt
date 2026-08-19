@@ -2,14 +2,12 @@ package com.iq200.heigui.utils.render
 
 import com.mojang.blaze3d.vertex.PoseStack
 import com.mojang.blaze3d.vertex.VertexConsumer
-import com.iq200.mixin.accessors.BeaconBeamAccessor
 import com.iq200.heigui.Heigui.mc
 import com.iq200.heigui.events.RenderEvent
 import com.iq200.heigui.events.core.on
 import com.iq200.heigui.utils.Color
 import com.iq200.heigui.utils.Color.Companion.multiplyAlpha
 import com.iq200.heigui.utils.addVec
-import com.iq200.heigui.utils.renderPos
 import com.iq200.heigui.utils.unaryMinus
 import it.unimi.dsi.fastutil.objects.ObjectArrayList
 import net.minecraft.client.gui.Font
@@ -23,6 +21,7 @@ import net.minecraft.world.phys.AABB
 import net.minecraft.world.phys.Vec3
 import org.joml.Vector3f
 import kotlin.math.cos
+import kotlin.math.floor
 import kotlin.math.max
 import kotlin.math.sin
 import kotlin.math.sqrt
@@ -70,12 +69,11 @@ object RenderBatchManager {
             poseStack.renderQueuedLinesAndWireBoxes(renderConsumer.lines, renderConsumer.wireBoxes, bufferSource)
             poseStack.renderQueuedFilledBoxes(renderConsumer.filledBoxes, bufferSource)
             poseStack.renderQueuedTexturedQuads(renderConsumer.texturedQuads, bufferSource)
+            poseStack.renderQueuedBeaconBeams(renderConsumer.beaconBeams, bufferSource, camera)
             poseStack.popPose()
 
-            poseStack.renderQueuedBeaconBeams(renderConsumer.beaconBeams, camera)
             poseStack.renderQueuedTexts(renderConsumer.texts, bufferSource, camera)
             renderConsumer.clear()
-
             RoundRectPIPRenderer.clear()
         }
     }
@@ -198,33 +196,78 @@ private fun PoseStack.renderQueuedFilledBoxes(consumer: List<BoxData>, bufferSou
     }
 }
 
-private fun PoseStack.renderQueuedBeaconBeams(consumer: List<BeaconData>, camera: Vec3) {
+private fun PoseStack.renderQueuedBeaconBeams(consumer: List<BeaconData>, bufferSource: MultiBufferSource, camera: Vec3) {
+    if (consumer.isEmpty()) return
+
+    val buffer = bufferSource.getBuffer(CustomRenderType.BEACON_ESP)
+    val animationTime = (System.currentTimeMillis() % 3600000L) / 50.0f
+
+    // 🌟 動畫與滾動參數
+    val scroll = -animationTime
+    val texVOff = net.minecraft.util.Mth.frac(scroll * 0.2f - floor(scroll * 0.1f))
+    val height = 384
+
     for (beacon in consumer) {
         pushPose()
-        translate(beacon.pos.x - camera.x, beacon.pos.y - camera.y, beacon.pos.z - camera.z)
+        translate(beacon.pos.x + 0.5, beacon.pos.y.toDouble(), beacon.pos.z + 0.5)
 
-        val centerX = beacon.pos.x + 0.5
-        val centerZ = beacon.pos.z + 0.5
-        val dx = camera.x - centerX
-        val dz = camera.z - centerZ
-        val length = sqrt(dx * dx + dz * dz).toFloat()
+        val dx = camera.x - (beacon.pos.x + 0.5)
+        val dz = camera.z - (beacon.pos.z + 0.5)
+        val dist = sqrt(dx * dx + dz * dz).toFloat()
 
-        val scale = if (beacon.isScoping) 1.0f else maxOf(1.0f, length * 0.010416667f)
+        val scale = if (beacon.isScoping) 1.0f else maxOf(1.0f, dist / 96.0f)
+        val radius = 0.2f * scale
 
-        BeaconBeamAccessor.invokeRenderBeam(
-            this,
-            mc.gameRenderer.featureRenderDispatcher.submitNodeStorage,
-            BEAM_TEXTURE,
-            1f,
-            beacon.gameTime.toFloat(),
-            0,
-            319,
-            beacon.color.rgba,
-            0.2f * scale,
-            0.25f * scale
+        val color = beacon.color.rgba
+
+        pushPose()
+        mulPose(com.mojang.math.Axis.YP.rotationDegrees(animationTime * 2.25f - 45.0f))
+
+        val v2 = -1.0f + texVOff
+        val v1 = height.toFloat() * (0.5f / radius) + v2
+
+        // 🌟 繪製乾淨、高亮且穿透的單層核心光柱
+        renderBeamPart(
+            this.last(), buffer, color, 0, height,
+            0.0f, radius, radius, 0.0f, -radius, 0.0f, 0.0f, -radius,
+            0.0f, 1.0f, v1, v2
         )
+
+        popPose()
         popPose()
     }
+}
+
+private fun renderBeamPart(
+    pose: PoseStack.Pose, builder: VertexConsumer, color: Int, yStart: Int, yEnd: Int,
+    wnx: Float, wnz: Float, enx: Float, enz: Float, wsx: Float, wsz: Float, esx: Float, esz: Float,
+    u1: Float, u2: Float, v1: Float, v2: Float
+) {
+    renderBeamQuad(pose, builder, color, yStart, yEnd, wnx, wnz, enx, enz, u1, u2, v1, v2)
+    renderBeamQuad(pose, builder, color, yStart, yEnd, esx, esz, wsx, wsz, u1, u2, v1, v2)
+    renderBeamQuad(pose, builder, color, yStart, yEnd, enx, enz, esx, esz, u1, u2, v1, v2)
+    renderBeamQuad(pose, builder, color, yStart, yEnd, wsx, wsz, wnx, wnz, u1, u2, v1, v2)
+}
+
+private fun renderBeamQuad(
+    pose: PoseStack.Pose, builder: VertexConsumer, color: Int, yStart: Int, yEnd: Int,
+    x1: Float, z1: Float, x2: Float, z2: Float, u1: Float, u2: Float, v1: Float, v2: Float
+) {
+    addBeamVertex(pose, builder, color, yEnd, x1, z1, u2, v1)
+    addBeamVertex(pose, builder, color, yStart, x1, z1, u2, v2)
+    addBeamVertex(pose, builder, color, yStart, x2, z2, u1, v2)
+    addBeamVertex(pose, builder, color, yEnd, x2, z2, u1, v1)
+}
+
+private fun addBeamVertex(
+    pose: PoseStack.Pose, builder: VertexConsumer, color: Int, y: Int, x: Float, z: Float, u: Float, v: Float
+) {
+    builder.addVertex(pose, x, y.toFloat(), z)
+        .setColor(color)
+        .setUv(u, v)
+        .setOverlay(OverlayTexture.NO_OVERLAY)
+        .setLight(15728880)
+        .setNormal(pose, 0.0f, 1.0f, 0.0f)
 }
 
 private fun PoseStack.renderQueuedTexts(consumer: List<TextData>, bufferSource: MultiBufferSource.BufferSource, camera: Vec3) {
@@ -323,7 +366,8 @@ fun RenderEvent.Extract.drawCustomBeacon(
     position: BlockPos,
     color: Color,
     increase: Boolean = true,
-    distance: Boolean = true
+    distance: Boolean = true,
+    scale: Float = 2.0f
 ) {
     val dist = mc.player?.blockPosition()?.distManhattan(position) ?: return
 
@@ -332,7 +376,7 @@ fun RenderEvent.Extract.drawCustomBeacon(
     drawText(
         (if (distance) ("$title §r§f(§3${dist}m§f)") else title),
         position.center.addVec(y = 1.7),
-        if (increase) max(1f, dist * 0.05f) else 2f,
+        if (increase) max(scale, dist * 0.05f * (scale / 2f)) else scale,
         false
     )
 }
