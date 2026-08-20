@@ -36,5 +36,4 @@ jobs:
           name: Heigui-Build # 這是你到時候在 GitHub 下載的壓縮檔名稱
           path: |
             build/libs/*.jar
-            !build/libs/*-sources.jar
-            !build/libs/*-dev.jar
+            build/libs/*-sources.jar

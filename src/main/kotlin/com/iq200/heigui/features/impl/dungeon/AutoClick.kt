@@ -108,7 +108,7 @@ object AutoClick : Module (
 
         if (customAC) {
             val uuid = item.itemUUID
-            if (uuid != null && config.data.items.containsKey(uuid)) {
+            if (config.data.items.containsKey(uuid)) {
                 return true
             }
         }
@@ -125,9 +125,6 @@ object AutoClick : Module (
         val uuid = item.itemUUID
         val itemName = item.hoverName.string
 
-        if (uuid == null) {
-            return modMessage("§cCurrent held item does not have a valid Skyblock UUID or ID!")
-        }
 
         config.update { data ->
             if (!data.items.containsKey(uuid)) {
@@ -139,16 +136,12 @@ object AutoClick : Module (
         }
     }
 
-
     fun removeCurrentItem() {
         val player = mc.player ?: return
         val item = player.getItemInHand(InteractionHand.MAIN_HAND)
         val uuid = item.itemUUID
         val itemName = item.hoverName.string
 
-        if (uuid == null) {
-            return modMessage("§cCurrent held item does not have a valid Skyblock UUID or ID!")
-        }
 
         config.update { data ->
             if (data.items.containsKey(uuid)) {
