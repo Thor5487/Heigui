@@ -34,13 +34,16 @@ fun LiteralNode.setupAutoCroesusCommand() {
             // 新增黑名單
             literal("add") {
                 runs { item: GreedyString ->
-                    val internalId = item.toString().trim().replace(" ", "_").uppercase()
+                    val keyword = item.toString().trim()
 
-                    if (!AutoCroesus.ignoreList.contains(internalId)) {
-                        AutoCroesus.ignoreConfig.update { it.ignoreList.add(internalId) }
-                        modMessage("§aSuccessfully added §e'$internalId' §ato the ignore list!")
+                    // 為了防止重複新增大小寫不同的相同字詞，我們在新增前可以統一轉小寫比對
+                    val exists = AutoCroesus.ignoreList.any { it.equals(keyword, ignoreCase = true) }
+
+                    if (!exists) {
+                        AutoCroesus.ignoreConfig.update { it.ignoreList.add(keyword) }
+                        modMessage("§aSuccessfully added §e'$keyword' §ato the ignore list!")
                     } else {
-                        modMessage("§c'$internalId' is already in the ignore list.")
+                        modMessage("§c'$keyword' is already in the ignore list.")
                     }
                 }
             }
@@ -48,17 +51,20 @@ fun LiteralNode.setupAutoCroesusCommand() {
             // 移除黑名單
             literal("remove") {
                 runs { item: GreedyString ->
-                    val internalId = item.toString().trim().replace(" ", "_").uppercase()
+                    val keyword = item.toString().trim()
 
-                    if (internalId.isEmpty()) {
-                        return@runs modMessage("Please Enter Valid Item Namee")
+                    if (keyword.isEmpty()) {
+                        return@runs modMessage("§cPlease Enter Valid Item Name")
                     }
 
-                    if (AutoCroesus.ignoreList.contains(internalId)) {
-                        AutoCroesus.ignoreConfig.update { it.ignoreList.remove(internalId) }
-                        modMessage("§aSuccessfully removed §e'$internalId' §afrom the ignore list!")
+                    // 尋找清單中是否有一樣的字詞 (忽略大小寫)
+                    val targetToRemove = AutoCroesus.ignoreList.find { it.equals(keyword, ignoreCase = true) }
+
+                    if (targetToRemove != null) {
+                        AutoCroesus.ignoreConfig.update { it.ignoreList.remove(targetToRemove) }
+                        modMessage("§aSuccessfully removed §e'$targetToRemove' §afrom the ignore list!")
                     } else {
-                        modMessage("§c'$internalId' was not found in the ignore list.")
+                        modMessage("§c'$keyword' was not found in the ignore list.")
                     }
                 }
             }

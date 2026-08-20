@@ -131,7 +131,7 @@ tasks.register("buildAllVersions") {
         println("============================================")
 
         // 不執行 clean（保留快取），直接打包 Private 版
-        ProcessBuilder(gradlew, "clean", "build", "-PisPrivate=true")
+        ProcessBuilder(gradlew, "build", "-PisPrivate=true")
             .directory(project.rootDir)
             .inheritIO()
             .start()

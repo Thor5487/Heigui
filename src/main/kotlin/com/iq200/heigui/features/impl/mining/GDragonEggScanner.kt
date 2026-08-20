@@ -44,7 +44,7 @@ object GDragonEggScanner : Module(
     private val structureColor by ColorSetting("Structure Color", Colors.MINECRAFT_RED, desc = "Color for Structure Beam").withDependency { structureFinder }
     private val sound = createSoundSettings("Sound", "entity.experience_orb.pickup") { structureFinder }
 
-    private val GDragUUID = "4748372c-3f57-384a-8d72-5e767eb3f51b"
+    private val GDragBase64 = "ewogICJ0aW1lc3RhbXAiIDogMTYyMDM1MDExNzgyMiwKICAicHJvZmlsZUlkIiA6ICJkMGI4MjE1OThmMTE0NzI1ODBmNmNiZTliOGUxYmU3MCIsCiAgInByb2ZpbGVOYW1lIiA6ICJqYmFydHl5IiwKICAic2lnbmF0dXJlUmVxdWlyZWQiIDogdHJ1ZSwKICAidGV4dHVyZXMiIDogewogICAgIlNLSU4iIDogewogICAgICAidXJsIiA6ICJodHRwOi8vdGV4dHVyZXMubWluZWNyYWZ0Lm5ldC90ZXh0dXJlLzExM2JkZjJkMmIwMDYwNTYwNjgyNmRmNzZlMjExZWEyODhhYTA1MGVkYzlkNzFjYjA5OTg2YzQ4OGNhMDQxMWMiLAogICAgICAibWV0YWRhdGEiIDogewogICAgICAgICJtb2RlbCIgOiAic2xpbSIKICAgICAgfQogICAgfQogIH0KfQ=="
     private val EyeBase64 = "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZDA5MjVjNDhiMDU2NjI4NDhlYzlmMDY4NWY4NThkODg5ZDNkYTExYjA3MTc4OGVhYTM2Y2NkOGYxZjMxZGUifX19"
 
     var eggCount = 0
@@ -191,7 +191,6 @@ object GDragonEggScanner : Module(
                         if (blockEntity is SkullBlockEntity) {
                             val profileComponent = blockEntity.ownerProfile
                             var blockTexture: String ?= null
-                            val id = profileComponent?.partialProfile()?.id?.toString()
 
                             if (profileComponent != null) {
                                 val gameProfile = profileComponent.partialProfile()
@@ -200,7 +199,7 @@ object GDragonEggScanner : Module(
                             }
 
                             // 發現是 Gdrag 蛋！
-                            if (id == GDragUUID) {
+                            if (blockTexture == GDragBase64) {
                                 // 建立一個 1x1x1 的方塊大小的 Box 準備畫透視框
                                 val box = AABB(
                                     pos.x.toDouble(), pos.y.toDouble(), pos.z.toDouble(),

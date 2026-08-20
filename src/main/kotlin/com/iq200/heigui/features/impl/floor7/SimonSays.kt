@@ -109,7 +109,7 @@ object SimonSays : Module(
             if (clickInOrder.isEmpty() || clickNeeded >= clickInOrder.size) return@on
 
             // 取得玩家目前準心看著的方塊
-            val hitResult = mc.hitResult as? net.minecraft.world.phys.BlockHitResult ?: return@on
+            val hitResult = mc.hitResult as? BlockHitResult ?: return@on
             val pos = hitResult.blockPos
             // 檢查：看著的方塊的「東邊一格」是不是等於解答需要的方塊？
             if (clickInOrder.getOrNull(clickNeeded) != pos.east()) return@on
