@@ -45,7 +45,7 @@ jobs:
           name: Heigui-Build
           path: |
             build/libs/*.jar
-            !build/libs/*-dev.jar
+            build/libs/*-sources.jar
 
       # ==========================================
       # 2. 建立正式 Release (獨立的 .jar 檔案)
@@ -58,4 +58,4 @@ jobs:
           generate_release_notes: true
           files: |
             build/libs/*.jar
-            !build/libs/*-dev.jar
+            build/libs/*-sources.jar
