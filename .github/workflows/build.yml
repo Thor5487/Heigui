@@ -1,5 +1,12 @@
 name: build
-on: [ pull_request, push ]
+
+# 記得要加上 tags 條件，這樣你推標籤時才會觸發編譯！
+on:
+  push:
+    branches: [ "**" ]
+    tags: [ "v*" ]
+  pull_request:
+    branches: [ "**" ]
 
 jobs:
   build:
@@ -29,11 +36,26 @@ jobs:
       - name: build
         run: ./gradlew build
 
-      # 這裡修正了版本號，並改為適用於你專案的萬用字元過濾
-      - name: upload release jar
+      # ==========================================
+      # 1. 產生 Actions 後台的 Artifact (.zip)
+      # ==========================================
+      - name: upload release jar (Artifact)
         uses: actions/upload-artifact@v4
         with:
-          name: Heigui-Build # 這是你到時候在 GitHub 下載的壓縮檔名稱
+          name: Heigui-Build
           path: |
             build/libs/*.jar
-            build/libs/*-sources.jar
+            !build/libs/*-dev.jar
+
+      # ==========================================
+      # 2. 建立正式 Release (獨立的 .jar 檔案)
+      # ==========================================
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/') # 只有你 Push Tag 時才會執行這步
+        with:
+          name: "Heigui Release ${{ github.ref_name }}"
+          generate_release_notes: true
+          files: |
+            build/libs/*.jar
+            !build/libs/*-dev.jar
