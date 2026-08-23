@@ -1,10 +1,12 @@
 package com.iq200.heigui.features.impl.general
 
 import com.google.gson.JsonParser
+import com.iq200.heigui.events.ChatPacketEvent
 import com.iq200.heigui.events.WorldEvent
 import com.iq200.heigui.events.core.on
 import com.iq200.heigui.features.Category
 import com.iq200.heigui.features.Module
+import com.iq200.heigui.utils.alert
 import com.iq200.heigui.utils.modMessage
 import net.fabricmc.loader.api.FabricLoader
 import net.minecraft.network.chat.ClickEvent
@@ -22,6 +24,7 @@ object UpdateChecker : Module(
     category = Category.GENERAL
 ) {
     private const val GITHUB_REPO = "Thor5487/Heigui"
+    private val profileRegex = Regex("Profile ID:\\s*(.{36})")
 
     // ⚠️ 這個字串必須和你 GitHub Release 的 Tag 名稱格式一致 (例如 "v1.0.0")
     val CURRENT_VERSION = FabricLoader.getInstance()
@@ -33,10 +36,12 @@ object UpdateChecker : Module(
     private var hasChecked = false
 
     init {
-        on<WorldEvent.Load> {
-            if (!hasChecked && enabled) {
-                hasChecked = true
+        on<ChatPacketEvent> {
+            if (!profileRegex.matches(value)) return@on
+
+            if (!hasChecked) {
                 checkForUpdates()
+                hasChecked = true
             }
         }
     }
@@ -103,5 +108,6 @@ object UpdateChecker : Module(
             .append(clickableLink)
 
         modMessage(message)
+        alert("Heigui Update Available!")
     }
 }

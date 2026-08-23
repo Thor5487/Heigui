@@ -83,6 +83,10 @@ afterEvaluate {
 }
 
 tasks {
+    withType<AbstractArchiveTask>().configureEach {
+        destinationDirectory.set(layout.buildDirectory.dir("libs/${project.version}"))
+    }
+
     processResources {
         inputs.property("isPrivateBuild", isPrivateBuild)
         filesMatching("fabric.mod.json") {
