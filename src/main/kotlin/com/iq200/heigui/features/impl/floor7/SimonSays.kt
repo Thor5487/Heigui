@@ -62,21 +62,18 @@ object SimonSays : Module(
         }
 
         on<BlockUpdateEvent> {
-            // 只在 F7 第三階段 (Terminals) 運作
             if (DungeonUtils.getF7Phase() != M7Phases.P3) return@on
 
-            // 偵測開始按鈕被按下
             if (pos == startButton && updated.block == Blocks.STONE_BUTTON && updated.getValue(BlockStateProperties.POWERED)) {
                 resetSolution()
                 firstPhase = true
                 return@on
             }
 
-            // Simon Says 區域判定 (y: 120-123, z: 92-95)
             if (pos.y !in 120..123 || pos.z !in 92..95) return@on
 
             when (pos.x) {
-                111 -> // 偵測海晶燈變回黑曜石 (代表該按鈕被閃過)
+                111 ->
                     if (updated.block == Blocks.SEA_LANTERN && old.block == Blocks.OBSIDIAN) {
 
                         if (pos != clickInOrder.getOrNull(clickInOrder.size - 1)) {
@@ -86,7 +83,7 @@ object SimonSays : Module(
                         }
                     }
 
-                110 -> // 偵測按鈕被按下，更新進度
+                110 ->
                     if (updated.block == Blocks.STONE_BUTTON && updated.getValue(BlockStateProperties.POWERED)) {
                         val indexOfButton = clickInOrder.indexOf(pos.east())
                         clickNeeded = indexOfButton + 1

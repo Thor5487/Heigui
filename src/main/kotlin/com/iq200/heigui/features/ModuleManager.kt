@@ -21,6 +21,7 @@ import com.iq200.heigui.features.impl.dungeon.SkipSecrets
 import com.iq200.heigui.features.impl.dungeon.Triggerbot
 import com.iq200.heigui.features.impl.dungeon.ZPDB
 import com.iq200.heigui.features.impl.floor7.AutoCrit
+import com.iq200.heigui.features.impl.floor7.InstaMid
 import com.iq200.heigui.features.impl.floor7.LBHelper
 import com.iq200.heigui.features.impl.floor7.SimonSays
 import com.iq200.heigui.features.impl.floor7.WitherAimBot
@@ -72,7 +73,7 @@ object ModuleManager {
             SecretAura, AutoClose, ZPDB, Triggerbot, AutoClick, SecretDone, SkipSecrets, SATpFix, AutoCroesus,
 
             // floor 7
-            SimonSays, WitherAimBot, LBHelper, AutoCrit,
+            SimonSays, WitherAimBot, LBHelper, AutoCrit, InstaMid,
 
             // render
             ClickGUIModule,

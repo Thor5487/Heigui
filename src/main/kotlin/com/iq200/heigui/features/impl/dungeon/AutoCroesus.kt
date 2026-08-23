@@ -95,7 +95,8 @@ object AutoCroesus : Module(
         SCANNING_MAIN_PAGE,
         WAITING_FOR_CHEST_MENU, // 點擊局數後，等待該局的寶箱畫面加載
         INSIDE_LOOT_CHEST,
-        WAITING_FOR_CONFIRM_MENU, // 等待並點擊 "Open Reward Chest"
+        WAITING_FOR_CONFIRM_MENU,
+        IN_CONFIRM_MENU,
         WAITING_FOR_REOPEN
     }
 
@@ -156,7 +157,8 @@ object AutoCroesus : Module(
                 CroesusState.SCANNING_MAIN_PAGE -> handleScanningMainPage(currentScreen, currentTime)
                 CroesusState.WAITING_FOR_CHEST_MENU -> handleWaitingForChestMenu(menuTitle)
                 CroesusState.INSIDE_LOOT_CHEST -> handleInsideLootChest(currentScreen, currentTime)
-                CroesusState.WAITING_FOR_CONFIRM_MENU -> handleConfirmMenu(currentScreen, currentTime) // 【新增這行】
+                CroesusState.WAITING_FOR_CONFIRM_MENU -> handleWaitingForConfirmMenu(menuTitle)
+                CroesusState.IN_CONFIRM_MENU -> handleInConfirmMenu(currentScreen, currentTime)
                 else -> {}
             }
         }
@@ -545,8 +547,18 @@ object AutoCroesus : Module(
     }
 
 
+    private fun handleWaitingForConfirmMenu(menuTitle: String) {
+        val targetChestTitles = listOf("Wood", "Gold", "Diamond", "Emerald", "Obsidian", "Bedrock")
 
-    private fun handleConfirmMenu(currentScreen: AbstractContainerScreen<*>, currentTime: Long) {
+        // 如果標題包含任何一個寶箱名稱，代表已經成功進入確認畫面
+        if (targetChestTitles.any { menuTitle.contains(it, ignoreCase = true) }) {
+            currentState = CroesusState.IN_CONFIRM_MENU
+        }
+
+    }
+
+
+    private fun handleInConfirmMenu(currentScreen: AbstractContainerScreen<*>, currentTime: Long) {
         val menu = currentScreen.menu
         val player = mc.player ?: return
 
