@@ -25,6 +25,7 @@ import com.iq200.heigui.features.impl.floor7.InstaMid
 import com.iq200.heigui.features.impl.floor7.LBHelper
 import com.iq200.heigui.features.impl.floor7.SimonSays
 import com.iq200.heigui.features.impl.floor7.WitherAimBot
+import com.iq200.heigui.features.impl.general.UpdateChecker
 import com.iq200.heigui.features.impl.mining.BigPane
 import com.iq200.heigui.features.impl.mining.GDragonEggScanner
 import com.iq200.heigui.features.impl.mining.MSB
@@ -85,7 +86,10 @@ object ModuleManager {
             BigPane, Mineshaft, MSB, GDragonEggScanner,
 
             // dev
-            DevMode
+            DevMode,
+
+            // general
+            UpdateChecker
         )
 
         // hashmap, but would need to keep track when setting values change

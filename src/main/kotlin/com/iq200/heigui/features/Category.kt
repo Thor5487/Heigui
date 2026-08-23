@@ -23,6 +23,8 @@ data class Category private constructor(val name: String) {
         val MINING = custom(name = "Mining")
         @JvmField
         val DEV = custom(name = "Dev")
+        @JvmField
+        val GENERAL = custom(name = "General")
 
         /**
          * Returns a category with name provided.
