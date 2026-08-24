@@ -20,8 +20,11 @@ object InstaMid : Module(
     category = Category.FLOOR7
 ) {
     private val delay by NumberSetting("Delay", 1, 0, 10, desc = "Delay to Trigger After Getting Pulled", unit = "tick")
-    private val clazz = SelectorSetting("Class", "Berserk", listOf("Archer", "Berserk", "Healer", "Mage", "Tank"), desc = "class to leap")
+    private val classOptions = listOf("Archer", "Berserk", "Healer", "Mage", "Tank")
+    private val clazz by SelectorSetting("Class", "Berserk", classOptions, desc = "class to leap")
 
+    private val currentClassName: String
+        get() = classOptions.getOrElse(clazz) { "Unknown" }
     // 騎乘狀態追蹤
     private var isRiding = false
     private var rideTicks = 0
@@ -69,7 +72,7 @@ object InstaMid : Module(
 
                     val teammate = DungeonUtils.dungeonTeammates.find { it.name.equals(headName, ignoreCase = true) }
 
-                    if (teammate != null && teammate.clazz.name.equals(clazz.selected, ignoreCase = true)) {
+                    if (teammate != null && teammate.clazz.name.equals(currentClassName, ignoreCase = true)) {
                         if (!teammate.isDead) {
                             targetSlot = i
                             break
@@ -79,10 +82,10 @@ object InstaMid : Module(
 
                 if (targetSlot != -1) {
                     mc.gameMode?.handleContainerInput(menu.containerId, targetSlot, 0, ContainerInput.PICKUP, player)
-                    modMessage("§a[InstaMid] Auto Leaped to ${clazz.selected}!")
+                    modMessage("§a[InstaMid] Auto Leaped to ${currentClassName}!")
                     isWaitingToLeap = false
                 } else if (headsFound > 0) {
-                    modMessage("§c[InstaMid] Target class (${clazz.selected}) not found or is dead!")
+                    modMessage("§c[InstaMid] Target class (${currentClassName}) not found or is dead!")
                     isWaitingToLeap = false
                 }
             }

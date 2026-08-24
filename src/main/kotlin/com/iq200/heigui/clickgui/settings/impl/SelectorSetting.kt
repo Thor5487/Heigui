@@ -37,11 +37,15 @@ class SelectorSetting(
             field = if (value > options.size - 1) 0 else if (value < 0) options.size - 1 else value
         }
 
-    var selected: String
+    private var selected: String
         get() = options[index]
         set(value) {
             index = optionIndex(value)
         }
+
+    operator fun getValue(thisRef: Any?, property: kotlin.reflect.KProperty<*>): String {
+        return options[index]
+    }
 
     private val elementWidths by lazy { options.map { NVGRenderer.textWidth(it, 16f, NVGRenderer.defaultFont) } }
     private val settingAnim = EaseInOutAnimation(200)
