@@ -1,6 +1,5 @@
 package com.iq200.heigui.features.impl.floor7
 
-import com.iq200.heigui.clickgui.settings.impl.BooleanSetting
 import com.iq200.heigui.clickgui.settings.impl.NumberSetting
 import com.iq200.heigui.clickgui.settings.impl.SelectorSetting
 import com.iq200.heigui.events.TickEvent
@@ -25,15 +24,13 @@ object InstaMid : Module(
 
     private val currentClassName: String
         get() = classOptions.getOrElse(clazz) { "Unknown" }
+
     // 騎乘狀態追蹤
     private var isRiding = false
     private var rideTicks = 0
 
     // 🌟 單局鎖：確保每場地城只會觸發一次
     private var hasTriggeredThisRun = false
-
-    // Leap 等待控制
-    private var isWaitingToLeap = false
 
     private val playerRegex = Regex("(?:\\[.+?] )?(?<name>\\w+)")
 
@@ -44,56 +41,8 @@ object InstaMid : Module(
             val player = mc.player ?: return@on
 
             // ==========================================
-            // 1. 放開與維持 Shift 的邏輯 (背景獨立倒數計時)
+            // 3. 騎乘狀態偵測與即時觸發
             // ==========================================
-
-            // ==========================================
-            // 2. Leap 耐心等待邏輯 (等待伺服器將頭顱放入介面)
-            // ==========================================
-            if (isWaitingToLeap) {
-                val screen = mc.screen as? AbstractContainerScreen<*> ?: return@on
-                val title = screen.title.string.lowercase().replace(Regex("§[0-9a-fk-or]"), "")
-
-                if (!title.contains("spirit leap") && !title.contains("teleport to player")) return@on
-
-                val menu = screen.menu
-                var targetSlot = -1
-                var headsFound = 0
-
-                for (i in 0 until (menu.slots.size - 36)) {
-                    val slot = menu.slots.getOrNull(i) ?: continue
-                    val item = slot.item
-
-                    if (item.isEmpty || !item.`is`(Items.PLAYER_HEAD)) continue
-                    headsFound++
-
-                    val hoverName = item.hoverName.string.replace(Regex("§[0-9a-fk-or]"), "")
-                    val headName = playerRegex.find(hoverName)?.groups?.get("name")?.value ?: continue
-
-                    val teammate = DungeonUtils.dungeonTeammates.find { it.name.equals(headName, ignoreCase = true) }
-
-                    if (teammate != null && teammate.clazz.name.equals(currentClassName, ignoreCase = true)) {
-                        if (!teammate.isDead) {
-                            targetSlot = i
-                            break
-                        }
-                    }
-                }
-
-                if (targetSlot != -1) {
-                    mc.gameMode?.handleContainerInput(menu.containerId, targetSlot, 0, ContainerInput.PICKUP, player)
-                    modMessage("§a[InstaMid] Auto Leaped to ${currentClassName}!")
-                    isWaitingToLeap = false
-                } else if (headsFound > 0) {
-                    modMessage("§c[InstaMid] Target class (${currentClassName}) not found or is dead!")
-                    isWaitingToLeap = false
-                }
-            }
-
-            // ==========================================
-            // 3. 騎乘狀態偵測與觸發
-            // ==========================================
-            // 🌟 如果這局已經觸發過了，就不再進行騎乘計時
             if (hasTriggeredThisRun) return@on
 
             val currentlyRiding = player.isPassenger
@@ -108,27 +57,60 @@ object InstaMid : Module(
             if (isRiding) {
                 rideTicks++
 
-                if (rideTicks == delay) {
-                    // 🌟 達到 delay 瞬間，立刻把鎖鎖上！
-                    hasTriggeredThisRun = true
-                    isWaitingToLeap = true
-                    modMessage("§e[InstaMid] Waiting for Leap menu...")
+                // 🌟 改成 >= 0 兼容 delay=0 的情況，且在達標的「當下」立刻判定
+                if (rideTicks > delay) {
+                    hasTriggeredThisRun = true // 鎖上，這場絕對不會再觸發第二次
+
+                    // 🎯 當下立刻檢查畫面
+                    val screen = mc.screen as? AbstractContainerScreen<*>
+                    if (screen != null) {
+                        val title = screen.title.string.lowercase().replace(Regex("§[0-9a-fk-or]"), "")
+
+                        if (title.contains("spirit leap") || title.contains("teleport to player")) {
+                            val menu = screen.menu
+                            var targetSlot = -1
+                            var headsFound = 0
+
+                            for (i in 0 until (menu.slots.size - 36)) {
+                                val slot = menu.slots.getOrNull(i) ?: continue
+                                val item = slot.item
+
+                                if (item.isEmpty || !item.`is`(Items.PLAYER_HEAD)) continue
+                                headsFound++
+
+                                val hoverName = item.hoverName.string.replace(Regex("§[0-9a-fk-or]"), "")
+                                val headName = playerRegex.find(hoverName)?.groups?.get("name")?.value ?: continue
+
+                                val teammate = DungeonUtils.dungeonTeammates.find { it.name.equals(headName, ignoreCase = true) }
+
+                                if (teammate != null && teammate.clazz.name.equals(currentClassName, ignoreCase = true)) {
+                                    if (!teammate.isDead) {
+                                        targetSlot = i
+                                        break
+                                    }
+                                }
+                            }
+
+                            if (targetSlot != -1) {
+                                mc.gameMode?.handleContainerInput(menu.containerId, targetSlot, 0, ContainerInput.PICKUP, player)
+                                modMessage("§a[InstaMid] Auto Leaped to ${currentClassName}!")
+                            } else {
+                                modMessage("§c[InstaMid] Target class (${currentClassName}) not found or is dead!")
+                            }
+                        } else {
+                            modMessage("§c[InstaMid] Triggered, but Leap menu is not open. Skipped.")
+                        }
+                    } else {
+                        modMessage("§c[InstaMid] Triggered, but no GUI is open. Skipped.")
+                    }
                 }
             }
         }
 
         on<WorldEvent.Load> {
-            // 🌟 換世界時，解開單局鎖，一切重置
             isRiding = false
             rideTicks = 0
-            isWaitingToLeap = false
             hasTriggeredThisRun = false
-
         }
-    }
-
-    override fun onDisable() {
-        isWaitingToLeap = false
-        super.onDisable()
     }
 }
