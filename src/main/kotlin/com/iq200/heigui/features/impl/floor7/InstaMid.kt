@@ -20,8 +20,7 @@ object InstaMid : Module(
     category = Category.FLOOR7
 ) {
     private val delay by NumberSetting("Delay", 1, 0, 10, desc = "Delay to Trigger After Getting Pulled", unit = "tick")
-    private val clazz by SelectorSetting("Class", "Berserk", listOf("Archer", "Berserk", "Healer", "Mage", "Tank"), desc = "class to leap")
-    private val sneak by BooleanSetting("Sneak", false, desc = "Use Sneak or not to InstaMid")
+    private val clazz = SelectorSetting("Class", "Berserk", listOf("Archer", "Berserk", "Healer", "Mage", "Tank"), desc = "class to leap")
 
     // 騎乘狀態追蹤
     private var isRiding = false
@@ -29,11 +28,6 @@ object InstaMid : Module(
 
     // 🌟 單局鎖：確保每場地城只會觸發一次
     private var hasTriggeredThisRun = false
-
-    // Sneak 控制
-    private var isHoldingSneak = false
-    private var sneakHoldTicks = 0
-    private val SNEAK_DURATION = 2
 
     // Leap 等待控制
     private var isWaitingToLeap = false
@@ -49,16 +43,6 @@ object InstaMid : Module(
             // ==========================================
             // 1. 放開與維持 Shift 的邏輯 (背景獨立倒數計時)
             // ==========================================
-            if (isHoldingSneak) {
-                sneakHoldTicks++
-                if (sneakHoldTicks >= SNEAK_DURATION) {
-                    mc.options.keyShift.isDown = false
-                    isHoldingSneak = false
-                    sneakHoldTicks = 0
-                } else {
-                    mc.options.keyShift.isDown = true
-                }
-            }
 
             // ==========================================
             // 2. Leap 耐心等待邏輯 (等待伺服器將頭顱放入介面)
@@ -85,7 +69,7 @@ object InstaMid : Module(
 
                     val teammate = DungeonUtils.dungeonTeammates.find { it.name.equals(headName, ignoreCase = true) }
 
-                    if (teammate != null && teammate.clazz.name.equals(clazz.toString(), ignoreCase = true)) {
+                    if (teammate != null && teammate.clazz.name.equals(clazz.selected, ignoreCase = true)) {
                         if (!teammate.isDead) {
                             targetSlot = i
                             break
@@ -95,10 +79,10 @@ object InstaMid : Module(
 
                 if (targetSlot != -1) {
                     mc.gameMode?.handleContainerInput(menu.containerId, targetSlot, 0, ContainerInput.PICKUP, player)
-                    modMessage("§a[InstaMid] Auto Leaped to $clazz!")
+                    modMessage("§a[InstaMid] Auto Leaped to ${clazz.selected}!")
                     isWaitingToLeap = false
                 } else if (headsFound > 0) {
-                    modMessage("§c[InstaMid] Target class ($clazz) not found or is dead!")
+                    modMessage("§c[InstaMid] Target class (${clazz.selected}) not found or is dead!")
                     isWaitingToLeap = false
                 }
             }
@@ -121,19 +105,11 @@ object InstaMid : Module(
             if (isRiding) {
                 rideTicks++
 
-                if (rideTicks == delay.toInt()) {
+                if (rideTicks == delay) {
                     // 🌟 達到 delay 瞬間，立刻把鎖鎖上！
                     hasTriggeredThisRun = true
-
-                    if (sneak) {
-                        mc.options.keyShift.isDown = true
-                        isHoldingSneak = true
-                        sneakHoldTicks = 0
-                        modMessage("§a[InstaMid] Sneaking to InstaMid!")
-                    } else {
-                        isWaitingToLeap = true
-                        modMessage("§e[InstaMid] Waiting for Leap menu...")
-                    }
+                    isWaitingToLeap = true
+                    modMessage("§e[InstaMid] Waiting for Leap menu...")
                 }
             }
         }
@@ -145,20 +121,10 @@ object InstaMid : Module(
             isWaitingToLeap = false
             hasTriggeredThisRun = false
 
-            if (isHoldingSneak) {
-                mc.options.keyShift.isDown = false
-                isHoldingSneak = false
-                sneakHoldTicks = 0
-            }
         }
     }
 
     override fun onDisable() {
-        if (isHoldingSneak) {
-            mc.options.keyShift.isDown = false
-            isHoldingSneak = false
-            sneakHoldTicks = 0
-        }
         isWaitingToLeap = false
         super.onDisable()
     }

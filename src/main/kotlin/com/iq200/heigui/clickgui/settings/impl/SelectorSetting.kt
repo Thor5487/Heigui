@@ -37,7 +37,7 @@ class SelectorSetting(
             field = if (value > options.size - 1) 0 else if (value < 0) options.size - 1 else value
         }
 
-    private var selected: String
+    var selected: String
         get() = options[index]
         set(value) {
             index = optionIndex(value)
