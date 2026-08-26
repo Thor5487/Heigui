@@ -149,6 +149,7 @@ object Vampire : Module(
 
     private var hasSwappedForCurrentTwinclaws = false
     private var myActiveBoss: ArmorStand? = null
+    private var myActiveRealBoss: Player? = null
 
     private var currentManiaTime: Float? = null
 
@@ -320,6 +321,28 @@ object Vampire : Module(
                                 maxBossHealth = null
                                 currentBossHealth = null
                                 hasSwappedToSteakForCurrentBoss = false
+                            }
+                        }
+                    }
+                }
+            }
+
+            myActiveRealBoss = null
+            if (myActiveBoss != null) {
+                val textStand = myActiveBoss!!
+                var closestDistSqr = 25.0
+
+                mc.level!!.entitiesForRendering().forEach { entity ->
+                    if (entity is Player && entity != mc.player) {
+                        val distSqr = entity.distanceToSqr(textStand)
+                        if (distSqr < closestDistSqr) {
+                            val profile = entity.gameProfile
+                            val textureProperty = profile.properties.get("textures").firstOrNull()
+                            val skinBase64 = textureProperty?.value ?: ""
+
+                            if (skinBase64 == BOSS_SKIN_TEXTURE) {
+                                closestDistSqr = distSqr
+                                myActiveRealBoss = entity // 鎖定這隻真實的 NPC
                             }
                         }
                     }
@@ -706,63 +729,27 @@ object Vampire : Module(
 
             val pt = context.gameRenderer().mainCamera.getCameraEntityPartialTicks(mc.deltaTracker)
 
-            if (bossEsp && myActiveBoss != null) {
-                val textStand = myActiveBoss!!
-                var realBoss: Entity? = null
+            if (bossEsp && myActiveRealBoss != null) {
+                val realBoss = myActiveRealBoss!! // 直接拿找好的 NPC
 
-                var closestDistSqr = 25.0
+                // 取得平滑移動後的座標
+                val lerpedPos = realBoss.getPosition(pt)
+                val aabb = realBoss.boundingBox.move(
+                    lerpedPos.x - realBoss.x,
+                    lerpedPos.y - realBoss.y,
+                    lerpedPos.z - realBoss.z
+                )
 
-                mc.level!!.entitiesForRendering().forEach { entity ->
-                    if (entity is Player && entity != mc.player) {
-                        // 直接使用 Minecraft 內建的方法計算與 textStand 的距離平方 (效能比開根號好)
-                        val distSqr = entity.distanceToSqr(textStand)
-
-                        // 1. 判斷是否在容許範圍內，且比「目前找到的最近 Boss」還要更近
-                        if (distSqr < closestDistSqr) {
-                            val profile = entity.gameProfile
-
-                            // 抓取 Skin 的 Base64 字串
-                            val textureProperty = profile.properties.get("textures").firstOrNull()
-                            val skinBase64 = textureProperty?.value ?: ""
-
-                            // 2. 檢查 Skin 是否吻合
-                            if (skinBase64 == BOSS_SKIN_TEXTURE) {
-                                // 3. 更新最短距離，並將這個實體指派為 realBoss
-                                closestDistSqr = distSqr
-                                realBoss = entity
-                            }
-                        }
+                // 判斷顏色
+                var boxColor = Color(255, 0, 0, 80f)
+                if (maxBossHealth != null && currentBossHealth != null) {
+                    if (currentBossHealth!! <= (maxBossHealth!! * 0.2f)) {
+                        boxColor = Color(148, 0, 211, 80f)
                     }
                 }
 
-                // 2. 取得 BoundingBox
-                if (realBoss != null) {
-                    val lerpedPos = realBoss.getPosition(pt)
-                    // 將 BoundingBox 位移到平滑座標上 (平滑座標 - 當前實體座標)
-                    val aabb = realBoss.boundingBox.move(
-                        lerpedPos.x - realBoss.x,
-                        lerpedPos.y - realBoss.y,
-                        lerpedPos.z - realBoss.z
-                    )
-
-                    // 3. 判斷顏色：預設紅色，低於 20% 變紫色
-                    var boxColor = Color(255, 0, 0, 80f) // 預設實心紅
-
-                    if (maxBossHealth != null && currentBossHealth != null) {
-                        val twentyPercent = maxBossHealth!! * 0.2f
-                        if (currentBossHealth!! <= twentyPercent) {
-                            boxColor = Color(148, 0, 211, 80f) // 小於等於 20%，變成實心紫
-                        }
-                    }
-
-                    // 4. 畫出實心透視框
-                    drawStyledBox(
-                        aabb = aabb,
-                        color = boxColor,
-                        style = 0,
-                        depth = false
-                    )
-                }
+                // 畫出實心透視框
+                drawStyledBox(aabb = aabb, color = boxColor, style = 0, depth = false)
             }
 
             if (ichorEsp && trackedIchorIds.isNotEmpty()) {
@@ -860,7 +847,7 @@ object Vampire : Module(
                 tZ = pZ + fakeDistance * sin(timeSec)
             }
             else {
-                val target = myActiveBoss ?: return@on
+                val target = myActiveRealBoss ?: return@on
                 val targetPos = target.getPosition(pt)
                 tX = targetPos.x
                 tZ = targetPos.z
@@ -941,6 +928,7 @@ object Vampire : Module(
 
     override fun onDisable() {
         resetAllStates()
+        super.onDisable()
     }
 
     fun triggerAutoItem(itemName: String): Boolean {
@@ -1032,5 +1020,6 @@ object Vampire : Module(
         knownKillerSpringIds.clear()
         currentRenderedLayer = null
         currentManiaTime = null
+        myActiveRealBoss = null
     }
 }
