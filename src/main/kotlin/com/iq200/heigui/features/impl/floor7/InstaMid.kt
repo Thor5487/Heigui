@@ -2,8 +2,8 @@ package com.iq200.heigui.features.impl.floor7
 
 import com.iq200.heigui.clickgui.settings.impl.NumberSetting
 import com.iq200.heigui.clickgui.settings.impl.SelectorSetting
+import com.iq200.heigui.events.LevelEvent
 import com.iq200.heigui.events.TickEvent
-import com.iq200.heigui.events.WorldEvent
 import com.iq200.heigui.events.core.on
 import com.iq200.heigui.features.Category
 import com.iq200.heigui.features.Module
@@ -108,7 +108,7 @@ object InstaMid : Module(
             }
         }
 
-        on<WorldEvent.Load> {
+        on<LevelEvent.Load> {
             isRiding = false
             rideTicks = 0
             hasTriggeredThisRun = false

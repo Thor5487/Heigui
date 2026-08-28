@@ -1,8 +1,8 @@
 package com.iq200.heigui.utils.skyblock
 
 import com.iq200.heigui.events.ChatPacketEvent
+import com.iq200.heigui.events.LevelEvent
 import com.iq200.heigui.events.TickEvent
-import com.iq200.heigui.events.WorldEvent
 import com.iq200.heigui.events.core.on
 import com.iq200.heigui.utils.skyblock.dungeon.DungeonListener
 
@@ -45,7 +45,7 @@ object SplitsManager {
         }
 
         on<TickEvent.Server> { tickCounter++ }
-        on<WorldEvent.Load> {
+        on<LevelEvent.Load> {
             currentSplits = SplitsGroup(emptyList())
             tickCounter = 0L
         }

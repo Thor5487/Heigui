@@ -1,7 +1,7 @@
 #version 330
 
 #moj_import <minecraft:dynamictransforms.glsl>
-#moj_import <odin:round_rect.glsl>
+#moj_import <heigui:round_rect.glsl>
 
 out vec4 fragColor;
 

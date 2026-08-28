@@ -1,9 +1,8 @@
 package com.iq200.heigui.features.impl.dungeon
 
 import com.iq200.heigui.clickgui.settings.impl.BooleanSetting
-import com.iq200.heigui.clickgui.settings.impl.HudElement
+import com.iq200.heigui.events.LevelEvent
 import com.iq200.heigui.events.TickEvent
-import com.iq200.heigui.events.WorldEvent
 import com.iq200.heigui.events.core.on
 import com.iq200.heigui.features.Category
 import com.iq200.heigui.features.Module
@@ -40,7 +39,7 @@ object SecretDone : Module (
 
 
     init {
-        on<WorldEvent.Load> {
+        on<LevelEvent.Load> {
             hasNotified = false
         }
 

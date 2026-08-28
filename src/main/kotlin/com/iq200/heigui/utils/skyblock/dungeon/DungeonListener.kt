@@ -2,8 +2,8 @@ package com.iq200.heigui.utils.skyblock.dungeon
 
 import com.iq200.heigui.Heigui.mc
 import com.iq200.heigui.events.ChatPacketEvent
+import com.iq200.heigui.events.LevelEvent
 import com.iq200.heigui.events.TickEvent
-import com.iq200.heigui.events.WorldEvent
 import com.iq200.heigui.events.core.on
 import com.iq200.heigui.events.core.onReceive
 import com.iq200.heigui.utils.noControlCodes
@@ -12,7 +12,7 @@ import net.minecraft.network.protocol.game.ClientboundEntityEventPacket
 import net.minecraft.network.protocol.game.ClientboundPlayerInfoUpdatePacket
 import net.minecraft.network.protocol.game.ClientboundRemoveEntitiesPacket
 import net.minecraft.network.protocol.game.ClientboundSetPlayerTeamPacket
-import net.minecraft.world.entity.EntityType
+import net.minecraft.world.entity.EntityTypes
 import net.minecraft.world.entity.monster.zombie.Zombie
 import net.minecraft.world.entity.player.Player
 import net.minecraft.world.level.Level
@@ -47,7 +47,7 @@ object DungeonListener {
             if (DungeonUtils.inDungeons) inBoss = getBoss()
         }
 
-        on<WorldEvent.Load> {
+        on<LevelEvent.Load> {
             dungeonStats = DungeonStats()
             dungeonTeammatesNoSelf = emptyList()
             dungeonTeammates.clear()
@@ -97,7 +97,7 @@ object DungeonListener {
         }
 
         onReceive<ClientboundAddEntityPacket> {
-            if (type == EntityType.PLAYER)
+            if (type == EntityTypes.PLAYER)
                 DungeonUtils.dungeonTeammates.find { it.entity == null && it.name == mc.level?.getEntity(id)?.name?.string }?.entity =
                     mc.level?.getEntity(id) as? Player
         }

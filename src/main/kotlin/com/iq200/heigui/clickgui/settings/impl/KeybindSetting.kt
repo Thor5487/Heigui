@@ -62,8 +62,11 @@ class KeybindSetting(
 
     fun registerKeyMapping(owner: String) {
         if (mapping != null) return
-        val label = if (name == "Keybind") owner else "$owner ($name)"
-        mapping = KeyMappingHelper.registerKeyMapping(KeyMapping(label, pending.type, pending.value, KEYBIND_CATEGORY))
+        val baseLabel = if (name == "Keybind") owner else "$owner ($name)"
+
+        // 2. 核心修改：在 ID 前面強制加上 Heigui 專屬前綴，確保與 Odin 徹底錯開
+        val safeId = "[Heigui] $baseLabel"
+        mapping = KeyMappingHelper.registerKeyMapping(KeyMapping(safeId, pending.type, pending.value, KEYBIND_CATEGORY))
     }
 
     fun onPress(block: () -> Unit): KeybindSetting {

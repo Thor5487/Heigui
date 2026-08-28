@@ -2,7 +2,6 @@ package com.iq200.heigui.features.impl.general
 
 import com.google.gson.JsonParser
 import com.iq200.heigui.events.ChatPacketEvent
-import com.iq200.heigui.events.WorldEvent
 import com.iq200.heigui.events.core.on
 import com.iq200.heigui.features.Category
 import com.iq200.heigui.features.Module

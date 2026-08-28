@@ -19,6 +19,8 @@ abstract class RenderableSetting<T>(
 
     override var visibilityDependency: (() -> Boolean)? = null
 
+    override var lockDependency: (() -> Boolean)? = null
+
     override val clickButtons: IntArray = LEFT_ONLY
 
     override fun children(): List<GuiEventListener> = emptyList()

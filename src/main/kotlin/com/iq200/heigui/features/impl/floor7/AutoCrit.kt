@@ -4,12 +4,11 @@ import com.iq200.heigui.clickgui.settings.Setting.Companion.withDependency
 import com.iq200.heigui.clickgui.settings.impl.BooleanSetting
 import com.iq200.heigui.clickgui.settings.impl.NumberSetting
 import com.iq200.heigui.events.InputEvent
+import com.iq200.heigui.events.LevelEvent
 import com.iq200.heigui.events.TickEvent
-import com.iq200.heigui.events.WorldEvent
 import com.iq200.heigui.events.core.on
 import com.iq200.heigui.features.Category
 import com.iq200.heigui.features.Module
-import com.iq200.heigui.utils.itemId
 import com.iq200.heigui.utils.sendCommand
 import com.mojang.blaze3d.platform.InputConstants
 import net.minecraft.client.KeyMapping
@@ -37,7 +36,7 @@ object AutoCrit : Module (
     private var state = State.IDLE
 
     init {
-        on<WorldEvent.Load> {
+        on<LevelEvent.Load> {
             reset()
         }
 

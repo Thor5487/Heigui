@@ -5,8 +5,8 @@ import com.iq200.heigui.clickgui.settings.impl.BooleanSetting
 import com.iq200.heigui.clickgui.settings.impl.NumberSetting
 import com.iq200.heigui.config.JsonConfig
 import com.iq200.heigui.events.InputEvent
+import com.iq200.heigui.events.LevelEvent
 import com.iq200.heigui.events.TickEvent
-import com.iq200.heigui.events.WorldEvent
 import com.iq200.heigui.events.core.on
 import com.iq200.heigui.features.Category
 import com.iq200.heigui.features.Module
@@ -44,7 +44,7 @@ object AutoClick : Module (
     init {
         config.load()
 
-        on<WorldEvent.Load> {
+        on<LevelEvent.Load> {
             isHolding = false
         }
 

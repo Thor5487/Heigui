@@ -56,13 +56,13 @@ object Vampire : Module(
     category = Category.SKYBLOCK
 ), ClientRotationProvider {
     private val autoImpel by BooleanSetting("Auto Impel", false, "Auto Do Impel").withLock { BuildConfig.isPrivate }
-    private val rotationSpeed by NumberSetting("Speed", 40, 0, 100, 10,
+    private val rotationSpeed by NumberSetting("Speed", 40, 0 .. 100, 10,
         unit = "°/t", desc = "Rotation Speed For Click Up/Down").withDependency { autoImpel }.withLock { BuildConfig.isPrivate }
-    private  val IMPEL_TIMEOUT_MS by NumberSetting("Impel Timeout", 200, 100, 500, 50,
+    private  val IMPEL_TIMEOUT_MS by NumberSetting("Impel Timeout", 200, 100 .. 500, 50,
         unit = "ms", desc = "Timeout For Impel To Be Considered Finished").withDependency { autoImpel }.withLock { BuildConfig.isPrivate }
     private val autoIce by BooleanSetting("Auto Ice", false, "Auto use Holy Ice on Twinclaws").withLock { BuildConfig.isPrivate }
     private val autoMelon by BooleanSetting("Auto Melon", false, "Auto use Healing Melon on low HP").withLock { BuildConfig.isPrivate }
-    private val melonHealth by NumberSetting("Melon Health", 12, 4, 26, 1,
+    private val melonHealth by NumberSetting("Melon Health", 12, 4 .. 26, 1,
         desc = "Health threshold for Auto Melon").withDependency { autoMelon }.withLock { BuildConfig.isPrivate }
     private val ichorEsp by BooleanSetting("Ichor ESP", false, "Highlight Blood Ichor")
     private val ichorTracer by BooleanSetting("Ichor Tracer", false, "Draw line to Blood Ichor").withDependency { ichorEsp }
@@ -70,8 +70,8 @@ object Vampire : Module(
     private val killerSpringTracer by BooleanSetting("Killer Spring Tracer", false, "Draw a line to  Killer Spring")
     private val bossEsp by BooleanSetting("Boss ESP", false, "Highlight your boss with a solid box")
     private val bossArrow by BooleanSetting("Boss Arrow", false, "Draw an arrow pointing to the boss")
-    private val arrowRadius by NumberSetting("Arrow Radius", 50, 10, 100, 10, desc = "Radius of the arrow circle").withDependency { bossArrow }
-    private val arrowScale by NumberSetting("Arrow Size", 2f, 1f, 3f, 0.1f, desc = "Size of Arrow").withDependency { bossArrow }
+    private val arrowRadius by NumberSetting("Arrow Radius", 50, 10 .. 100, 10, desc = "Radius of the arrow circle").withDependency { bossArrow }
+    private val arrowScale by NumberSetting("Arrow Size", 2.0, 1.0 .. 3.0, 0.1, desc = "Size of Arrow").withDependency { bossArrow }
     private val arrowColor by ColorSetting("Arrow Color", Colors.MINECRAFT_AQUA, desc = "Arrow Color").withDependency { bossArrow }
     private val testArrow by BooleanSetting("Test Arrow", false, "Show a rotating test arrow (Turn off in real game)").withDependency { bossArrow }
     private val maniaHud by HUD("Mania Hud", "Display Mania Time") { example ->
@@ -192,7 +192,7 @@ object Vampire : Module(
             val myBoss = myActiveBoss ?: return@on
             if (packet is ClientboundBlockUpdatePacket) {
                 val state = packet.blockState
-                if (state.`is`(Blocks.GREEN_TERRACOTTA)) {
+                if (state.`is`(Blocks.DYED_TERRACOTTA.green)) {
                     val pos = packet.pos
                     // 放寬條件，收集玩家周圍 50 格內的 Mania 更新
                     if (mc.player != null && pos.closerToCenterThan(myBoss.position(), 30.0)) {
@@ -202,7 +202,7 @@ object Vampire : Module(
             }
             else if (packet is ClientboundSectionBlocksUpdatePacket) {
                 packet.runUpdates { pos, state ->
-                    if (state.`is`(Blocks.GREEN_TERRACOTTA)) {
+                    if (state.`is`(Blocks.DYED_TERRACOTTA.green)) {
                         if (mc.player != null && pos.closerToCenterThan(myBoss.position(), 30.0)) {
                             greenBlocksBuffer.add(pos.immutable())
                         }
@@ -727,7 +727,7 @@ object Vampire : Module(
                 while (mc.options.keyAttack.consumeClick()) { }
             }
 
-            val pt = context.gameRenderer().mainCamera.getCameraEntityPartialTicks(mc.deltaTracker)
+            val pt = context.gameRenderer().mainCamera().getCameraEntityPartialTicks(mc.deltaTracker)
 
             if (bossEsp && myActiveRealBoss != null) {
                 val realBoss = myActiveRealBoss!! // 直接拿找好的 NPC
@@ -878,7 +878,7 @@ object Vampire : Module(
             poseStack.rotate(rotationRad)
 
             // 2. 套用你在設定裡拉好的縮放大小
-            poseStack.scale(arrowScale, arrowScale)
+            poseStack.scale(arrowScale.toFloat(), arrowScale.toFloat())
 
             graphics.blit(
                 net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, // 1. 指定渲染管線 (普通 GUI 圖片)

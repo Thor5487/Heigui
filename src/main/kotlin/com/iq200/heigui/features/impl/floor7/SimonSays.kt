@@ -55,7 +55,7 @@ object SimonSays : Module(
 
 
     init {
-        on<WorldEvent.Load> {
+        on<LevelEvent.Load> {
             resetSolution()
             firstPhase = true
             clickCntOnStartBtn = 0

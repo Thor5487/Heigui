@@ -1,7 +1,7 @@
 package com.iq200.heigui.utils.skyblock
 
+import com.iq200.heigui.events.LevelEvent
 import com.iq200.heigui.events.PacketEvent
-import com.iq200.heigui.events.WorldEvent
 import com.iq200.heigui.events.core.on
 import net.minecraft.network.protocol.game.ClientboundSetActionBarTextPacket
 import net.minecraft.network.protocol.game.ClientboundSystemChatPacket
@@ -31,7 +31,7 @@ object ActionBarParser {
     private val manaRegex = Regex("""(\d+)/(\d+)\uE003""")
 
     init {
-        on<WorldEvent.Load> {
+        on<LevelEvent.Load> {
             reset()
         }
 

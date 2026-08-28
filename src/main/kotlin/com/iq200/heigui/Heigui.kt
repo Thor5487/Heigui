@@ -2,6 +2,7 @@ package com.iq200.heigui
 
 import com.iq200.heigui.commands.mainCommand
 import com.iq200.heigui.events.EventDispatcher
+import com.iq200.heigui.events.HudRenderEvent
 import com.iq200.heigui.events.core.EventBus
 import com.iq200.heigui.features.ModuleManager
 import com.iq200.heigui.utils.DeathTickUtil
@@ -24,9 +25,11 @@ import net.fabricmc.api.ClientModInitializer
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback // 🌟 引入 Fabric 指令註冊
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents
 import net.fabricmc.fabric.api.client.rendering.v1.PictureInPictureRendererRegistry
+import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry
 import net.fabricmc.loader.api.FabricLoader
 import net.fabricmc.loader.api.Version
 import net.minecraft.client.Minecraft
+import net.minecraft.resources.Identifier
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import java.io.File
@@ -70,6 +73,13 @@ object Heigui : ClientModInitializer {
             arrayOf(mainCommand).forEach { it.register(dispatcher) }
         }
 
+
+        HudElementRegistry.addLast(
+            Identifier.fromNamespaceAndPath(Heigui.MOD_ID, "hud_dispatcher")
+        ) { graphics, deltaTracker ->
+            // 只要在這裡發射一次事件
+            HudRenderEvent(graphics, deltaTracker).postAndCatch()
+        }
 
         PictureInPictureRendererRegistry.register {
             ItemStateRenderer()

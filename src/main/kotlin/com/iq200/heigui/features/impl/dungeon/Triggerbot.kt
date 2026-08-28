@@ -2,13 +2,11 @@ package com.iq200.heigui.features.impl.dungeon
 
 import com.iq200.heigui.clickgui.settings.impl.BooleanSetting
 import com.iq200.heigui.clickgui.settings.impl.NumberSetting
-import com.iq200.heigui.events.PlayerInputEvent
+import com.iq200.heigui.events.LevelEvent
 import com.iq200.heigui.events.RenderEvent
-import com.iq200.heigui.events.WorldEvent
 import com.iq200.heigui.events.core.on
 import com.iq200.heigui.features.Category
 import com.iq200.heigui.features.Module
-import com.iq200.heigui.utils.modMessage
 import com.iq200.heigui.utils.skyblock.dungeon.DungeonUtils
 import com.iq200.heigui.utils.skyblock.dungeon.ScanUtils
 import net.minecraft.core.BlockPos
@@ -55,7 +53,7 @@ object Triggerbot : Module (
 
 
     init {
-        on<WorldEvent.Load> {
+        on<LevelEvent.Load> {
             clearBlocks()
         }
 

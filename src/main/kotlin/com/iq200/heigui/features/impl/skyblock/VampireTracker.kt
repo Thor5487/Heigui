@@ -20,6 +20,7 @@ import com.iq200.heigui.utils.render.textDim
 import com.iq200.heigui.utils.texture
 import net.minecraft.ChatFormatting
 import net.minecraft.network.chat.Component
+import net.minecraft.network.chat.TextColor
 import net.minecraft.world.entity.EquipmentSlot
 import net.minecraft.world.entity.decoration.ArmorStand
 import net.minecraft.world.item.Items
@@ -43,8 +44,7 @@ object VampireTracker: Module(
     private val afkTimeout by NumberSetting(
         "AFK Timeout",
         30,
-        5,
-        120,
+        5 ..120,
         1,
         unit = "s",
         desc = "Pause uptime after certain amount of time without activity"
@@ -258,7 +258,7 @@ object VampireTracker: Module(
                         val textColor = part.style.color
 
                         // 比對顏色值是否等於 ChatFormatting.GOLD (整數值)
-                        if (textColor != null && textColor.value == ChatFormatting.GOLD.color) {
+                        if (textColor != null && textColor.value == TextColor.fromLegacyFormat(ChatFormatting.GOLD)?.value) {
                             isGold = true
                         }
 

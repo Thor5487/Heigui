@@ -63,9 +63,9 @@ interface TickEvent : Event {
     object Server : TickEvent
 }
 
-interface WorldEvent : Event {
-    object Load : WorldEvent
-    object Unload : WorldEvent
+interface LevelEvent : Event {
+    object Load : LevelEvent
+    object Unload : LevelEvent
 }
 
 abstract class RenderEvent(open val context: AbstractLevelRenderContext) : Event {

@@ -1,4 +1,4 @@
 {
-  "vertex": "odin:core/round_rect",
-  "fragment": "odin:core/round_rect"
+  "vertex": "heigui:core/round_rect",
+  "fragment": "heigui:core/round_rect"
 }

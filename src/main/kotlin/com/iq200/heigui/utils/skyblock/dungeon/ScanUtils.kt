@@ -1,9 +1,9 @@
 package com.iq200.heigui.utils.skyblock.dungeon
 
 import com.iq200.heigui.Heigui.mc
+import com.iq200.heigui.events.LevelEvent
 import com.iq200.heigui.events.RoomEnterEvent
 import com.iq200.heigui.events.TickEvent
-import com.iq200.heigui.events.WorldEvent
 import com.iq200.heigui.events.core.on
 import com.iq200.heigui.utils.JsonResourceLoader
 import com.iq200.heigui.utils.Vec2i
@@ -68,7 +68,7 @@ object ScanUtils {
             devMessage("${room?.data?.name} - ${room?.rotation} || clay: ${room?.clayPos}")
         }
 
-        on<WorldEvent.Load> {
+        on<LevelEvent.Load> {
             passedRooms.clear()
             currentRoom = null
             lastRoomPos = Vec2i(0, 0)
@@ -86,10 +86,10 @@ object ScanUtils {
         room.rotation = Rotations.entries.dropLast(1).find { rotation ->
             room.roomComponents.any { component ->
                 BlockPos(component.x + rotation.x, roomHeight, component.z + rotation.z).let { blockPos ->
-                    level.getBlockState(blockPos).block == Blocks.BLUE_TERRACOTTA && (room.roomComponents.size == 1 || horizontals.all { facing ->
+                    level.getBlockState(blockPos).block == Blocks.DYED_TERRACOTTA.blue && (room.roomComponents.size == 1 || horizontals.all { facing ->
                         level.getBlockState(
                             blockPos.offset((if (facing.axis == Direction.Axis.X) facing.stepX else 0), 0, (if (facing.axis == Direction.Axis.Z) facing.stepZ else 0))
-                        ).block.equalsOneOf(Blocks.AIR, Blocks.BLUE_TERRACOTTA)
+                        ).block.equalsOneOf(Blocks.AIR, Blocks.DYED_TERRACOTTA.blue)
                     }).also { isCorrectClay -> if (isCorrectClay) room.clayPos = blockPos }
                 }
             }

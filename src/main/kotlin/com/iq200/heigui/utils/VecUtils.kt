@@ -221,3 +221,5 @@ fun vec3FromRotation(pitch: Float, yaw: Float): Vec3 {
 fun Vec3.multiply(m : Double) : Vec3 {
     return this.multiply(m, m, m)
 }
+
+val BlockPos.center: Vec3 get() = Vec3.atCenterOf(this)

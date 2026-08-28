@@ -4,21 +4,19 @@ import com.iq200.heigui.clickgui.settings.Setting.Companion.withDependency
 import com.iq200.heigui.clickgui.settings.impl.BooleanSetting
 import com.iq200.heigui.clickgui.settings.impl.ColorSetting
 import com.iq200.heigui.clickgui.settings.impl.NumberSetting
+import com.iq200.heigui.events.LevelEvent
 import com.iq200.heigui.events.RenderEvent
 import com.iq200.heigui.events.TickEvent
-import com.iq200.heigui.events.WorldEvent
 import com.iq200.heigui.events.core.on
 import com.iq200.heigui.features.Category
 import com.iq200.heigui.features.Module
 import com.iq200.heigui.utils.Color
 import com.iq200.heigui.utils.Colors
 import com.iq200.heigui.utils.createSoundSettings
-import com.iq200.heigui.utils.modMessage
 import com.iq200.heigui.utils.playSoundSettings
 import com.iq200.heigui.utils.render.drawBeaconBeam
 import com.iq200.heigui.utils.render.drawCustomBeacon
 import com.iq200.heigui.utils.render.drawStyledBox
-import com.iq200.heigui.utils.render.drawText
 import com.iq200.heigui.utils.render.drawTracer
 import com.iq200.heigui.utils.render.textDim
 import com.iq200.heigui.utils.skyblock.Island
@@ -156,10 +154,18 @@ object GDragonEggScanner : Module(
             }
         }
 
-        on<WorldEvent.Load> {
+        on<LevelEvent.Load> {
             foundLair = false
         }
 
+        on<RenderEvent.Extract> {
+            val player = mc.player ?: return@on
+            val pos = player.position()
+            drawBeaconBeam(
+                pos.toBlockPos(),
+                eggColor
+            )
+        }
     }
 
 

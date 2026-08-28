@@ -1,12 +1,10 @@
 package com.iq200.heigui.utils.skyblock
 
 import com.iq200.heigui.Heigui.mc
-import com.iq200.heigui.events.TickEvent
-import com.iq200.heigui.events.WorldEvent
+import com.iq200.heigui.events.LevelEvent
 import com.iq200.heigui.events.core.on
 import com.iq200.heigui.events.core.onReceive
 import com.iq200.heigui.utils.equalsOneOf
-import com.iq200.heigui.utils.modMessage
 import com.iq200.heigui.utils.noControlCodes
 import com.iq200.heigui.utils.startsWithOneOf
 import net.minecraft.network.protocol.game.ClientboundPlayerInfoUpdatePacket
@@ -45,8 +43,8 @@ object LocationUtils {
             lobbyRegex.find(text)?.groupValues?.get(1)?.let { lobbyId = it }
         }
 
-        on<WorldEvent.Load> {
-            currentArea = if (mc.isSingleplayer) Island.SinglePlayer else Island.Unknown
+        on<LevelEvent.Load> {
+            currentArea = if (mc.hasSingleplayerServer()) Island.SinglePlayer else Island.Unknown
             isInSkyblock = false
             lobbyId = null
         }
