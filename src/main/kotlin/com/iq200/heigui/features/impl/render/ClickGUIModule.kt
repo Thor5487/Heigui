@@ -16,7 +16,7 @@ object ClickGUIModule : Module(
     key = GLFW.GLFW_KEY_RIGHT_SHIFT,
     category = Category.RENDER
 ) {
-    val clickGuiScale by NumberSetting("Click GUI Size", 2, 1..4, 1, desc = "GUI scale the Click GUI is drawn at, whatever the video setting says.")
+    val clickGuiScale by NumberSetting("Click GUI Size", 2f, 1.0..4.0, 0.1, desc = "GUI scale the Click GUI is drawn at, whatever the video setting says.")
     val enableNotification by BooleanSetting("Chat notifications", true, desc = "Sends a message when you toggle a module with a keybind")
     val clickGUIColor by ColorSetting("Color", Color(50, 150, 220), desc = "The color of the Click GUI.")
 

@@ -158,14 +158,6 @@ object GDragonEggScanner : Module(
             foundLair = false
         }
 
-        on<RenderEvent.Extract> {
-            val player = mc.player ?: return@on
-            val pos = player.position()
-            drawBeaconBeam(
-                pos.toBlockPos(),
-                eggColor
-            )
-        }
     }
 
 
