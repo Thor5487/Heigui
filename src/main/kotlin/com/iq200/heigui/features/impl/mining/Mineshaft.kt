@@ -29,7 +29,7 @@ object Mineshaft : Module (
         on<GuiEvent.MouseClick> {
             if (!redirectClick) return@on
 
-            val containerName = mc.screen?.title?.string ?: return@on
+            val containerName = mc.gui.screen()?.title?.string ?: return@on
 
             if (containerName.contains("Glacite Mineshaft", ignoreCase = true)) {
                 val currentTime = System.currentTimeMillis()

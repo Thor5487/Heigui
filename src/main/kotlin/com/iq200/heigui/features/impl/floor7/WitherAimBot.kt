@@ -85,7 +85,7 @@ object WitherAimBot : Module(
                 }
             }
 
-            val partialTick =  context.gameRenderer().mainCamera.getCameraEntityPartialTicks(mc.deltaTracker)
+            val partialTick =  context.gameRenderer().mainCamera().getCameraEntityPartialTicks(mc.deltaTracker)
 
             val window = mc.window
             val centerX = window.guiScaledWidth / 2f

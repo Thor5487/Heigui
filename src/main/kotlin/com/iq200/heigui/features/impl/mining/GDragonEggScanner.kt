@@ -36,11 +36,11 @@ object GDragonEggScanner : Module(
 ) {
 
     private val eggColor by ColorSetting("Egg Color", Colors.MINECRAFT_GOLD, desc = "Color for Eggs")
-    private val scanDelay by NumberSetting("Scan Delay", 2, 1, 20, 1, desc = "Delay Between Each Scan", unit = "tick")
+    private val scanDelay by NumberSetting("Scan Delay", 2, 1 .. 20, 1, desc = "Delay Between Each Scan", unit = "tick")
     private val tracer by BooleanSetting("Tracer", false, desc = "Tracer to Eggs")
     private val tracerColor by ColorSetting("Tracer Color", Colors.MINECRAFT_GOLD, desc = "Color for Tracer").withDependency { tracer }
     private val structureFinder by BooleanSetting("Structure Finder", false, desc = "Find Lair Structure")
-    private val textScale by NumberSetting("Text Scale", 1, 0, 20, 1, desc = "Text Scale for Structure Title").withDependency { structureFinder }
+    private val textScale by NumberSetting("Text Scale", 1, 0 .. 20, 1, desc = "Text Scale for Structure Title").withDependency { structureFinder }
     private val structureColor by ColorSetting("Structure Color", Colors.MINECRAFT_RED, desc = "Color for Structure Beam").withDependency { structureFinder }
     private val sound = createSoundSettings("Sound", "entity.experience_orb.pickup") { structureFinder }
 
