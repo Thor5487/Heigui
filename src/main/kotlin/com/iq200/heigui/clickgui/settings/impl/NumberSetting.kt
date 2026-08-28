@@ -257,6 +257,22 @@ class NumberSetting<E>(
                     isEditing = false
                     if (activeSetting == this) activeSetting = null
                 }
+
+                in GLFW.GLFW_KEY_0..GLFW.GLFW_KEY_9 -> {
+                    insertChar((event.key - GLFW.GLFW_KEY_0).toString())
+                }
+                // 🌟 處理數字鍵盤 (Numpad) 0-9
+                in GLFW.GLFW_KEY_KP_0..GLFW.GLFW_KEY_KP_9 -> {
+                    insertChar((event.key - GLFW.GLFW_KEY_KP_0).toString())
+                }
+                // 🌟 處理小數點 (主鍵盤與數字鍵盤)
+                GLFW.GLFW_KEY_PERIOD, GLFW.GLFW_KEY_KP_DECIMAL -> {
+                    insertChar(".")
+                }
+                // 🌟 處理負號 (主鍵盤與數字鍵盤)
+                GLFW.GLFW_KEY_MINUS, GLFW.GLFW_KEY_KP_SUBTRACT -> {
+                    insertChar("-")
+                }
             }
             return true
         }
@@ -305,6 +321,16 @@ class NumberSetting<E>(
 
     override fun read(element: JsonElement, gson: Gson) {
         element.asNumber?.let { value = it as E }
+    }
+
+    private fun insertChar(charStr: String) {
+        // 防呆：不能有多個小數點
+        if (charStr == "." && inputText.contains(".")) return
+        // 防呆：負號只能加在最前面，且不能有多個
+        if (charStr == "-" && (cursorIndex > 0 || inputText.contains("-"))) return
+
+        inputText = inputText.substring(0, cursorIndex) + charStr + inputText.substring(cursorIndex)
+        cursorIndex += charStr.length
     }
 
 }
