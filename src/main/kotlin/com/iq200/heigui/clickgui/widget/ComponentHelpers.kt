@@ -1,5 +1,14 @@
 package com.iq200.heigui.clickgui.widget
 
+import com.iq200.heigui.Heigui.mc
+import com.iq200.heigui.clickgui.GuiTheme
+import com.iq200.heigui.clickgui.hoverTint
+import com.iq200.heigui.utils.Colors
+import com.iq200.heigui.utils.render.Corners
+import com.iq200.heigui.utils.render.circle
+import com.iq200.heigui.utils.render.roundedRectClipped
+import com.iq200.heigui.utils.render.roundedRectOutlined
+import com.iq200.heigui.utils.render.roundedTexture
 import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.client.gui.components.EditBox
 import net.minecraft.network.chat.Component

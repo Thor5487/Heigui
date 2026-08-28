@@ -24,11 +24,10 @@ object WitherAimBot : Module(
     description = "Aimbot for withers in F7/M7",
     category = Category.FLOOR7
 ) {
-    private val fovRadius by NumberSetting("Radius", 50f, 10f, 200f, 1f
-                                            , "Radius for Auto-Aiming");
+    private val fovRadius by NumberSetting("Radius", 50, 10 .. 200, desc = "Radius for Auto-Aiming");
     private val circleToggled by BooleanSetting("Circle", false, "Display Circle")
-    private val lineThickness by NumberSetting(name = "Thickness", default = 1f, min = 1f, max = 5f, increment = 1f
-                                            , desc = "Thickness of Line").withDependency { circleToggled }
+    private val lineThickness by NumberSetting("Thickness", 1, 1 .. 5, 1
+                                            , "Thickness of Line").withDependency { circleToggled }
     private val circleColor by ColorSetting(name = "Color", default = Colors.WHITE, allowAlpha = true, desc = "Color of Circle").withDependency { circleToggled }
     private val allWithers by BooleanSetting("All", false, "Aimbot for All Withers")
     private val maxor by BooleanSetting("Maxor", true, "Aimbot for Maxor").withDependency { !allWithers }
@@ -52,9 +51,9 @@ object WitherAimBot : Module(
                     graphics,
                     centerX,
                     centerY,
-                    fovRadius,
+                    fovRadius.toFloat(),
                     circleColor,
-                    lineThickness*2
+                    lineThickness*2f
                 )
             }
 

@@ -3,6 +3,7 @@ package com.iq200.heigui.clickgui.settings.impl
 import com.google.gson.Gson
 import com.google.gson.JsonElement
 import com.google.gson.reflect.TypeToken
+import com.iq200.heigui.clickgui.settings.AbstractSetting
 import com.iq200.heigui.clickgui.settings.Saving
 import com.iq200.heigui.clickgui.settings.Setting
 import java.lang.reflect.Type
@@ -18,7 +19,7 @@ class MapSetting<K : Any, V : Any, T : MutableMap<K, V>>(
     name: String,
     override val default: T,
     private val type: Type,
-) : Setting<T>(name, description = ""), Saving {
+) : AbstractSetting<T>(name, description = ""), Saving {
 
     override var value: T = default
 

@@ -1,11 +1,13 @@
 package com.iq200.heigui.clickgui.settings.impl
 
-import com.iq200.heigui.clickgui.ClickGUI
 import com.iq200.heigui.clickgui.settings.RenderableSetting
-import com.iq200.heigui.utils.Colors
-import com.iq200.heigui.utils.ui.isAreaHovered
-import com.iq200.heigui.utils.ui.rendering.NVGRenderer
+import com.iq200.heigui.clickgui.widget.drawIcon
+import com.iq200.heigui.utils.ui.animations.Easing
+import com.iq200.heigui.utils.ui.animations.Fade
+import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.client.input.MouseButtonEvent
+import net.minecraft.resources.Identifier
+import kotlin.math.PI
 
 /**
  * A setting intended to show or hide other settings in the GUI.
@@ -21,36 +23,24 @@ class DropdownSetting(
     override var value: Boolean = default
     private var enabled: Boolean by this::value
 
-    private val toggleAnimation = LinearAnimation<Float>(200)
-    private val hoverHandler = HoverHandler(150)
+    private val toggleAnimation = Fade(FLIP_DURATION, Easing.EASE_IN_OUT)
 
-    override fun render(x: Float, y: Float, mouseX: Float, mouseY: Float): Float {
-        super.render(x, y, mouseX, mouseY)
-        val height = getHeight()
+    override fun render(graphics: GuiGraphicsExtractor, mouseX: Int, mouseY: Int) {
+        drawLabel(graphics)
 
-        NVGRenderer.text(name, x + 6f, y + height / 2f - 8f, 16f, Colors.WHITE.rgba, NVGRenderer.defaultFont)
+        val iconX = x + width - 12 - 8
+        val iconY = y + (height - 12) / 2
 
-        hoverHandler.handle(lastX + width - 30f, lastY + getHeight() / 2f - 16f, 24f, 24f, true)
-
-        val imageSize = 24f + (6f * hoverHandler.percent() / 100f)
-        val offset = (imageSize - 24f) / 2f
-
-        NVGRenderer.push()
-        NVGRenderer.translate(x + width - 18f, y + height / 2f - 4f)
-        NVGRenderer.rotate(toggleAnimation.get(0f, Math.PI.toFloat() / 2f, enabled))
-        NVGRenderer.translate(-(12f + offset), -(12f + offset))
-        NVGRenderer.image(ClickGUI.chevronImage, 0f, 0f, imageSize, imageSize)
-        NVGRenderer.pop()
-
-        return height
+        graphics.drawIcon(CHEVRON, iconX, iconY, 15, hover, toggleAnimation.progress(enabled) * QUARTER_TURN)
     }
 
-    override fun mouseClicked(mouseX: Float, mouseY: Float, click: MouseButtonEvent): Boolean {
-        if (click.button() != 0 || !isHovered) return false
+    override fun onClick(event: MouseButtonEvent, doubleClick: Boolean) {
         enabled = !enabled
-        toggleAnimation.start()
-        return true
     }
 
-    override val isHovered: Boolean get() = isAreaHovered(lastX + width - 30f, lastY + getHeight() / 2f - 16f, 24f, 24f, true)
+    private companion object {
+        val CHEVRON: Identifier = Identifier.fromNamespaceAndPath("heigui", "textures/chevron.png")
+        const val QUARTER_TURN = (PI / 2).toFloat()
+        const val FLIP_DURATION = 200L
+    }
 }

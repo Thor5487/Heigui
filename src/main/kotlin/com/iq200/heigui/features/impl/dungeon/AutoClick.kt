@@ -28,8 +28,8 @@ object AutoClick : Module (
 ) {
     private val customAC by BooleanSetting("Custom Item", false, desc = "Custom Item for Auto Click, /hg cac to view complete commands")
     private val mac by BooleanSetting("MAC", false, "Mage Autoclick")
-    private val cps by NumberSetting("CPS", 10, 1, 20, 1, "Clicks per second")
-    private val delay by NumberSetting("Hold Delay", 200, 50, 500, 50, unit = "ms", desc = "Delay to Start Autoclick")
+    private val cps by NumberSetting("CPS", 10, 1 .. 20, 1, "Clicks per second")
+    private val delay by NumberSetting("Hold Delay", 200, 50 .. 500, 50, unit = "ms", desc = "Delay to Start Autoclick")
 
     private var isHolding = false
     private var pressStartTime = 0L
@@ -74,7 +74,7 @@ object AutoClick : Module (
                 return@on
             }
 
-            if (mc.screen != null) return@on
+            if (mc.gui.screen() != null) return@on
 
             if (Vampire.enabled && Vampire.isHandlingKillerSpring) {
                 return@on

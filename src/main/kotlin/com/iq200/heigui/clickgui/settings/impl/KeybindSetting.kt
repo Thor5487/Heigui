@@ -3,17 +3,20 @@ package com.iq200.heigui.clickgui.settings.impl
 import com.google.gson.Gson
 import com.google.gson.JsonElement
 import com.google.gson.JsonPrimitive
+import com.iq200.heigui.Heigui
 import com.mojang.blaze3d.platform.InputConstants
 import com.iq200.heigui.Heigui.mc
-import com.iq200.heigui.clickgui.ClickGUI.gray38
+import com.iq200.heigui.clickgui.GuiTheme
 import com.iq200.heigui.clickgui.settings.RenderableSetting
 import com.iq200.heigui.clickgui.settings.Saving
-import com.iq200.heigui.features.impl.render.ClickGUIModule
 import com.iq200.heigui.utils.Colors
-import com.iq200.heigui.utils.ui.isAreaHovered
-import com.iq200.heigui.utils.ui.rendering.NVGRenderer
+import com.iq200.heigui.utils.render.roundedRectOutlined
+import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper
+import net.minecraft.client.KeyMapping
+import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.client.input.KeyEvent
 import net.minecraft.client.input.MouseButtonEvent
+import net.minecraft.resources.Identifier
 import org.lwjgl.glfw.GLFW
 
 class KeybindSetting(
@@ -24,60 +27,43 @@ class KeybindSetting(
 
     constructor(name: String, defaultKeyCode: Int, desc: String = "") : this(name, InputConstants.Type.KEYSYM.getOrCreate(defaultKeyCode), desc)
 
-    override var value: InputConstants.Key = default
+    override var value: InputConstants.Key
+        get() = mapping?.let { KeyMappingHelper.getBoundKeyOf(it) } ?: pending
+        set(key) {
+            pending = key
+            val mapping = mapping ?: return
+            if (mapping.matches(key)) return
+            mapping.setKey(key)
+            KeyMapping.resetMapping()
+            pendingOptionsSave = true
+        }
+
+    private var mapping: KeyMapping? = null
+    private var pending: InputConstants.Key = default
+    val boundKey: InputConstants.Key get() = value
+
     var onPress: (() -> Unit)? = null
-    private var keyNameWidth = -1f
+    private var listening = false
 
-    private var key: InputConstants.Key
-        get() = value
-        set(newKey) {
-            if (newKey == value) return
-            value = newKey
-            keyNameWidth = NVGRenderer.textWidth(value.displayName.string, 16f, NVGRenderer.defaultFont)
+    private var namedKey: InputConstants.Key? = null
+    private var keyName = ""
+
+    private val boundName: String
+        get() {
+            val key = value
+            if (key !== namedKey) {
+                namedKey = key
+                keyName = key.displayName.string
+            }
+            return keyName
         }
 
-    override fun render(x: Float, y: Float, mouseX: Float, mouseY: Float): Float {
-        super.render(x, y, mouseX, mouseY)
-        if (keyNameWidth < 0) keyNameWidth = NVGRenderer.textWidth(value.displayName.string, 16f, NVGRenderer.defaultFont)
-        val height = getHeight()
+    override val clickButtons: IntArray get() = if (listening) ALL_MOUSE_BUTTONS else BOTH_BUTTONS
 
-        val rectX = x + width - 20 - keyNameWidth
-        val rectY = y + height / 2f - 10f
-        val rectWidth = keyNameWidth + 12f
-        val rectHeight = 20f
-
-        NVGRenderer.rect(rectX, rectY, rectWidth, rectHeight, gray38.rgba, 5f)
-        NVGRenderer.hollowRect(rectX - 1, rectY - 1, rectWidth + 2f, rectHeight + 2f, 1.5f, ClickGUIModule.clickGUIColor.rgba, 4f)
-
-        NVGRenderer.text(name, x + 6f, y + height / 2f - 8f, 16f, Colors.WHITE.rgba, NVGRenderer.defaultFont)
-        NVGRenderer.text(value.displayName.string, rectX + (rectWidth - keyNameWidth) / 2, rectY + rectHeight / 2 - 8f, 16f, if (listening) Colors.MINECRAFT_YELLOW.rgba else Colors.WHITE.rgba, NVGRenderer.defaultFont)
-
-        return height
-    }
-
-    override fun mouseClicked(mouseX: Float, mouseY: Float, click: MouseButtonEvent): Boolean {
-        if (listening) {
-            key = InputConstants.Type.MOUSE.getOrCreate(click.button())
-            listening = false
-            return true
-        } else if (click.button() == 0 && isHovered) {
-            listening = true
-            return true
-        }
-        return false
-    }
-
-    override fun keyPressed(input: KeyEvent): Boolean {
-        if (!listening) return false
-
-        when (input.key) {
-            GLFW.GLFW_KEY_ESCAPE, GLFW.GLFW_KEY_BACKSPACE -> key = InputConstants.UNKNOWN
-            GLFW.GLFW_KEY_ENTER -> listening = false
-            else -> key = InputConstants.getKey(input)
-        }
-
-        listening = false
-        return true
+    fun registerKeyMapping(owner: String) {
+        if (mapping != null) return
+        val label = if (name == "Keybind") owner else "$owner ($name)"
+        mapping = KeyMappingHelper.registerKeyMapping(KeyMapping(label, pending.type, pending.value, KEYBIND_CATEGORY))
     }
 
     fun onPress(block: () -> Unit): KeybindSetting {
@@ -85,20 +71,77 @@ class KeybindSetting(
         return this
     }
 
-    fun isDown(): Boolean =
-        value != InputConstants.UNKNOWN && InputConstants.isKeyDown(mc.window, value.value)
+    override fun render(graphics: GuiGraphicsExtractor, mouseX: Int, mouseY: Int) {
+        if (listening && !isFocused) listening = false
 
-    override val isHovered: Boolean
-        get() =
-            isAreaHovered(lastX + width - 20 - keyNameWidth, lastY + getHeight() / 2f - 10f, keyNameWidth + 12f, 22f, true)
+        drawLabel(graphics)
+
+        val boxWidth = mc.font.width(boundName) + PADDING * 2
+        val boxX = x + width - RIGHT_PAD - boxWidth
+        val boxY = y + (height - BOX_HEIGHT) / 2
+
+        graphics.roundedRectOutlined(boxX, boxY, boxX + boxWidth, boxY + BOX_HEIGHT, GuiTheme.surface.rgba, GuiTheme.accent.rgba, 1f, GuiTheme.RADIUS)
+
+        val color = if (listening) Colors.MINECRAFT_YELLOW.rgba else Colors.WHITE.rgba
+        graphics.text(mc.font, boundName, boxX + PADDING, GuiTheme.textY(boxY, BOX_HEIGHT), color, false)
+    }
+
+    override fun onClick(event: MouseButtonEvent, doubleClick: Boolean) {
+        if (listening) {
+            value = InputConstants.Type.MOUSE.getOrCreate(event.button())
+            listening = false
+        } else if (event.button() == LEFT) listening = true
+    }
+
+    override fun keyPressed(event: KeyEvent): Boolean {
+        if (!listening) return false
+        when (event.key) {
+            GLFW.GLFW_KEY_ESCAPE, GLFW.GLFW_KEY_BACKSPACE -> value = InputConstants.UNKNOWN
+            GLFW.GLFW_KEY_ENTER -> Unit
+            else -> value = InputConstants.getKey(event)
+        }
+        listening = false
+        return true
+    }
+
+    override fun release() {
+        listening = false
+    }
 
     override fun write(gson: Gson): JsonElement = JsonPrimitive(value.name)
 
     override fun read(element: JsonElement, gson: Gson) {
-        element.asString?.let { value = InputConstants.getKey(it) }
+        val saved = element.asString?.let(InputConstants::getKey) ?: return
+        if (mapping?.isDefault != false) value = saved
     }
 
     override fun reset() {
         value = default
+    }
+
+    companion object {
+        private const val BOX_HEIGHT = 16
+        private const val PADDING = 6
+        private const val RIGHT_PAD = 5
+
+        private val ALL_MOUSE_BUTTONS = IntArray(GLFW.GLFW_MOUSE_BUTTON_LAST + 1) { it }
+
+        private val KEYBIND_CATEGORY: KeyMapping.Category =
+            KeyMapping.Category.register(Identifier.fromNamespaceAndPath(Heigui.MOD_ID, "keybinds"))
+
+        private var pendingOptionsSave = false
+
+        fun saveOptionsIfChanged() {
+            if (!pendingOptionsSave) return
+            pendingOptionsSave = false
+            mc.options.save()
+        }
+
+        fun InputConstants.Key.isDown(): Boolean = when {
+            this == InputConstants.UNKNOWN -> false
+            type == InputConstants.Type.MOUSE -> GLFW.glfwGetMouseButton(mc.window.handle(), value) == GLFW.GLFW_PRESS
+            value >= GLFW.GLFW_KEY_SPACE -> InputConstants.isKeyDown(mc.window, value)
+            else -> false
+        }
     }
 }

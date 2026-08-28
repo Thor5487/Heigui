@@ -7,10 +7,12 @@ import com.iq200.heigui.features.Category
 import com.iq200.heigui.features.ModuleManager
 import com.iq200.heigui.features.impl.render.ClickGUIModule
 import com.iq200.heigui.utils.Colors
+import com.iq200.heigui.utils.render.Corners
 import com.iq200.heigui.utils.render.pushScissor
 import com.iq200.heigui.utils.render.roundedRect
 import com.iq200.heigui.utils.render.roundedShadow
 import net.minecraft.client.gui.GuiGraphicsExtractor
+import net.minecraft.client.gui.components.events.GuiEventListener
 import net.minecraft.client.input.MouseButtonEvent
 import net.minecraft.network.chat.Component
 import kotlin.math.sign

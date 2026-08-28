@@ -45,7 +45,7 @@ object Triggerbot : Module (
     private val lever by BooleanSetting("Lever", false, "lever triggerbot")
     private val chest by BooleanSetting("Chest", false, "chest triggerbot")
     private val essence by BooleanSetting("Essence", false, "essence triggerbot")
-    private val cd by NumberSetting("CD for Click", 200, 50, 1000, 10, "CD between clicking same block")
+    private val cd by NumberSetting("CD for Click", 200, 50 .. 1000, 10, "CD between clicking same block")
 
     private val clickedBlocks = mutableMapOf<BlockPos, Long>()
 

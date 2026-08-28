@@ -22,9 +22,9 @@ object AutoCrit : Module (
     category = Category.FLOOR7
 ) {
     private val swordSwap by BooleanSetting("Sword Swap", false, desc = "Swap to the sword for multipliers.")
-    private val swordSlot by NumberSetting("Sword Slot", 1.0, 1.0, 8.0, 1, "The hotbar slot to swap to for sword.").withDependency { swordSwap }
+    private val swordSlot by NumberSetting("Sword Slot", 1.0, 1.0 .. 8.0, 1, "The hotbar slot to swap to for sword.").withDependency { swordSwap }
     private val armorSwap by BooleanSetting("Armor Swap", false, desc = "Swap armor in the wardrobe.")
-    private val slotIndex by NumberSetting("Wardrobe Slot", 1.0, 1.0, 9.0, 1, "The armor to swap to in wardrobe.").withDependency { armorSwap }
+    private val slotIndex by NumberSetting("Wardrobe Slot", 1.0, 1.0 .. 9.0, 1, "The armor to swap to in wardrobe.").withDependency { armorSwap }
 
     private enum class State {
         IDLE,
@@ -43,7 +43,7 @@ object AutoCrit : Module (
 
         on<InputEvent> {
             if (state != State.IDLE) return@on
-            if (mc.screen != null) return@on
+            if (mc.gui.screen() != null) return@on
 
             if (key.value != InputConstants.MOUSE_BUTTON_LEFT || !isHoldingDeathBow()) return@on
 
@@ -87,7 +87,7 @@ object AutoCrit : Module (
                         return@on
                     }
 
-                    val screen = mc.screen as? AbstractContainerScreen<*> ?: return@on
+                    val screen = mc.gui.screen() as? AbstractContainerScreen<*> ?: return@on
                     if (!screen.title.string.contains("Loadouts")) return@on
 
                     val zeroBasedIndex = slotIndex - 1

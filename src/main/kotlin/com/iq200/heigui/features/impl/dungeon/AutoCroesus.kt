@@ -64,9 +64,9 @@ object AutoCroesus : Module(
     description = "Automatically opens and claims rare or profitable loot from Croesus.",
     category = Category.DUNGEON
 ) {
-    private val clickDelay by NumberSetting("Click Delay", 150, 50, 1000, 50, "minimum delay between each click", "ms")
+    private val clickDelay by NumberSetting("Click Delay", 150, 50 .. 1000, 50, "minimum delay between each click", "ms")
     private val useKismets by BooleanSetting("Kismet", true, "use kismets or not")
-    private val targetProfit by NumberSetting("Target Profit", 5, 1, 100, 1, "rerolls the chest if current profit is below this value", "m").withDependency { useKismets }
+    private val targetProfit by NumberSetting("Target Profit", 5, 1 .. 100, 1, "rerolls the chest if current profit is below this value", "m").withDependency { useKismets }
 
     val ignoreConfig = JsonConfig(
         fileName = "ac-ignore.json",
@@ -126,7 +126,7 @@ object AutoCroesus : Module(
             if (currentTime - lastActionTime < clickDelay) return@on
 
             if (currentState == CroesusState.WAITING_FOR_REOPEN) {
-                if (mc.screen == null) { // 只有當介面真的被伺服器關閉後，才進行下一步
+                if (mc.gui.screen() == null) { // 只有當介面真的被伺服器關閉後，才進行下一步
                     saveRunRecord(pendingChestData)
                     pendingChestData = null
 
@@ -148,7 +148,7 @@ object AutoCroesus : Module(
                 return@on
             }
 
-            val currentScreen = mc.screen as? AbstractContainerScreen<*> ?: return@on
+            val currentScreen = mc.gui.screen() as? AbstractContainerScreen<*> ?: return@on
             val menuTitle = currentScreen.title.string.replace(Regex("§[0-9a-fk-or]"), "")
 
             // 就像路由台一樣，把任務指派給對應的函式處理
@@ -304,7 +304,7 @@ object AutoCroesus : Module(
             mc.execute {
                 val player = mc.player ?: return@execute
 
-                if (mc.screen != null) {
+                if (mc.gui.screen() != null) {
                     player.closeContainer()
                 }
 
@@ -365,7 +365,7 @@ object AutoCroesus : Module(
             isWorking = false
             modMessage("§c[AutoCroesus] AutoCroesus has been stopped")
 
-            if (mc.screen != null) {
+            if (mc.gui.screen() != null) {
                 mc.player?.closeContainer()
             }
         }

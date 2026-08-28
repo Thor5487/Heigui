@@ -9,7 +9,7 @@ import com.iq200.heigui.utils.handlers.schedule
 val mainCommand = Commodore("heigui", "hg") {
 
     runs {
-        schedule(0) { mc.setScreen(ClickGUI) }
+        schedule(0) { mc.setScreenAndShow(ClickGUI) }
     }
 
     setupAutoCroesusCommand()

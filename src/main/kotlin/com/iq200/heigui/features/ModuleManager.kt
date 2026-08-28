@@ -15,7 +15,6 @@ import com.iq200.heigui.features.impl.dungeon.AutoClick
 import com.iq200.heigui.features.impl.dungeon.AutoClose
 import com.iq200.heigui.features.impl.dungeon.AutoCroesus
 import com.iq200.heigui.features.impl.dungeon.SATpFix
-import com.iq200.heigui.features.impl.dungeon.SecretAura
 import com.iq200.heigui.features.impl.dungeon.SecretDone
 import com.iq200.heigui.features.impl.dungeon.SkipSecrets
 import com.iq200.heigui.features.impl.dungeon.Triggerbot
@@ -72,7 +71,7 @@ object ModuleManager {
     init {
         registerModules(config = ModuleConfig(file = File(Heigui.configDir, "heigui-config.json")),
             // dungeon
-            SecretAura, AutoClose, ZPDB, Triggerbot, AutoClick, SecretDone, SkipSecrets, SATpFix, AutoCroesus,
+            AutoClose, ZPDB, Triggerbot, AutoClick, SecretDone, SkipSecrets, SATpFix, AutoCroesus,
 
             // floor 7
             SimonSays, WitherAimBot, LBHelper, AutoCrit, InstaMid,
@@ -98,7 +97,7 @@ object ModuleManager {
             if (!isPress) return@on
 
             for (setting in keybindSettingsCache) {
-                if (setting.value.value == key.value) setting.onPress?.invoke()
+                if (setting.boundKey.value == key.value) setting.onPress?.invoke()
             }
         }
 
@@ -128,7 +127,10 @@ object ModuleManager {
 
             for ((_, setting) in module.settings) {
                 when (setting) {
-                    is KeybindSetting -> keybindSettingsCache.add(setting)
+                    is KeybindSetting -> {
+                        keybindSettingsCache.add(setting)
+                        setting.registerKeyMapping(module.name)
+                    }
                     is HUDSetting -> hudSettingsCache.add(setting)
                 }
             }
@@ -153,17 +155,14 @@ object ModuleManager {
         for (config in configs) {
             config.save()
         }
+        KeybindSetting.saveOptionsIfChanged()
     }
 
     fun render(guiGraphics: GuiGraphicsExtractor, tickCounter: DeltaTracker) {
-        if (mc.level == null || mc.player == null || mc.screen == HudManager || mc.options.hideGui) return
+        if (mc.level == null || mc.player == null || mc.gui.screen() == HudManager) return
 
-        guiGraphics.pose().pushMatrix()
-        val sf = mc.window.guiScale
-        guiGraphics.pose().scale(1f / sf, 1f / sf)
-        for (hudSettings in hudSettingsCache) {
-            if (hudSettings.isEnabled) hudSettings.value.draw(guiGraphics, false)
+        for (hudSetting in hudSettingsCache) {
+            if (hudSetting.isEnabled) hudSetting.hud.draw(guiGraphics, false)
         }
-        guiGraphics.pose().popMatrix()
     }
 }

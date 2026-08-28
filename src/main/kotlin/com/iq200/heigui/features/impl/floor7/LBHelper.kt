@@ -21,11 +21,11 @@ object LBHelper : Module (
     description = "auto release LB and recharge",
     category = Category.FLOOR7
 ) {
-    private val RED_TICK by NumberSetting("Red Dragon", 10, 5, 20, 1, "max tick for red dragon", "tick")
-    private val GREEN_TICK by NumberSetting("Green Dragon", 9, 5, 20, 1, "max tick for green dragon", "tick")
-    private val PURPLE_TICK by NumberSetting("Purple Dragon", 7, 5, 20, 1, "max tick for purple dragon", "tick")
-    private val BLUE_TICK by NumberSetting("Blue Dragon", 10, 5, 20, 1, "max tick for blue dragon", "tick")
-    private val ORANGE_TICK by NumberSetting("Orange Dragon", 9, 5, 20, 1, "max tick for orange dragon", "tick")
+    private val RED_TICK by NumberSetting("Red Dragon", 10, 5 .. 20, 1, "max tick for red dragon", "tick")
+    private val GREEN_TICK by NumberSetting("Green Dragon", 9, 5 .. 20, 1, "max tick for green dragon", "tick")
+    private val PURPLE_TICK by NumberSetting("Purple Dragon", 7, 5 .. 20, 1, "max tick for purple dragon", "tick")
+    private val BLUE_TICK by NumberSetting("Blue Dragon", 10, 5 .. 20, 1, "max tick for blue dragon", "tick")
+    private val ORANGE_TICK by NumberSetting("Orange Dragon", 9, 5 .. 20, 1, "max tick for orange dragon", "tick")
     private val sound by BooleanSetting("Sound", false, "play sound when release")
     private val soundSetting = createSoundSettings("Release Sound", "entity.experience_orb.pickup") { sound }
 
@@ -57,7 +57,7 @@ object LBHelper : Module (
 
 
         on<TickEvent.Server> {
-            if (mc.screen != null) return@on reset()
+            if (mc.gui.screen() != null) return@on reset()
             if (!isHolding && !isCharging) return@on
 
             val itemName = mc.player?.mainHandItem?.hoverName?.string?.lowercase() ?: return@on reset()
@@ -87,7 +87,7 @@ object LBHelper : Module (
         mc.options.keyUse.isDown = false
         reset()
         schedule(2, false) {
-            if (isHolding && mc.screen == null) mc.options.keyUse.isDown = true
+            if (isHolding && mc.gui.screen() == null) mc.options.keyUse.isDown = true
 
         }
 

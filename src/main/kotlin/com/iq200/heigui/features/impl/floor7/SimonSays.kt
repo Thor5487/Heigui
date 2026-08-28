@@ -38,7 +38,7 @@ object SimonSays : Module(
     private val blockSound = createSoundSettings("Block Sound", "entity.blaze.hurt") { blockWrongClick }
     private val autoStart by BooleanSetting("Auto Start", false, "auto starts ss when s1 starts")
     private val triggerbot by BooleanSetting("Triggerbot", false, desc = "")
-    private val triggerBotDelay by NumberSetting("Triggerbot Delay", 200L, 0, 500, unit = "ms", desc = "Delay for Each Click").withDependency { triggerbot }
+    private val triggerBotDelay by NumberSetting("Triggerbot Delay", 200L, 0 .. 500, unit = "ms", desc = "Delay for Each Click").withDependency { triggerbot }
     private val triggerBotClock = Clock(triggerBotDelay)
     private val firstClickClock = Clock(100)
 
@@ -100,7 +100,7 @@ object SimonSays : Module(
         }
 
         on<RenderEvent.Extract> {
-            if (!triggerbot|| !triggerBotClock.hasTimePassed(triggerBotDelay) || mc.screen != null) return@on
+            if (!triggerbot|| !triggerBotClock.hasTimePassed(triggerBotDelay) || mc.gui.screen() != null) return@on
 
             // 如果還沒有解答，或者已經點完了，就跳出
             if (clickInOrder.isEmpty() || clickNeeded >= clickInOrder.size) return@on

@@ -8,22 +8,23 @@ import com.iq200.heigui.events.core.on
 import com.iq200.heigui.features.Category
 import com.iq200.heigui.features.Module
 import com.iq200.heigui.utils.modMessage
+import com.iq200.heigui.utils.skyblock.dungeon.DungeonClass
 import com.iq200.heigui.utils.skyblock.dungeon.DungeonUtils
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen
 import net.minecraft.world.inventory.ContainerInput
 import net.minecraft.world.item.Items
+
 
 object InstaMid : Module(
     name = "InstaMid",
     description = "Instant Middle",
     category = Category.FLOOR7
 ) {
-    private val delay by NumberSetting("Delay", 1, 0, 10, desc = "Delay to Trigger After Getting Pulled", unit = "tick")
-    private val classOptions = listOf("Archer", "Berserk", "Healer", "Mage", "Tank")
-    private val clazz by SelectorSetting("Class", "Berserk", classOptions, desc = "class to leap")
+    private val delay by NumberSetting("Delay", 1, 0 .. 10, desc = "Delay to Trigger After Getting Pulled", unit = "tick")
+    private val clazz by SelectorSetting("Class", DungeonClass.BERSERK, desc = "class to leap")
 
     private val currentClassName: String
-        get() = classOptions.getOrElse(clazz) { "Unknown" }
+        get() = clazz.name
 
     // 騎乘狀態追蹤
     private var isRiding = false
@@ -62,7 +63,7 @@ object InstaMid : Module(
                     hasTriggeredThisRun = true // 鎖上，這場絕對不會再觸發第二次
 
                     // 🎯 當下立刻檢查畫面
-                    val screen = mc.screen as? AbstractContainerScreen<*>
+                    val screen = mc.gui.screen() as? AbstractContainerScreen<*>
                     if (screen != null) {
                         val title = screen.title.string.lowercase().replace(Regex("§[0-9a-fk-or]"), "")
 
