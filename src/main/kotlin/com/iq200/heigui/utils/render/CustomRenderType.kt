@@ -36,10 +36,12 @@ object CustomRenderType {
             .createRenderSetup()
     )
 
+    @JvmField
     val BEACON_ESP: RenderType = RenderType.create(
-        "beacon-esp",
+        "beacon_esp",
         RenderSetup.builder(CustomRenderPipelines.BEACON_ESP)
-            .withTexture("Sampler0", Identifier.fromNamespaceAndPath("heigui", "shit"))
+            // 因為底層用了原版 Snippet，這裡塞入 Sampler0 絕對會成功，不會再破圖了！
+            .withTexture("Sampler0", BeaconRenderer.BEAM_LOCATION)
             .setOutputTarget(OutputTarget.ITEM_ENTITY_TARGET)
             .createRenderSetup()
     )

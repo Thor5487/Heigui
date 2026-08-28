@@ -20,7 +20,8 @@
     "mixins.MixinMouseHandler",
     "mixins.MixinMultiplayerGameMode",
     "mixins.MixinPaneOutLine",
-    "mixins.MixinScreen"
+    "mixins.MixinScreen",
+    "mixins.MixinBeaconRenderer"
   ],
   "mixins": [
     "mixins.MixinConnection",

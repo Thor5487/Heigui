@@ -234,7 +234,7 @@ class ColorSetting(
     }
 
     private companion object {
-        val HUE_GRADIENT: Identifier = Identifier.fromNamespaceAndPath("odin", "textures/huegradient.png")
+        val HUE_GRADIENT: Identifier = Identifier.fromNamespaceAndPath("heigui", "textures/huegradient.png")
 
         const val EXPAND_DURATION = 200L
         const val MARKER_DURATION = 100L

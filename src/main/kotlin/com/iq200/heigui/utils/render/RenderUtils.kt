@@ -10,9 +10,11 @@ import com.iq200.heigui.utils.Color.Companion.multiplyAlpha
 import com.iq200.heigui.utils.addVec
 import com.iq200.heigui.utils.center
 import com.iq200.heigui.utils.unaryMinus
+import com.iq200.mixin.accessors.BeaconBeamAccessor
 import it.unimi.dsi.fastutil.objects.ObjectArrayList
 import net.minecraft.client.gui.Font
 import net.minecraft.client.renderer.SubmitNodeCollector
+import net.minecraft.client.renderer.blockentity.BeaconRenderer
 import net.minecraft.client.renderer.rendertype.RenderTypes
 import net.minecraft.client.renderer.texture.OverlayTexture
 import net.minecraft.core.BlockPos
@@ -203,81 +205,45 @@ private fun PoseStack.renderQueuedBeaconBeams(consumer: List<BeaconData>, collec
     if (consumer.isEmpty()) return
 
     val animationTime = (System.currentTimeMillis() % 3600000L) / 50.0f
-
-    // 🌟 保留你原本完美的動態滾動參數
-    val scroll = -animationTime
-    val texVOff = frac(scroll * 0.2f - floor(scroll * 0.1f))
-    val height = 384
+    val height = 384 // 光柱高度
 
     for (beacon in consumer) {
         pushPose()
 
-        // 1. 26.2 座標修正：必須手動減掉相機座標
+        // 1. 座標修正：手動減掉相機座標
         translate(
-            beacon.pos.x + 0.5 - camera.x,
+            beacon.pos.x - camera.x,
             beacon.pos.y.toDouble() - camera.y,
-            beacon.pos.z + 0.5 - camera.z
+            beacon.pos.z - camera.z
         )
 
         val dx = camera.x - (beacon.pos.x + 0.5)
         val dz = camera.z - (beacon.pos.z + 0.5)
         val dist = sqrt(dx * dx + dz * dz).toFloat()
-
         val scale = if (beacon.isScoping) 1.0f else maxOf(1.0f, dist / 96.0f)
-        val radius = 0.2f * scale
-        val color = beacon.color.rgba
 
-        pushPose()
-        mulPose(com.mojang.math.Axis.YP.rotationDegrees(animationTime * 2.25f - 45.0f))
+        // 🌟 2. 打開 ESP 開關 (告訴 Mixin：接下來這根是我畫的，請讓它穿牆！)
+        ESPState.isRenderingCustomESP = true
 
-        val v2 = -1.0f + texVOff
-        val v1 = height.toFloat() * (0.5f / radius) + v2
+        // 🌟 3. 呼叫原版的渲染邏輯，完美繼承貼圖、動畫與幾何
+        BeaconBeamAccessor.invokeRenderBeam(
+            this,
+            collector,
+            BeaconRenderer.BEAM_LOCATION,
+            1.0f,
+            animationTime,
+            0,
+            height,
+            beacon.color.rgba,
+            0.2f * scale,
+            0f
+        )
 
-        // 2. 26.2 提交修正：改用 collector 提交自訂幾何，傳入正確的 pose 與 buffer
-        collector.submitCustomGeometry(this, CustomRenderType.BEACON_ESP) { pose, buffer ->
-            renderBeamPart(
-                pose, buffer, color, 0, height,
-                0.0f, radius, radius, 0.0f, -radius, 0.0f, 0.0f, -radius,
-                0.0f, 1.0f, v1, v2
-            )
-        }
+        // 🌟 4. 畫完立刻關掉 (讓原版世界裡的烽火台維持正常不穿牆)
+        ESPState.isRenderingCustomESP = false
 
-        popPose()
         popPose()
     }
-}
-
-private fun renderBeamPart(
-    pose: PoseStack.Pose, builder: VertexConsumer, color: Int, yStart: Int, yEnd: Int,
-    wnx: Float, wnz: Float, enx: Float, enz: Float, wsx: Float, wsz: Float, esx: Float, esz: Float,
-    u1: Float, u2: Float, v1: Float, v2: Float
-) {
-    renderBeamQuad(pose, builder, color, yStart, yEnd, wnx, wnz, enx, enz, u1, u2, v1, v2)
-    renderBeamQuad(pose, builder, color, yStart, yEnd, esx, esz, wsx, wsz, u1, u2, v1, v2)
-    renderBeamQuad(pose, builder, color, yStart, yEnd, enx, enz, esx, esz, u1, u2, v1, v2)
-    renderBeamQuad(pose, builder, color, yStart, yEnd, wsx, wsz, wnx, wnz, u1, u2, v1, v2)
-}
-
-private fun renderBeamQuad(
-    pose: PoseStack.Pose, builder: VertexConsumer, color: Int, yStart: Int, yEnd: Int,
-    x1: Float, z1: Float, x2: Float, z2: Float, u1: Float, u2: Float, v1: Float, v2: Float
-) {
-    addBeamVertex(pose, builder, color, yEnd, x1, z1, u2, v1)
-    addBeamVertex(pose, builder, color, yStart, x1, z1, u2, v2)
-    addBeamVertex(pose, builder, color, yStart, x2, z2, u1, v2)
-    addBeamVertex(pose, builder, color, yEnd, x2, z2, u1, v1)
-}
-
-private fun addBeamVertex(
-    pose: PoseStack.Pose, builder: VertexConsumer, color: Int, y: Int, x: Float, z: Float, u: Float, v: Float
-) {
-    // 修正 3：addVertex 吃 pose.pose() (即 Matrix4f)；setNormal 吃 pose，並換回標準 setUv2 命名
-    builder.addVertex(pose.pose(), x, y.toFloat(), z)
-        .setColor(color)
-        .setUv(u, v)
-        .setOverlay(OverlayTexture.NO_OVERLAY)
-        .setUv2(LightCoordsUtil.FULL_BRIGHT, LightCoordsUtil.FULL_BRIGHT)
-        .setNormal(pose, 0.0f, 1.0f, 0.0f)
 }
 
 private fun PoseStack.renderQueuedTexts(consumer: List<TextData>, collector: SubmitNodeCollector, camera: Vec3) {

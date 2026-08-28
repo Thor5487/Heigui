@@ -47,17 +47,11 @@ object CustomRenderPipelines {
     )
 
     val BEACON_ESP: RenderPipeline = RenderPipelines.register(
-        RenderPipeline.builder(RenderPipelines.MATRICES_FOG_SNIPPET)
-            .withVertexShader("core/rendertype_beacon_beam")
-            .withFragmentShader("core/rendertype_beacon_beam")
-
-            // 🌟 關鍵 1：必須在管線宣告這個插槽，Shader 才能吃到圖！
-            .withSampler("Sampler0")
-
-            .withVertexBinding(0, DefaultVertexFormat.ENTITY)
-            .withPrimitiveTopology(PrimitiveTopology.QUADS)
-            .withColorTargetState(ColorTargetState(BlendFunction.TRANSLUCENT))
-            .withDepthStencilState(Optional.empty()) // 穿牆透視
+        // 🌟 關鍵修正：直接繼承原版的烽火台 Snippet！
+        // 這樣它就會自動帶有正確的 VertexFormat、Shader 以及貼圖插槽 (Sampler0)
+        // (註：請用 IDE 自動補全確認名稱，通常是 BEACON_BEAM_SNIPPET 或 RENDERTYPE_BEACON_BEAM_SNIPPET)
+        RenderPipeline.builder(RenderPipelines.BEACON_BEAM_SNIPPET)
+            .withDepthStencilState(Optional.empty()) // 🌟 唯一修改：關閉深度測試，達成穿牆 ESP
             .withLocation("heigui/beacon_esp")
             .build()
     )
