@@ -81,7 +81,7 @@ object HighliteHelper : Module(
         on<InputEvent> {
             if (mc.player == null) return@on
 
-            if (mc.screen != null) return@on
+            if (mc.gui.screen() != null) return@on
 
             if (key.type == InputConstants.Type.MOUSE && key.value == GLFW.GLFW_MOUSE_BUTTON_LEFT) {
                 if (isPress) {
@@ -237,14 +237,11 @@ object HighliteHelper : Module(
     // ==========================================
     private fun getActionForBlock(pos: BlockPos, state: BlockState): BlockAction {
         val currentLevel = when {
-            state.`is`(Blocks.LIGHT_BLUE_STAINED_GLASS) ||
-                    state.`is`(Blocks.LIGHT_BLUE_STAINED_GLASS_PANE) -> 1
+            state.`is`(Blocks.STAINED_GLASS_PANE.lightBlue) -> 1
 
-            state.`is`(Blocks.BLUE_STAINED_GLASS) ||
-                    state.`is`(Blocks.BLUE_STAINED_GLASS_PANE) -> 2
+            state.`is`(Blocks.STAINED_GLASS_PANE.blue)  -> 2
 
-            state.`is`(Blocks.PURPLE_STAINED_GLASS) ||
-                    state.`is`(Blocks.PURPLE_STAINED_GLASS_PANE) -> 3
+            state.`is`(Blocks.STAINED_GLASS_PANE.purple) -> 3
 
             else -> -1
         }

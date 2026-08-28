@@ -40,7 +40,7 @@ object TeleportOptimization : Module (
     private val noRotateEnabled by BooleanSetting("NoRotate", false, "No Rotation after TP (Hype/AOTV/Etherwarp)")
     private val zpcmEnabled by BooleanSetting("Zeroping Camera", false, "Visually 0 Ping on TP (Hype/AOTV/Etherwarp) Note: Require NoRotate Enabled").withDependency { noRotateEnabled }
     private val hypeZpcm by BooleanSetting("Zeroping Camera Hyperion", false, "zpcm for hype").withDependency { zpcmEnabled }
-    private val timeOutMs by NumberSetting("Timeout", 500, 100, 1000, 50, unit = "ms", desc = "timeout for zeroping camera").withDependency { zpcmEnabled }
+    private val timeOutMs by NumberSetting("Timeout", 500, 100 .. 1000, 50, unit = "ms", desc = "timeout for zeroping camera").withDependency { zpcmEnabled }
 
     private val noRotatePackets = mutableListOf<ClientboundPlayerPositionPacket>()
     private val noRotateSent = mutableListOf<Long>()
