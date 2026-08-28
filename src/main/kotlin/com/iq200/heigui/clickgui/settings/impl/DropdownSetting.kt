@@ -3,8 +3,6 @@ package com.iq200.heigui.clickgui.settings.impl
 import com.iq200.heigui.clickgui.ClickGUI
 import com.iq200.heigui.clickgui.settings.RenderableSetting
 import com.iq200.heigui.utils.Colors
-import com.iq200.heigui.utils.ui.HoverHandler
-import com.iq200.heigui.utils.ui.animations.LinearAnimation
 import com.iq200.heigui.utils.ui.isAreaHovered
 import com.iq200.heigui.utils.ui.rendering.NVGRenderer
 import net.minecraft.client.input.MouseButtonEvent

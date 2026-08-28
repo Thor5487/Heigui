@@ -8,7 +8,6 @@ import com.iq200.heigui.utils.DeathTickUtil
 import com.iq200.heigui.utils.IrisCompatability
 import com.iq200.heigui.utils.ServerUtils
 import com.iq200.heigui.utils.handlers.TickTasks
-import com.iq200.heigui.utils.ui.rendering.NVGPIPRenderer
 import com.iq200.heigui.utils.render.ItemStateRenderer
 import com.iq200.heigui.utils.render.RenderBatchManager
 import com.iq200.heigui.utils.skyblock.ActionBarParser
@@ -71,13 +70,10 @@ object Heigui : ClientModInitializer {
             arrayOf(mainCommand).forEach { it.register(dispatcher) }
         }
 
-        PictureInPictureRendererRegistry.register { context ->
-            NVGPIPRenderer(context.bufferSource())
-        }
-        PictureInPictureRendererRegistry.register { context ->
-            ItemStateRenderer(context.bufferSource())
-        }
 
+        PictureInPictureRendererRegistry.register {
+            ItemStateRenderer()
+        }
 
         logger.info("[Heigui] Loading Features")
         loadCoreFeatures()

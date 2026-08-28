@@ -4,15 +4,12 @@ import com.google.gson.Gson
 import com.google.gson.JsonElement
 import com.google.gson.JsonPrimitive
 import com.iq200.heigui.clickgui.ClickGUI.gray38
-import com.iq200.heigui.clickgui.Panel
 import com.iq200.heigui.clickgui.settings.RenderableSetting
 import com.iq200.heigui.clickgui.settings.Saving
 import com.iq200.heigui.features.impl.render.ClickGUIModule
 import com.iq200.heigui.utils.Color
 import com.iq200.heigui.utils.Color.Companion.brighter
 import com.iq200.heigui.utils.Colors
-import com.iq200.heigui.utils.ui.HoverHandler
-import com.iq200.heigui.utils.ui.animations.EaseInOutAnimation
 import com.iq200.heigui.utils.ui.isAreaHovered
 import com.iq200.heigui.utils.ui.rendering.NVGRenderer
 import net.minecraft.client.input.MouseButtonEvent

@@ -26,6 +26,7 @@ repositories {
     maven("https://pkgs.dev.azure.com/djtheredstoner/DevAuth/_packaging/public/maven/v1")
     maven("https://maven.terraformersmc.com/")
     maven("https://api.modrinth.com/maven")
+    maven("https://maven.meteordev.org/releases")
 }
 
 dependencies {
@@ -55,6 +56,7 @@ dependencies {
     }
 
     compileOnly("maven.modrinth:iris:${property("iris")}")
+
 }
 // ====================================================
 

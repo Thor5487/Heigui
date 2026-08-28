@@ -2,23 +2,19 @@ package com.iq200.heigui.clickgui.settings.impl
 
 import com.google.gson.Gson
 import com.google.gson.JsonElement
-import com.google.gson.JsonObject
 import com.iq200.heigui.Heigui.mc
-import com.iq200.heigui.clickgui.ClickGUI
-import com.iq200.heigui.clickgui.ClickGUI.gray38
 import com.iq200.heigui.clickgui.HudManager
 import com.iq200.heigui.clickgui.settings.RenderableSetting
 import com.iq200.heigui.clickgui.settings.Saving
+import com.iq200.heigui.clickgui.widget.Toggle
+import com.iq200.heigui.clickgui.widget.drawIcon
+import com.iq200.heigui.clickgui.widget.drawToggle
+import com.iq200.heigui.clickgui.widget.isOver
 import com.iq200.heigui.features.Module
-import com.iq200.heigui.features.impl.render.ClickGUIModule
-import com.iq200.heigui.utils.Color.Companion.brighter
-import com.iq200.heigui.utils.Colors
-import com.iq200.heigui.utils.ui.HoverHandler
-import com.iq200.heigui.utils.ui.animations.LinearAnimation
-import com.iq200.heigui.utils.ui.isAreaHovered
-import com.iq200.heigui.utils.ui.rendering.NVGRenderer
+import com.iq200.heigui.utils.ui.animations.Fade
 import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.client.input.MouseButtonEvent
+import net.minecraft.resources.Identifier
 
 class HUDSetting(
     name: String,
@@ -43,73 +39,49 @@ class HUDSetting(
     override var value: HudElement = default
 
     val isEnabled: Boolean get() = module.enabled && value.enabled
+    val hud get() = value
 
-    private val toggleAnimation = LinearAnimation<Float>(200)
-    private val hoverHandler = HoverHandler(150)
+    private val toggleAnimation = Fade(TOGGLE_DURATION)
+    private val iconHover = Fade(HOVER_DURATION)
 
-    override fun render(x: Float, y: Float, mouseX: Float, mouseY: Float): Float {
-        super.render(x, y, mouseX, mouseY)
-        val height = getHeight()
-        NVGRenderer.text(name, x + 6f, y + height / 2f - 8f, 16f, Colors.WHITE.rgba, NVGRenderer.defaultFont)
+    private val iconX get() = x + width - ICON - RIGHT_PAD
+    private val iconY get() = y + (height - ICON) / 2
 
-        val iconX = x + width - 30f
-        val iconY = y + height / 2f - 12f
-        hoverHandler.handle(iconX, iconY, 24f, 24f, true)
+    private val switchX get() = iconX - Toggle.WIDTH - GAP
 
-        val imageSize = 24f + (6f * hoverHandler.percent() / 100f)
-        val offset = (imageSize - 24f) / 2f
+    private fun overIcon(mouseX: Int, mouseY: Int): Boolean = isOver(mouseX, mouseY, iconX, iconY, ICON, ICON)
 
-        NVGRenderer.image(ClickGUI.movementImage, iconX - offset, iconY - offset, imageSize, imageSize)
+    override fun render(graphics: GuiGraphicsExtractor, mouseX: Int, mouseY: Int) {
+        drawLabel(graphics)
 
-        if (toggleable) {
-            val hovered = isAreaHovered(lastX + width - 70f, lastY + getHeight() / 2f - 10f, 34f, 20f, true)
-            NVGRenderer.rect(x + width - 70f, y + height / 2f - 10f, 34f, 20f, if (hovered) gray38.brighter().rgba else gray38.rgba, 9f)
+        graphics.drawIcon(MOVEMENT, iconX, iconY, ICON, iconHover.progress(overIcon(mouseX, mouseY)))
 
-            if (value.enabled || toggleAnimation.isAnimating()) {
-                val color = ClickGUIModule.clickGUIColor
-                NVGRenderer.rect(
-                    x + width - 70f,
-                    y + height / 2f - 10f,
-                    toggleAnimation.get(34f, 9f, value.enabled),
-                    20f,
-                    if (hovered) color.brighter().rgba else color.rgba,
-                    9f
-                )
-            }
+        if (!toggleable) return
+        graphics.drawToggle(switchX, y + height / 2, toggleAnimation.progress(value.enabled), hover)
+    }
 
-            NVGRenderer.hollowRect(x + width - 70f, y + height / 2f - 10f, 34f, 20f, 2f, ClickGUIModule.clickGUIColor.rgba, 9f)
-            NVGRenderer.circle(x + width - toggleAnimation.get(30f, 14f, !value.enabled) - 30f, y + height / 2f, 6f, Colors.WHITE.rgba)
+    override fun onClick(event: MouseButtonEvent, doubleClick: Boolean) {
+        val mouseX = event.x().toInt()
+        val mouseY = event.y().toInt()
+
+        when {
+            overIcon(mouseX, mouseY) -> mc.setScreenAndShow(HudManager)
+            toggleable && mouseX >= switchX -> value.enabled = !value.enabled
         }
-        return height
     }
 
-    override fun mouseClicked(mouseX: Float, mouseY: Float, click: MouseButtonEvent): Boolean {
-        if (click.button() != 0) return false
-        return if (isHovered) {
-            mc.setScreen(HudManager)
-            true
-        } else if (toggleable && isAreaHovered(lastX + width - 70f, lastY + getHeight() / 2f - 10f, 34f, 20f, true)) {
-            toggleAnimation.start()
-            value.enabled = !value.enabled
-            true
+    override fun write(gson: Gson): JsonElement = value.write()
 
-        } else false
-    }
+    override fun read(element: JsonElement, gson: Gson) = value.read(element, toggleable)
 
-    override val isHovered: Boolean get() = isAreaHovered(lastX + width - 30F, lastY + getHeight() / 2f - 12f, 24f, 24f, true)
+    private companion object {
+        val MOVEMENT: Identifier = Identifier.fromNamespaceAndPath("heigui", "textures/movementicon.png")
+        const val TOGGLE_DURATION = 200L
 
-    override fun write(gson: Gson): JsonElement = JsonObject().apply {
-        addProperty("x", value.x)
-        addProperty("y", value.y)
-        addProperty("scale", value.scale)
-        addProperty("enabled", value.enabled)
-    }
+        const val HOVER_DURATION = 150L
 
-    override fun read(element: JsonElement, gson: Gson) {
-        if (element !is JsonObject) return
-        value.x = element.get("x")?.asInt ?: value.x
-        value.y = element.get("y")?.asInt ?: value.y
-        value.scale = element.get("scale")?.asFloat ?: value.scale
-        value.enabled = if (toggleable) element.get("enabled")?.asBoolean ?: value.enabled else true
+        const val ICON = Toggle.HEIGHT
+        const val RIGHT_PAD = 6
+        const val GAP = 6
     }
 }

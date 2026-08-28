@@ -1,29 +1,13 @@
 package com.iq200.heigui.features.impl.render
 
-import com.google.gson.annotations.SerializedName
-import com.iq200.heigui.Heigui
 import com.iq200.heigui.clickgui.ClickGUI
 import com.iq200.heigui.clickgui.HudManager
 import com.iq200.heigui.clickgui.settings.AlwaysActive
 import com.iq200.heigui.clickgui.settings.impl.*
-import com.iq200.heigui.events.WorldEvent
-import com.iq200.heigui.events.core.on
 import com.iq200.heigui.features.Category
 import com.iq200.heigui.features.Module
 import com.iq200.heigui.utils.Color
-import com.iq200.heigui.utils.alert
-import com.iq200.heigui.utils.getChatBreak
-import com.iq200.heigui.utils.modMessage
-import com.iq200.heigui.utils.network.WebUtils.fetchJson
-import com.iq200.heigui.utils.ui.rendering.NVGRenderer
-import kotlinx.coroutines.launch
-import net.minecraft.network.chat.ClickEvent
-import net.minecraft.network.chat.Component
-import net.minecraft.network.chat.HoverEvent
 import org.lwjgl.glfw.GLFW
-import java.net.URI
-import kotlin.math.max
-import kotlin.math.round
 
 @AlwaysActive
 object ClickGUIModule : Module(
@@ -32,6 +16,7 @@ object ClickGUIModule : Module(
     key = GLFW.GLFW_KEY_RIGHT_SHIFT,
     category = Category.RENDER
 ) {
+    val clickGuiScale by NumberSetting("Click GUI Size", 2, 1..4, 1, desc = "GUI scale the Click GUI is drawn at, whatever the video setting says.")
     val enableNotification by BooleanSetting("Chat notifications", true, desc = "Sends a message when you toggle a module with a keybind")
     val clickGUIColor by ColorSetting("Color", Color(50, 150, 220), desc = "The color of the Click GUI.")
 
@@ -39,7 +24,7 @@ object ClickGUIModule : Module(
 
     val hypixelApiUrl by StringSetting("API URL", "https://api.odtheking.com/hypixel/", 128, "The Hypixel API server to connect to.").hide()
 
-    private val action by ActionSetting("Open HUD Editor", desc = "Opens the HUD editor when clicked.") { mc.setScreen(HudManager) }
+    private val action by ActionSetting("Open HUD Editor", desc = "Opens the HUD editor when clicked.") { mc.setScreenAndShow(HudManager) }
     val devMessage by BooleanSetting("Developer Message", false, desc = "Sends development related messages to the chat.")
 
     override fun onKeybind() {
@@ -47,28 +32,23 @@ object ClickGUIModule : Module(
     }
 
     override fun onEnable() {
-        mc.setScreen(ClickGUI)
+        mc.setScreenAndShow(ClickGUI)
         super.onEnable()
         toggle()
     }
 
     val panelSetting by MapSetting("Panel Settings", mutableMapOf<String, PanelData>())
-    data class PanelData(var x: Float = 10f, var y: Float = 10f, var extended: Boolean = true)
+    data class PanelData(var x: Int, var y: Int, var extended: Boolean = true)
 
     fun resetPositions() {
-        Category.categories.entries.forEachIndexed { index, (categoryName, _) ->
-            val setting = panelSetting.getOrPut(categoryName) { PanelData() }
-            setting.x = 10f + 260f * index
-            setting.y = 10f
-            setting.extended = true
+        Category.categories.forEach { (categoryName, category) ->
+            panelSetting.getOrPut(categoryName) { PanelData(0, 0) }.apply {
+                x = category.x
+                y = category.y
+                extended = true
+            }
         }
     }
 
-
-    fun getStandardGuiScale(): Float {
-        val verticalScale = (mc.window.screenHeight.toFloat() / 1080f) / NVGRenderer.devicePixelRatio()
-        val horizontalScale = (mc.window.screenWidth.toFloat() / 1920f) / NVGRenderer.devicePixelRatio()
-        return round(max(verticalScale, horizontalScale).coerceIn(1f, 3f) * 10f) / 10f
-    }
 
 }

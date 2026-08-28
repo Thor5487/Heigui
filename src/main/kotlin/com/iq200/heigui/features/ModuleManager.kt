@@ -31,6 +31,7 @@ import com.iq200.heigui.features.impl.mining.GDragonEggScanner
 import com.iq200.heigui.features.impl.mining.MSB
 import com.iq200.heigui.features.impl.mining.Mineshaft
 import com.iq200.heigui.features.impl.render.*
+import com.iq200.heigui.features.impl.skyblock.HighliteHelper
 import com.iq200.heigui.features.impl.skyblock.SafariEsp
 import com.iq200.heigui.features.impl.skyblock.TeleportOptimization
 import com.iq200.heigui.features.impl.skyblock.Vampire
@@ -80,7 +81,7 @@ object ModuleManager {
             ClickGUIModule,
 
             // skyblock
-            TeleportOptimization, Vampire, VampireTracker, SafariEsp,
+            TeleportOptimization, Vampire, VampireTracker, SafariEsp, HighliteHelper,
 
             // mining
             BigPane, Mineshaft, MSB, GDragonEggScanner,
