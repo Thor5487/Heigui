@@ -39,7 +39,7 @@ object CustomRenderType {
     val BEACON_ESP: RenderType = RenderType.create(
         "beacon-esp",
         RenderSetup.builder(CustomRenderPipelines.BEACON_ESP)
-            .withTexture("Sampler0", BeaconRenderer.BEAM_LOCATION)
+            .withTexture("Sampler0", Identifier.fromNamespaceAndPath("heigui", "shit"))
             .setOutputTarget(OutputTarget.ITEM_ENTITY_TARGET)
             .createRenderSetup()
     )

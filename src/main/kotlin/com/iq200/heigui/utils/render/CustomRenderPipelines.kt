@@ -50,13 +50,13 @@ object CustomRenderPipelines {
         RenderPipeline.builder(RenderPipelines.MATRICES_FOG_SNIPPET)
             .withVertexShader("core/rendertype_beacon_beam")
             .withFragmentShader("core/rendertype_beacon_beam")
-            // .withSampler("Sampler0") <--- 1. 直接刪除這行，新版交由 BindGroup 處理
 
-            // 2. 將原本的 withVertexFormat 拆分成以下兩行：
-            .withVertexBinding(0, DefaultVertexFormat.BLOCK) // 綁定在 Index 0
-            .withPrimitiveTopology(PrimitiveTopology.QUADS)  // 3. 獨立設定拓樸模式
+            // 🌟 關鍵 1：必須在管線宣告這個插槽，Shader 才能吃到圖！
+            .withSampler("Sampler0")
 
-            .withColorTargetState(ColorTargetState(BlendFunction.TRANSLUCENT)) // 必備：貼圖半透明不變黑
+            .withVertexBinding(0, DefaultVertexFormat.ENTITY)
+            .withPrimitiveTopology(PrimitiveTopology.QUADS)
+            .withColorTargetState(ColorTargetState(BlendFunction.TRANSLUCENT))
             .withDepthStencilState(Optional.empty()) // 穿牆透視
             .withLocation("heigui/beacon_esp")
             .build()

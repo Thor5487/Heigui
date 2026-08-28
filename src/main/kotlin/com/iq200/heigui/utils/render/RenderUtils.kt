@@ -20,6 +20,7 @@ import net.minecraft.network.chat.Style
 import net.minecraft.resources.Identifier
 import net.minecraft.util.FormattedCharSequence
 import net.minecraft.util.LightCoordsUtil
+import net.minecraft.util.Mth
 import net.minecraft.util.Mth.frac
 import net.minecraft.world.phys.AABB
 import net.minecraft.world.phys.Vec3
@@ -203,14 +204,15 @@ private fun PoseStack.renderQueuedBeaconBeams(consumer: List<BeaconData>, collec
 
     val animationTime = (System.currentTimeMillis() % 3600000L) / 50.0f
 
-    // 🌟 動畫與滾動參數
-    val scroll = -animationTime * 0.1f
+    // 🌟 保留你原本完美的動態滾動參數
+    val scroll = -animationTime
+    val texVOff = frac(scroll * 0.2f - floor(scroll * 0.1f))
     val height = 384
 
     for (beacon in consumer) {
         pushPose()
 
-        // 修正 1：必須扣掉 camera 座標，將絕對座標轉換為相對渲染座標
+        // 1. 26.2 座標修正：必須手動減掉相機座標
         translate(
             beacon.pos.x + 0.5 - camera.x,
             beacon.pos.y.toDouble() - camera.y,
@@ -225,14 +227,14 @@ private fun PoseStack.renderQueuedBeaconBeams(consumer: List<BeaconData>, collec
         val radius = 0.2f * scale
         val color = beacon.color.rgba
 
+        pushPose()
         mulPose(com.mojang.math.Axis.YP.rotationDegrees(animationTime * 2.25f - 45.0f))
 
-        val v2 = scroll
-        val v1 = (height.toFloat() / 16.0f) + scroll
+        val v2 = -1.0f + texVOff
+        val v1 = height.toFloat() * (0.5f / radius) + v2
 
-        // 修正 2：使用 collector 來提交你的 BEACON_ESP 管線並取得 buffer
+        // 2. 26.2 提交修正：改用 collector 提交自訂幾何，傳入正確的 pose 與 buffer
         collector.submitCustomGeometry(this, CustomRenderType.BEACON_ESP) { pose, buffer ->
-            // 🌟 繪製乾淨、高亮且穿透的單層核心光柱
             renderBeamPart(
                 pose, buffer, color, 0, height,
                 0.0f, radius, radius, 0.0f, -radius, 0.0f, 0.0f, -radius,
@@ -240,6 +242,7 @@ private fun PoseStack.renderQueuedBeaconBeams(consumer: List<BeaconData>, collec
             )
         }
 
+        popPose()
         popPose()
     }
 }
