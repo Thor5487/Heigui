@@ -1,6 +1,7 @@
 package com.iq200.heigui.features.impl.skyblock
 
 import com.iq200.heigui.clickgui.settings.impl.BooleanSetting
+import com.iq200.heigui.clickgui.settings.impl.NumberSetting
 import com.iq200.heigui.events.InputEvent
 import com.iq200.heigui.events.RenderEvent
 import com.iq200.heigui.events.TickEvent
@@ -35,6 +36,14 @@ object HighliteHelper : Module(
         IGNORE  // 不是目標礦物：直接無視
     }
 
+    val highlitesPerCycle by NumberSetting(
+        "Highlites Per Cycle",
+        2,
+        1,
+        16,
+        1,
+        desc = "Target Highlites per mining cycle"
+    )
     val showProgress by BooleanSetting("Time Gun Progress", false, desc = "Show Time Gun Progress, better for gliding")
     private val progressHud by HUD("Cycle Progress", "Display Current Target and Progress") { example ->
         if (example) return@HUD textDim("§9Timite: §b32§7/64", 0, 0, Colors.WHITE)
@@ -46,11 +55,15 @@ object HighliteHelper : Module(
         val timiteCount = getInventoryItemCount("timite")
         val obsoliteCount = getInventoryItemCount("obsolite")
 
+        val targetAmount = highlitesPerCycle
+        val reqY = targetAmount * 32
+        val reqT = targetAmount * 32
+        val reqO = targetAmount * 16
         // 邏輯跟上面一模一樣，用來計算當前的目標值
-        val completedBatches = minOf(youngiteCount / 64, timiteCount / 64, obsoliteCount / 32)
-        val targetYoungite = (completedBatches + 1) * 64
-        val targetTimite = (completedBatches + 1) * 64
-        val targetObsolite = (completedBatches + 1) * 32
+        val completedBatches = minOf(youngiteCount / reqY, timiteCount / reqT, obsoliteCount / reqO)
+        val targetYoungite = (completedBatches + 1) * reqY
+        val targetTimite = (completedBatches + 1) * reqT
+        val targetObsolite = (completedBatches + 1) * reqO
 
         val text = when {
             youngiteCount < targetYoungite -> "§3Youngite: §b$youngiteCount§7/$targetYoungite"
@@ -125,11 +138,11 @@ object HighliteHelper : Module(
                         val now = System.currentTimeMillis()
 
                         if (shootingTargetPos == lookingAtPos) {
-                            val maxTime = if (doubleTimeShooting) 1800.0 else 2000.0
+                            val maxTime = if (doubleTimeShooting) 1800.0 else 1800.0
                             val elapsed = now - shootStartTime
 
                             // 1. 檢查第一階段是否達成（時間到了，或者伺服器已經提前回傳方塊變色）
-                            if (!doubleTimeShooting && !isHoldingGreen && (elapsed >= 2000.0 || (lastBlockState != null && lastBlockState!!.block != currentBlockState.block))) {
+                            if (!doubleTimeShooting && !isHoldingGreen && (elapsed >= 1800.0 || (lastBlockState != null && lastBlockState!!.block != currentBlockState.block))) {
                                 // 🌟 啟動 0.5 秒的「綠色視覺滯留提醒」
                                 isHoldingGreen = true
                                 greenHoldStartTime = now
@@ -195,23 +208,23 @@ object HighliteHelper : Module(
             if (isHoldingGreen) {
                 // 🌟 滯留期：強制畫出「滿格的綠色」維持 0.5 秒
                 aabb = AABB(
-                    target.x - 0.01, target.y.toDouble(), target.z - 0.01,
-                    target.x + 1.01, target.y + 1.0, target.z + 1.01
+                    target.x.toDouble(), target.y.toDouble(), target.z.toDouble(),
+                    target.x + 1.0, target.y + 1.0, target.z + 1.0
                 )
                 boxColor = Color(50, 255, 100, 150) // 綠色
             } else {
                 // 一般計算進度
-                val maxTime = if (doubleTimeShooting) 1800.0 else 2000.0
+                val maxTime = if (doubleTimeShooting) 1800.0 else 1800.0
                 val elapsed = now - shootStartTime
                 val progress = (elapsed / maxTime).coerceIn(0.0, 1.0)
 
                 aabb = AABB(
-                    target.x - 0.01,
+                    target.x.toDouble(),
                     target.y.toDouble(),
-                    target.z - 0.01,
-                    target.x + 1.01,
+                    target.z.toDouble(),
+                    target.x + 1.0,
                     target.y + progress * 1.0,
-                    target.z + 1.01
+                    target.z + 1.0
                 )
 
                 boxColor = if (doubleTimeShooting) {
@@ -259,12 +272,18 @@ object HighliteHelper : Module(
         // 2. 🌟 核心算法：計算已經「完美湊齊」了幾組
         // 例如：Y=130(2組), T=65(1組), O=10(0組) -> 最小值是 0，代表第 1 組還沒湊齊
         // 例如：Y=130(2組), T=128(2組), O=64(2組) -> 最小值是 2，準備開始湊第 3 組
-        val completedBatches = minOf(youngiteCount / 64, timiteCount / 64, obsoliteCount / 32)
+        val targetAmount = highlitesPerCycle
+        val reqY = targetAmount * 32
+        val reqT = targetAmount * 32
+        val reqO = targetAmount * 16
+
+        // 2. 🌟 核心算法：計算已經「完美湊齊」了幾組
+        val completedBatches = minOf(youngiteCount / reqY, timiteCount / reqT, obsoliteCount / reqO)
 
         // 3. 計算當前循環的目標數量
-        val targetYoungite = (completedBatches + 1) * 64
-        val targetTimite = (completedBatches + 1) * 64
-        val targetObsolite = (completedBatches + 1) * 32
+        val targetYoungite = (completedBatches + 1) * reqY
+        val targetTimite = (completedBatches + 1) * reqT
+        val targetObsolite = (completedBatches + 1) * reqO
 
         // 4. 判斷現在該挖哪一種
         val targetLevel = when {
