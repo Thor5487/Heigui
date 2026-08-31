@@ -129,7 +129,7 @@ object HighliteHelper : Module(
                             val elapsed = now - shootStartTime
 
                             // 1. 檢查第一階段是否達成（時間到了，或者伺服器已經提前回傳方塊變色）
-                            if (!doubleTimeShooting && !isHoldingGreen && (elapsed >= 2000.0 || (lastBlockState != null && lastBlockState != currentBlockState))) {
+                            if (!doubleTimeShooting && !isHoldingGreen && (elapsed >= 2000.0 || (lastBlockState != null && lastBlockState!!.block != currentBlockState.block))) {
                                 // 🌟 啟動 0.5 秒的「綠色視覺滯留提醒」
                                 isHoldingGreen = true
                                 greenHoldStartTime = now
@@ -146,7 +146,7 @@ object HighliteHelper : Module(
 
                             // 3. 第二階段（橘色充能）的完成判定與循環
                             if (doubleTimeShooting && !isHoldingGreen) {
-                                if (elapsed >= maxTime || (lastBlockState != null && lastBlockState != currentBlockState)) {
+                                if (elapsed >= maxTime || (lastBlockState != null && lastBlockState!!.block != currentBlockState.block)) {
                                     // 達成紫色或進入下一個循環，重置計時
                                     shootStartTime = now
                                 }
