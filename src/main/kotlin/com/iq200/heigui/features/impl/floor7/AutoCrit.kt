@@ -52,7 +52,7 @@ object AutoCrit : Module (
             cancel()
         }
 
-        on<TickEvent.Start> {
+        on<TickEvent.Server> {
             val player = mc.player ?: return@on
 
             when (state) {

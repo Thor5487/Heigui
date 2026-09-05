@@ -21,7 +21,7 @@ object PriceUtils {
                 if (notifyPlayer) modMessage("§eFetching latest prices from Odin API...")
                 Heigui.logger.info("[PriceUtils] Fetching prices from Odin API...")
 
-                val jsonString = URI.create("https://api.odtheking.com/lb/averages/7day").toURL().readText()
+                val jsonString = URI.create("https://api.odtheking.com/lb/averages/1day").toURL().readText()
                 val jsonObject = JsonParser.parseString(jsonString).asJsonObject
 
                 var count = 0

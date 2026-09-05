@@ -13,6 +13,7 @@ import com.iq200.heigui.utils.Colors
 import com.iq200.heigui.utils.PlayerUtils
 import com.iq200.heigui.utils.createSoundSettings
 import com.iq200.heigui.utils.handlers.schedule
+import com.iq200.heigui.utils.modMessage
 import com.iq200.heigui.utils.playSoundSettings
 import com.iq200.heigui.utils.render.drawStyledBox
 import com.iq200.heigui.utils.sendCommand
@@ -35,6 +36,7 @@ object SimonSays : Module(
 
     private val announceProgress by BooleanSetting("Announce Progress", false, "announce ss progress")
     private val blockWrongClick by BooleanSetting("Block Wrong Click", false, "prevent clicking on wrong button, sneak to bypass")
+    private val blockDuringLag by BooleanSetting("Block During Lag", false, "prevent clicking when server is lagging")
     private val blockSound = createSoundSettings("Block Sound", "entity.blaze.hurt") { blockWrongClick }
     private val autoStart by BooleanSetting("Auto Start", false, "auto starts ss when s1 starts")
     private val triggerbot by BooleanSetting("Triggerbot", false, desc = "")
@@ -47,6 +49,7 @@ object SimonSays : Module(
     private var clickNeeded = 0
     private var firstPhase = true
     private var clickCntOnStartBtn = 0
+    private var serverResponded = true
 
     private fun resetSolution() {
         clickInOrder.clear()
@@ -59,6 +62,7 @@ object SimonSays : Module(
             resetSolution()
             firstPhase = true
             clickCntOnStartBtn = 0
+            serverResponded = true
         }
 
         on<BlockUpdateEvent> {
@@ -111,6 +115,8 @@ object SimonSays : Module(
             // 檢查：看著的方塊的「東邊一格」是不是等於解答需要的方塊？
             if (clickInOrder.getOrNull(clickNeeded) != pos.east()) return@on
 
+            if (blockDuringLag && !serverResponded) return@on
+
             // 核心點擊邏輯
             if (clickNeeded == 0) {
                 // 避免狂點第一個按鈕導致解謎壞掉
@@ -119,6 +125,7 @@ object SimonSays : Module(
                 val player = mc.player ?: return@on
                 mc.gameMode?.useItemOn(player, InteractionHand.MAIN_HAND, hitResult)
                 mc.player?.swing(InteractionHand.MAIN_HAND)
+                serverResponded = false
                 return@on
             }
 
@@ -126,6 +133,7 @@ object SimonSays : Module(
             triggerBotClock.update()
             val player = mc.player ?: return@on
             mc.gameMode?.useItemOn(player, InteractionHand.MAIN_HAND, hitResult)
+            serverResponded = false
             player.swing(InteractionHand.MAIN_HAND)
         }
 
@@ -151,11 +159,20 @@ object SimonSays : Module(
             if (!blockWrongClick || player.isShiftKeyDown) return@on
 
             if (pos.y in 120..123 && pos.z in 92..95 && pos.x == 110) {
+                if (blockDuringLag && !serverResponded) {
+                    cancel()
+                    playSoundSettings(blockSound())
+                    modMessage("§cBlock During Lag")
+                    return@on
+                }
+
                val expectedPos = clickInOrder.getOrNull(clickNeeded)
 
                 if (expectedPos == null || pos.east() != expectedPos) {
                     cancel()
                     playSoundSettings(blockSound())
+                } else {
+                    serverResponded = false
                 }
             }
         }
@@ -192,6 +209,10 @@ object SimonSays : Module(
                     }
                 }
             }
+        }
+
+        on<TickEvent.Server> {
+            serverResponded = true
         }
 
     }
