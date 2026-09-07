@@ -224,7 +224,7 @@ object AutoCroesus : Module(
     }
 
     private fun handleWaitingForChestMenu(menuTitle: String) {
-        if (!menuTitle.contains("Croesus")) {
+        if (menuTitle.contains("Catacombs", ignoreCase = true)) {
             currentState = CroesusState.INSIDE_LOOT_CHEST
         }
     }
