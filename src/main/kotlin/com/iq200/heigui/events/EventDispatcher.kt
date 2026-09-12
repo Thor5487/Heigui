@@ -14,6 +14,9 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents
 import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents
 import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents
+import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents
+import net.fabricmc.fabric.api.client.screen.v1.ScreenKeyboardEvents
+import net.fabricmc.fabric.api.client.screen.v1.ScreenMouseEvents
 import net.minecraft.network.protocol.game.ClientboundRemoveEntitiesPacket
 import net.minecraft.network.protocol.game.ClientboundSoundPacket
 import net.minecraft.network.protocol.game.ClientboundSystemChatPacket
@@ -42,7 +45,22 @@ object EventDispatcher {
             !ChatManager.shouldCancelMessage(text)
         }
 
-        // 🌟 1.21.1 官方映射: 封包變數改為方法，加上 ()
+        ScreenEvents.AFTER_INIT.register { _, screen, _, _ -> ScreenEvent.Open(screen).postAndCatch() }
+        ScreenEvents.BEFORE_INIT.register { _, screen, _, _ ->
+            ScreenEvents.remove(screen).register {
+                ScreenEvent.Close(screen).postAndCatch()
+            }
+            ScreenMouseEvents.allowMouseClick(screen).register { screen, event ->
+                !ScreenEvent.MouseClick(screen, event).postAndCatch()
+            }
+            ScreenMouseEvents.allowMouseRelease(screen).register { screen, event ->
+                !ScreenEvent.MouseRelease(screen, event).postAndCatch()
+            }
+            ScreenKeyboardEvents.allowKeyPress(screen).register { screen, event ->
+                !ScreenEvent.KeyPress(screen, event).postAndCatch()
+            }
+        }
+
         onReceive<ClientboundSystemChatPacket> {
             if (!overlay) {
                 ChatPacketEvent(content().string.noControlCodes, content()).postAndCatch()
