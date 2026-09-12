@@ -35,6 +35,7 @@ object AutoCrit : Module (
     }
 
     private var state = State.IDLE
+    private var wait = true
 
     init {
         on<WorldEvent.Load> {
@@ -66,6 +67,11 @@ object AutoCrit : Module (
                 }
 
                 State.SWAP_SWORD -> {
+                    if (wait) {
+                        wait = false
+                        return@on
+                    }
+
                     if (!swordSwap) {
                         state = State.OPEN_WORDRABE
                         return@on
@@ -110,6 +116,7 @@ object AutoCrit : Module (
     private fun reset() {
         state = State.IDLE
         KeyMapping.set(mc.options.keyUse.defaultKey, false)
+        wait = true
     }
 
     private fun isHoldingDeathBow() : Boolean {

@@ -92,6 +92,7 @@ object AutoCroesus : Module(
     private enum class CroesusState {
         IDLE,
         WAITING_FOR_MENU,
+        WAITING_FOR_NEXT_PAGE,
         SCANNING_MAIN_PAGE,
         WAITING_FOR_CHEST_MENU, // 點擊局數後，等待該局的寶箱畫面加載
         INSIDE_LOOT_CHEST,
@@ -103,6 +104,8 @@ object AutoCroesus : Module(
     private var intendingToReroll = false
     private var currentState = CroesusState.IDLE
     private var lastActionTime = 0L
+
+    private var lastMenuTitle = ""
 
     private var currentFloor: String = "unknown"
     private var currentRunKismets: Int = 0
@@ -154,6 +157,7 @@ object AutoCroesus : Module(
             // 就像路由台一樣，把任務指派給對應的函式處理
             when (currentState) {
                 CroesusState.WAITING_FOR_MENU -> handleWaitingForMenu(menuTitle)
+                CroesusState.WAITING_FOR_NEXT_PAGE -> handleWaitingForNextPage(menuTitle)
                 CroesusState.SCANNING_MAIN_PAGE -> handleScanningMainPage(currentScreen, currentTime)
                 CroesusState.WAITING_FOR_CHEST_MENU -> handleWaitingForChestMenu(menuTitle)
                 CroesusState.INSIDE_LOOT_CHEST -> handleInsideLootChest(currentScreen, currentTime)
@@ -212,9 +216,11 @@ object AutoCroesus : Module(
             val nextItemName = nextSlot?.item?.hoverName?.string?.replace(Regex("§[0-9a-fk-or]"), "") ?: ""
 
             if (nextItemName.contains("Next Page")) {
+                lastMenuTitle = currentScreen.title.string.replace(Regex("§[0-9a-fk-or]"), "")
+
                 mc.gameMode?.handleContainerInput(menu.containerId, 53, 0, ContainerInput.PICKUP, player)
 
-                currentState = CroesusState.WAITING_FOR_MENU
+                currentState = CroesusState.WAITING_FOR_NEXT_PAGE
                 lastActionTime = currentTime
             } else {
                 modMessage("§a[AutoCroesus] Finished! All pages have been scanned and no unopened chests remain.")
@@ -226,6 +232,12 @@ object AutoCroesus : Module(
     private fun handleWaitingForChestMenu(menuTitle: String) {
         if (menuTitle.contains("Catacombs", ignoreCase = true)) {
             currentState = CroesusState.INSIDE_LOOT_CHEST
+        }
+    }
+
+    private fun handleWaitingForNextPage(menuTitle: String) {
+        if (menuTitle.contains("Croesus") && menuTitle != lastMenuTitle) {
+            currentState = CroesusState.SCANNING_MAIN_PAGE
         }
     }
 
