@@ -17,6 +17,10 @@ jobs:
     steps:
       - name: checkout repository
         uses: actions/checkout@v4
+        with:
+          # 必須抓完整歷史與所有 tag，否則 build.gradle.kts 裡的 git describe /
+          # rev-list --not --tags 會失靈，連推 tag 的 build 都會被誤判成 beta
+          fetch-depth: 0
 
       - name: validate gradle wrapper
         uses: gradle/actions/wrapper-validation@v4
@@ -42,7 +46,8 @@ jobs:
       - name: upload release jar (Artifact)
         uses: actions/upload-artifact@v4
         with:
-          name: Heigui-Build
+          # 帶上 commit 讓 Actions 後台也能分辨不同 build
+          name: Heigui-Build-${{ github.sha }}
           path: |
             build/libs/**/*.jar      
             build/libs/**/*-sources.jar
