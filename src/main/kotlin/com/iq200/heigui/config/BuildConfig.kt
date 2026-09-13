@@ -35,7 +35,7 @@ object BuildConfig {
         props.getProperty("commit", "unknown")
     }
 
-    // 完整版本號，測試版會帶 "-beta.N+<hash>" 後綴
+    // 完整版本號，測試版會帶 "-beta.N" 後綴
     val version: String by lazy {
         props.getProperty("version", "unknown")
     }

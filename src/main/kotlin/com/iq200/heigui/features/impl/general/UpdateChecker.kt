@@ -1,9 +1,10 @@
 package com.iq200.heigui.features.impl.general
 
 import com.google.gson.JsonParser
+import com.iq200.heigui.clickgui.settings.impl.BooleanSetting
+import com.iq200.heigui.config.BuildConfig
 import com.iq200.heigui.events.ChatPacketEvent
 import com.iq200.heigui.events.core.on
-import com.iq200.heigui.config.BuildConfig
 import com.iq200.heigui.features.Category
 import com.iq200.heigui.features.Module
 import com.iq200.heigui.utils.alert
@@ -23,6 +24,8 @@ object UpdateChecker : Module(
     description = "Check Update on Opening Game",
     category = Category.GENERAL
 ) {
+    private val checkAction by BooleanSetting("Check Actions", false, desc = "Check Updates for Actions")
+
     private const val GITHUB_REPO = "Thor5487/Heigui"
     private val profileRegex = Regex("Profile ID:\\s*(.{36})")
 
@@ -41,13 +44,17 @@ object UpdateChecker : Module(
             if (!profileRegex.matches(value)) return@on
 
             if (!hasChecked) {
-                checkForUpdates()
+                if (checkAction) {
+                    checkActionUpdates()
+                } else {
+                    checkReleaseUpdates()
+                }
                 hasChecked = true
             }
         }
     }
 
-    private fun checkForUpdates() {
+    private fun checkReleaseUpdates() {
         // 開啟一個新的背景執行緒，避免卡死 Minecraft 主執行緒
         thread(start = true) {
             try {
@@ -73,12 +80,86 @@ object UpdateChecker : Module(
                     if (isUpdateAvailable(CURRENT_VERSION, latestVersion)) {
                         // 切回 Minecraft 主執行緒發送訊息 (避免跨執行緒操作 GUI 報錯)
                         mc.execute {
-                            sendUpdateMessage(latestVersion, releaseUrl)
+                            sendUpdateMessage(latestVersion, releaseUrl, false)
                         }
                     }
                 }
             } catch (e: Exception) {
                 // 如果沒有網路或 API 限制，默默失敗就好，不要拿報錯洗玩家的畫面
+                e.printStackTrace()
+            }
+        }
+    }
+
+    private fun checkActionUpdates() {
+        thread(start = true) {
+            try {
+                // ==========================================
+                // 第一階段：取得最新一次成功的 Action 執行紀錄
+                // ==========================================
+                val runUrl = URL("https://api.github.com/repos/$GITHUB_REPO/actions/runs?branch=main&status=success&per_page=1")
+                val runConn = runUrl.openConnection() as HttpURLConnection
+                runConn.requestMethod = "GET"
+                runConn.setRequestProperty("Accept", "application/vnd.github.v3+json")
+                runConn.connectTimeout = 5000
+                runConn.readTimeout = 5000
+
+                if (runConn.responseCode != 200) return@thread
+
+                val runReader = InputStreamReader(runConn.inputStream)
+                val runJson = JsonParser.parseReader(runReader).asJsonObject
+                val runs = runJson.getAsJsonArray("workflow_runs")
+                runReader.close()
+
+                if (runs.size() == 0) return@thread
+
+                val latestRun = runs.get(0).asJsonObject
+                val runId = latestRun.get("id").asLong
+                val shortSha = latestRun.getAsJsonObject("head_commit").get("id").asString.take(7)
+                val actionUrl = latestRun.get("html_url").asString
+
+                // 讀取本機目前的 Git Hash，如果一樣代表沒更新就中斷
+                val localHash = BuildConfig.commit.take(7)
+                if (localHash.isEmpty() || localHash == shortSha || localHash == "unknown") return@thread
+
+                // ==========================================
+                // 第二階段：利用 run_id 去抓取該次建置的 Artifacts
+                // ==========================================
+                val artifactsUrl = URL("https://api.github.com/repos/$GITHUB_REPO/actions/runs/$runId/artifacts")
+                val artConn = artifactsUrl.openConnection() as HttpURLConnection
+                artConn.requestMethod = "GET"
+                artConn.setRequestProperty("Accept", "application/vnd.github.v3+json")
+                artConn.connectTimeout = 5000
+                artConn.readTimeout = 5000
+
+                // 預設顯示：萬一抓不到 Artifact 檔名，至少還有 Hash 可以看
+                var displayVersion = "Dev Build ($shortSha)"
+
+                if (artConn.responseCode == 200) {
+                    val artReader = InputStreamReader(artConn.inputStream)
+                    val artJson = JsonParser.parseReader(artReader).asJsonObject
+                    val artifacts = artJson.getAsJsonArray("artifacts")
+                    artReader.close()
+
+                    if (artifacts.size() > 0) {
+                        // 根據你的 yml，這裡會拿到 "Heigui-Public-1.3.9-beta.3-26.1.2.jar"
+                        val artifactName = artifacts.get(0).asJsonObject.get("name").asString
+
+                        // 用正則表達式精準萃取 "1.3.9-beta.3" 這一段
+                        val versionRegex = Regex("""\d+\.\d+\.\d+-beta\.\d+""")
+                        val matchResult = versionRegex.find(artifactName)
+
+                        if (matchResult != null) {
+                            displayVersion = matchResult.value // 成功抓到 "1.3.9-beta.3"
+                        }
+                    }
+                }
+
+                // 切回主執行緒發送更新通知
+                mc.execute { sendUpdateMessage(displayVersion, actionUrl, true) }
+
+            } catch (e: Exception) {
+                // 背景默默失敗即可
                 e.printStackTrace()
             }
         }
@@ -132,21 +213,21 @@ object UpdateChecker : Module(
         return 0
     }
 
-    private fun sendUpdateMessage(latestVersion: String, url: String) {
+    private fun sendUpdateMessage(latestVersion: String, url: String, isAction: Boolean) {
         // 建立可點擊的 Component
-        val clickableLink = Component.literal("§b§n[Click Here to Download]")
+        val linkText = if (isAction) "§b§n[Open Action Page]" else "§b§n[Click Here to Download]"
+        val hoverText = if (isAction) "§eOpen GitHub Actions Page" else "§eOpen GitHub Release Page"
+
+        val clickableLink = Component.literal(linkText)
             .withStyle { style ->
-                // 修正 1：使用 ClickEvent.OpenUrl，並傳入 URI 物件
                 style.withClickEvent(ClickEvent.OpenUrl(URI(url)))
-                    // 修正 2：使用 HoverEvent.ShowText，並直接傳入 Component
-                    .withHoverEvent(HoverEvent.ShowText(Component.literal("§eOpen GitHub Release Page")))
+                    .withHoverEvent(HoverEvent.ShowText(Component.literal(hoverText)))
             }
 
-        // 讓跑測試版的玩家知道自己現在不是正式版
-        val channelTag = if (BuildConfig.isBeta) " §6§l[BETA]§r" else ""
+        val updateType = if (isAction) "action" else "release"
 
         // 組合完整訊息
-        val message = Component.literal("§eA new update is available!$channelTag §7(§cv$CURRENT_VERSION §7-> §a$latestVersion§7) ")
+        val message = Component.literal("§eA new $updateType is available! §7(§cv$CURRENT_VERSION §7-> §a$latestVersion§7) ")
             .append(clickableLink)
 
         modMessage(message)
