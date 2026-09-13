@@ -44,126 +44,105 @@ object UpdateChecker : Module(
             if (!profileRegex.matches(value)) return@on
 
             if (!hasChecked) {
-                if (checkAction) {
-                    checkActionUpdates()
-                } else {
-                    checkReleaseUpdates()
-                }
+                checkForUpdates() // 統一呼叫一個檢查函數
                 hasChecked = true
             }
         }
     }
 
-    private fun checkReleaseUpdates() {
-        // 開啟一個新的背景執行緒，避免卡死 Minecraft 主執行緒
+    private fun checkForUpdates() {
         thread(start = true) {
             try {
-                // 呼叫 GitHub API 取得最新 Release 的資料
-                val url = URL("https://api.github.com/repos/$GITHUB_REPO/releases/latest")
-                val connection = url.openConnection() as HttpURLConnection
-                connection.requestMethod = "GET"
-                connection.setRequestProperty("Accept", "application/vnd.github.v3+json")
-                connection.connectTimeout = 5000 // 連線超時 5 秒
-                connection.readTimeout = 5000    // 讀取超時 5 秒
+                // ==========================================
+                // 第一階段：優先檢查 Release (正式版)
+                // ==========================================
+                val releaseUrl = URL("https://api.github.com/repos/$GITHUB_REPO/releases/latest")
+                val releaseConn = releaseUrl.openConnection() as HttpURLConnection
+                releaseConn.requestMethod = "GET"
+                releaseConn.setRequestProperty("Accept", "application/vnd.github.v3+json")
+                releaseConn.connectTimeout = 5000
+                releaseConn.readTimeout = 5000
 
-                if (connection.responseCode == 200) {
-                    val reader = InputStreamReader(connection.inputStream)
+                var hasReleaseUpdate = false
+
+                if (releaseConn.responseCode == 200) {
+                    val reader = InputStreamReader(releaseConn.inputStream)
                     val jsonObject = JsonParser.parseReader(reader).asJsonObject
 
-                    // 取得 GitHub 上的 Tag 與 網址
-                    val latestVersion = jsonObject.get("tag_name").asString
-                    val releaseUrl = jsonObject.get("html_url").asString
-
+                    val latestReleaseVersion = jsonObject.get("tag_name").asString
+                    val releaseHtmlUrl = jsonObject.get("html_url").asString
                     reader.close()
 
-                    // 比對版本號
-                    if (isUpdateAvailable(CURRENT_VERSION, latestVersion)) {
-                        // 切回 Minecraft 主執行緒發送訊息 (避免跨執行緒操作 GUI 報錯)
-                        mc.execute {
-                            sendUpdateMessage(latestVersion, releaseUrl, false)
+                    if (isUpdateAvailable(CURRENT_VERSION, latestReleaseVersion)) {
+                        mc.execute { sendUpdateMessage(latestReleaseVersion, releaseHtmlUrl, false) }
+                        hasReleaseUpdate = true // 標記已有正式版更新，後續不需再查 Action
+                    }
+                }
+
+                // ==========================================
+                // 第二階段：如果沒有正式版更新，且玩家開啟了 Action 檢查，再去查 Action
+                // ==========================================
+                if (!hasReleaseUpdate && checkAction) {
+                    val runUrl = URL("https://api.github.com/repos/$GITHUB_REPO/actions/runs?branch=main&status=success&per_page=1")
+                    val runConn = runUrl.openConnection() as HttpURLConnection
+                    runConn.requestMethod = "GET"
+                    runConn.setRequestProperty("Accept", "application/vnd.github.v3+json")
+                    runConn.connectTimeout = 5000
+                    runConn.readTimeout = 5000
+
+                    if (runConn.responseCode == 200) {
+                        val runReader = InputStreamReader(runConn.inputStream)
+                        val runJson = JsonParser.parseReader(runReader).asJsonObject
+                        val runs = runJson.getAsJsonArray("workflow_runs")
+                        runReader.close()
+
+                        if (runs.size() > 0) {
+                            val latestRun = runs.get(0).asJsonObject
+                            val runId = latestRun.get("id").asLong
+                            val shortSha = latestRun.getAsJsonObject("head_commit").get("id").asString.take(7)
+                            val actionUrl = latestRun.get("html_url").asString
+
+                            val localHash = BuildConfig.commit.take(7)
+                            // 注意這裡改回 BuildConfig.commitHash 以符合你之前的設定
+                            if (localHash.isNotEmpty() && localHash != shortSha && localHash != "unknown") {
+
+                                // 呼叫 Artifacts API 抓詳細檔名的邏輯
+                                val artifactsUrl = URL("https://api.github.com/repos/$GITHUB_REPO/actions/runs/$runId/artifacts")
+                                val artConn = artifactsUrl.openConnection() as HttpURLConnection
+                                artConn.requestMethod = "GET"
+                                artConn.setRequestProperty("Accept", "application/vnd.github.v3+json")
+                                artConn.connectTimeout = 5000
+                                artConn.readTimeout = 5000
+
+                                var latestActionVersion = "unknown-beta ($shortSha)"
+
+                                if (artConn.responseCode == 200) {
+                                    val artReader = InputStreamReader(artConn.inputStream)
+                                    val artJson = JsonParser.parseReader(artReader).asJsonObject
+                                    val artifacts = artJson.getAsJsonArray("artifacts")
+                                    artReader.close()
+
+                                    if (artifacts.size() > 0) {
+                                        val artifactName = artifacts.get(0).asJsonObject.get("name").asString
+                                        val versionRegex = Regex("""\d+\.\d+\.\d+-beta\.\d+""")
+                                        val matchResult = versionRegex.find(artifactName)
+                                        if (matchResult != null) {
+                                            latestActionVersion = matchResult.value
+                                        }
+                                    }
+                                }
+
+                                mc.execute { sendUpdateMessage(latestActionVersion, actionUrl, true) }
+                            }
                         }
                     }
                 }
             } catch (e: Exception) {
-                // 如果沒有網路或 API 限制，默默失敗就好，不要拿報錯洗玩家的畫面
                 e.printStackTrace()
             }
         }
     }
 
-    private fun checkActionUpdates() {
-        thread(start = true) {
-            try {
-                // ==========================================
-                // 第一階段：取得最新一次成功的 Action 執行紀錄
-                // ==========================================
-                val runUrl = URL("https://api.github.com/repos/$GITHUB_REPO/actions/runs?branch=main&status=success&per_page=1")
-                val runConn = runUrl.openConnection() as HttpURLConnection
-                runConn.requestMethod = "GET"
-                runConn.setRequestProperty("Accept", "application/vnd.github.v3+json")
-                runConn.connectTimeout = 5000
-                runConn.readTimeout = 5000
-
-                if (runConn.responseCode != 200) return@thread
-
-                val runReader = InputStreamReader(runConn.inputStream)
-                val runJson = JsonParser.parseReader(runReader).asJsonObject
-                val runs = runJson.getAsJsonArray("workflow_runs")
-                runReader.close()
-
-                if (runs.size() == 0) return@thread
-
-                val latestRun = runs.get(0).asJsonObject
-                val runId = latestRun.get("id").asLong
-                val shortSha = latestRun.getAsJsonObject("head_commit").get("id").asString.take(7)
-                val actionUrl = latestRun.get("html_url").asString
-
-                // 讀取本機目前的 Git Hash，如果一樣代表沒更新就中斷
-                val localHash = BuildConfig.commit.take(7)
-                if (localHash.isEmpty() || localHash == shortSha || localHash == "unknown") return@thread
-
-                // ==========================================
-                // 第二階段：利用 run_id 去抓取該次建置的 Artifacts
-                // ==========================================
-                val artifactsUrl = URL("https://api.github.com/repos/$GITHUB_REPO/actions/runs/$runId/artifacts")
-                val artConn = artifactsUrl.openConnection() as HttpURLConnection
-                artConn.requestMethod = "GET"
-                artConn.setRequestProperty("Accept", "application/vnd.github.v3+json")
-                artConn.connectTimeout = 5000
-                artConn.readTimeout = 5000
-
-                // 預設顯示：萬一抓不到 Artifact 檔名，至少還有 Hash 可以看
-                var displayVersion = "Dev Build ($shortSha)"
-
-                if (artConn.responseCode == 200) {
-                    val artReader = InputStreamReader(artConn.inputStream)
-                    val artJson = JsonParser.parseReader(artReader).asJsonObject
-                    val artifacts = artJson.getAsJsonArray("artifacts")
-                    artReader.close()
-
-                    if (artifacts.size() > 0) {
-                        // 根據你的 yml，這裡會拿到 "Heigui-Public-1.3.9-beta.3-26.1.2.jar"
-                        val artifactName = artifacts.get(0).asJsonObject.get("name").asString
-
-                        // 用正則表達式精準萃取 "1.3.9-beta.3" 這一段
-                        val versionRegex = Regex("""\d+\.\d+\.\d+-beta\.\d+""")
-                        val matchResult = versionRegex.find(artifactName)
-
-                        if (matchResult != null) {
-                            displayVersion = matchResult.value // 成功抓到 "1.3.9-beta.3"
-                        }
-                    }
-                }
-
-                // 切回主執行緒發送更新通知
-                mc.execute { sendUpdateMessage(displayVersion, actionUrl, true) }
-
-            } catch (e: Exception) {
-                // 背景默默失敗即可
-                e.printStackTrace()
-            }
-        }
-    }
 
     // 只抓開頭的數字版本段，後面的 prerelease / build metadata 交給 isPrerelease 處理
     private val versionNumberRegex = Regex("""^\d+(?:\.\d+)*""")
