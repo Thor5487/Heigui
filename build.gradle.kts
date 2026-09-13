@@ -41,11 +41,12 @@ val betaNumber = gitOutput("rev-list", "--count", "HEAD", "--not", "--tags")?.to
 val buildChannel = if (isReleaseBuild) "release" else "beta"
 
 // 正式版: 1.3.9
-// 測試版: 1.3.9-beta.2+2c1a205 (合法 semver 2.0.0，Fabric 能解析，且排序上小於 1.3.9)
+// 測試版: 1.3.9-beta.3 (合法 semver 2.0.0，Fabric 能解析，且排序上小於 1.3.9)
+// commit hash 不放進版本號，改放在 build_type.properties 裡，檔名才不會太長
 val modVersion = if (isReleaseBuild) {
     modVersionBase
 } else {
-    "$modVersionBase-beta.$betaNumber+$commitHash"
+    "$modVersionBase-beta.$betaNumber"
 }
 
 // 利用 Kotlin 的字串插值，把兩個版本號用 "-" 串接起來

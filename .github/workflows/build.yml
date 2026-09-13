@@ -41,16 +41,35 @@ jobs:
         run: ./gradlew build
 
       # ==========================================
-      # 1. 產生 Actions 後台的 Artifact (.zip)
+      # 1. 產生 Actions 後台的 Artifact (裸 .jar，不壓縮)
       # ==========================================
-      - name: upload release jar (Artifact)
-        uses: actions/upload-artifact@v4
+      # archive: false 只接受「單一具體檔案」，不能給 glob，
+      # 所以先在這裡把路徑算出來
+      - name: locate built jars
+        id: jars
+        run: |
+          MAIN=$(find build/libs -name '*.jar' ! -name '*-sources.jar' | head -1)
+          SOURCES=$(find build/libs -name '*-sources.jar' | head -1)
+          if [ -z "$MAIN" ]; then echo "找不到主 jar"; exit 1; fi
+          echo "main=$MAIN" >> "$GITHUB_OUTPUT"
+          echo "sources=$SOURCES" >> "$GITHUB_OUTPUT"
+          echo "main jar:    $MAIN"
+          echo "sources jar: $SOURCES"
+
+      # archive: false 會忽略 name，artifact 名稱直接用檔名
+      # (例如 Heigui-Public-1.3.9-beta.3-26.1.2.jar)
+      - name: upload jar (Artifact)
+        uses: actions/upload-artifact@v7
         with:
-          # 帶上 commit 讓 Actions 後台也能分辨不同 build
-          name: Heigui-Build-${{ github.sha }}
-          path: |
-            build/libs/**/*.jar      
-            build/libs/**/*-sources.jar
+          path: ${{ steps.jars.outputs.main }}
+          archive: false
+
+      - name: upload sources jar (Artifact)
+        uses: actions/upload-artifact@v7
+        if: steps.jars.outputs.sources != ''
+        with:
+          path: ${{ steps.jars.outputs.sources }}
+          archive: false
 
       # ==========================================
       # 2. 建立正式 Release (獨立的 .jar 檔案)
