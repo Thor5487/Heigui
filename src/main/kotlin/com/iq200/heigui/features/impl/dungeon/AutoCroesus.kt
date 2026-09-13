@@ -47,7 +47,6 @@ data class FloorTracker(
     var kismetsUsed: Int = 0,
     var kismetCost: Double = 0.0,     // 該樓層消耗的羽毛歷史總成本
     var chestCost: Double = 0.0,      // 該樓層開箱歷史總花費
-    var totalSellPrice: Double = 0.0, // 該樓層物品歷史總市價
     val items: MutableMap<String, TrackerItem> = mutableMapOf()
 )
 
@@ -426,7 +425,6 @@ object AutoCroesus : Module(
         // 如果這局有買寶箱，累加開箱成本與收益
         if (boughtData != null) {
             floorData.chestCost += boughtData.cost
-            floorData.totalSellPrice += boughtData.totalValue
 
             // 存入這局當下的物品價值
             for (item in boughtData.items) {
@@ -639,7 +637,7 @@ object AutoCroesus : Module(
         val chestCost = floorData.chestCost
         val kismetCost = floorData.kismetCost
         val totalCost = chestCost + kismetCost
-        val totalSell = floorData.totalSellPrice
+        val totalSell = floorData.items.values.sumOf { it.totalValue }
         val totalProfit = totalSell - totalCost
         val profitPerRun = if (runs > 0) totalProfit / runs else 0.0
 

@@ -89,6 +89,7 @@ object AutoClick : Module (
                         if (checkItem()) {
                             mc.missTime = 0
                             PlayerUtils.leftClick()
+                            mc.options.keyAttack.isDown = false
                             lastClickTime = now
                         }
                     }
