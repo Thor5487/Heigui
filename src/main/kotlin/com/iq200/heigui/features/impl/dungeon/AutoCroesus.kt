@@ -5,6 +5,7 @@ import com.iq200.heigui.clickgui.settings.Setting.Companion.withDependency
 import com.iq200.heigui.clickgui.settings.impl.BooleanSetting
 import com.iq200.heigui.clickgui.settings.impl.NumberSetting
 import com.iq200.heigui.config.JsonConfig
+import com.iq200.heigui.events.ChatPacketEvent
 import com.iq200.heigui.events.InputEvent
 import com.iq200.heigui.events.TickEvent
 import com.iq200.heigui.events.core.on
@@ -46,6 +47,8 @@ data class FloorTracker(
     var runsOpened: Int = 0,
     var kismetsUsed: Int = 0,
     var kismetCost: Double = 0.0,     // 該樓層消耗的羽毛歷史總成本
+    var keysUsed: Int = 0,            // 【新增】該樓層消耗的鑰匙總量
+    var keyCost: Double = 0.0,
     var chestCost: Double = 0.0,      // 該樓層開箱歷史總花費
     val items: MutableMap<String, TrackerItem> = mutableMapOf()
 )
@@ -66,6 +69,15 @@ object AutoCroesus : Module(
     private val clickDelay by NumberSetting("Click Delay", 150, 50, 1000, 50, "minimum delay between each click", "ms")
     private val useKismets by BooleanSetting("Kismet", true, "use kismets or not")
     private val targetProfit by NumberSetting("Target Profit", 5, 1, 100, 1, "rerolls the chest if current profit is below this value", "m").withDependency { useKismets }
+    private val useKey by BooleanSetting("Key", false, "use dungeon chest key or not")
+    private val keyTargetProfit by NumberSetting("Key Target Profit", 5, 1, 100, 1, "minimum profit to use a key", "m").withDependency { useKey }
+
+
+    private var pendingKeyRun = false
+    private var pendingKeyChestSlot = -1
+    private var pendingKeyChestData: ChestData? = null
+
+    private var currentRunIsKey = false
 
     val ignoreConfig = JsonConfig(
         fileName = "ac-ignore.json",
@@ -114,6 +126,23 @@ object AutoCroesus : Module(
         ignoreConfig.load()
         trackerConfig.load()
 
+        on<ChatPacketEvent> {
+            if (!isWorking) return@on
+            val cleanMsg = value.replace(Regex("§[0-9a-fk-or]"), "")
+
+            if (cleanMsg.contains("You need a Dungeon Chest Key to open another chest!")) {
+                modMessage("§c[AutoCroesus] Out of Dungeon Chest Keys! Script paused.")
+                modMessage("§e[AutoCroesus] Buy a key and type /hg ac go to resume.")
+
+                // 阻斷後續的紀錄與開啟邏輯
+                currentState = CroesusState.IDLE
+                pendingChestData = null
+
+                // 暫停腳本，但保留 pendingKeyRun 等狀態不清除
+                stop(clearPending = false)
+            }
+        }
+
         on<InputEvent> {
             if (!isWorking) return@on
             if (isPress) {
@@ -131,6 +160,12 @@ object AutoCroesus : Module(
                 if (mc.screen == null) { // 只有當介面真的被伺服器關閉後，才進行下一步
                     saveRunRecord(pendingChestData)
                     pendingChestData = null
+
+                    if (currentRunIsKey) {
+                        pendingKeyRun = false
+                        pendingKeyChestSlot = -1
+                        pendingKeyChestData = null
+                    }
 
                     mc.execute {
                         val player = mc.player ?: return@execute
@@ -159,7 +194,7 @@ object AutoCroesus : Module(
                 CroesusState.WAITING_FOR_NEXT_PAGE -> handleWaitingForNextPage(menuTitle)
                 CroesusState.SCANNING_MAIN_PAGE -> handleScanningMainPage(currentScreen, currentTime)
                 CroesusState.WAITING_FOR_CHEST_MENU -> handleWaitingForChestMenu(menuTitle)
-                CroesusState.INSIDE_LOOT_CHEST -> handleInsideLootChest(currentScreen, currentTime)
+                CroesusState.INSIDE_LOOT_CHEST -> handleInsideLootChests(currentScreen, currentTime)
                 CroesusState.WAITING_FOR_CONFIRM_MENU -> handleWaitingForConfirmMenu(menuTitle)
                 CroesusState.IN_CONFIRM_MENU -> handleInConfirmMenu(currentScreen, currentTime)
                 else -> {}
@@ -187,14 +222,24 @@ object AutoCroesus : Module(
             val lore = slot.item.loreString
             val loreComponents = slot.item.lore
 
-            if (lore.any { it.contains("No chests opened yet!") }) {
+            val isValidTarget = if (pendingKeyRun) {
+                loreComponents.any {
+                    it.string.contains("Dungeon Chest Key", ignoreCase = true) &&
+                            !it.toString().contains("strikethrough", ignoreCase = true)
+                }
+            } else {
+                lore.any { it.contains("No chests opened yet!") }
+            }
+
+            if (isValidTarget) {
                 val cleanName = slot.item.hoverName.string.replace(Regex("§[0-9a-fk-or]"), "")
                 currentFloor = parseFloor(cleanName, lore)
                 currentRunKismets = 0
 
+                currentRunIsKey = pendingKeyRun
+
                 val kismetComp = loreComponents.find { it.string.contains("Kismet Feather") }
                 if (kismetComp != null) {
-                    // 使用 toString() 檢查底層是否帶有 strikethrough (刪除線) 屬性
                     val isUsed = kismetComp.toString().contains("strikethrough", ignoreCase = true)
                     currentKismetAvailable = !isUsed
                 } else {
@@ -202,7 +247,6 @@ object AutoCroesus : Module(
                 }
 
                 mc.gameMode?.handleContainerInput(menu.containerId, i, 0, ContainerInput.PICKUP, player)
-
                 currentState = CroesusState.WAITING_FOR_CHEST_MENU
                 lastActionTime = currentTime
                 foundUnopened = true
@@ -222,8 +266,15 @@ object AutoCroesus : Module(
                 currentState = CroesusState.WAITING_FOR_NEXT_PAGE
                 lastActionTime = currentTime
             } else {
-                modMessage("§a[AutoCroesus] Finished! All pages have been scanned and no unopened chests remain.")
-                stop()
+                if (pendingKeyRun) {
+                    // 防呆：如果找不到鑰匙局數，自動重置狀態並停止
+                    modMessage("§c[AutoCroesus] Warning: Pending key run, but no available Dungeon Chest Keys found.")
+                    pendingKeyRun = false
+                    stop()
+                } else {
+                    modMessage("§a[AutoCroesus] Finished! All pages have been scanned and no unopened chests remain.")
+                    stop()
+                }
             }
         }
     }
@@ -240,9 +291,18 @@ object AutoCroesus : Module(
         }
     }
 
-    private fun handleInsideLootChest(currentScreen: AbstractContainerScreen<*>, currentTime: Long) {
+    private fun handleInsideLootChests(currentScreen: AbstractContainerScreen<*>, currentTime: Long) {
         val menu = currentScreen.menu
         val player = mc.player ?: return
+
+        if (pendingKeyRun && pendingKeyChestSlot != -1) {
+            pendingChestData = pendingKeyChestData
+            mc.gameMode?.handleContainerInput(menu.containerId, pendingKeyChestSlot, 0, ContainerInput.PICKUP, player)
+            currentState = CroesusState.WAITING_FOR_CONFIRM_MENU
+            lastActionTime = currentTime
+
+            return
+        }
 
         val targetChestNames = listOf(
             "Wood", "Gold", "Diamond",
@@ -266,31 +326,27 @@ object AutoCroesus : Module(
             return
         }
 
-        var bestChestSlot = -1
-        var maxProfit = Double.NEGATIVE_INFINITY
-        var bestChestData: ChestData? = null
+        val evaluatedChests = foundChests.map { Pair(it.first, calculateChestData(it.second.lore, it.second.loreString)) }
+        val sortedChests = evaluatedChests.sortedByDescending { it.second.profit }
+
+        val bestChestSlot = sortedChests.getOrNull(0)?.first ?: -1
+        val bestChestData = sortedChests.getOrNull(0)?.second
+        val maxProfit = bestChestData?.profit ?: Double.NEGATIVE_INFINITY
+
+        // 🌟 抓取第二名寶箱
+        val secondChestSlot = sortedChests.getOrNull(1)?.first ?: -1
+        val secondChestData = sortedChests.getOrNull(1)?.second
 
         var bedrockChestSlot = -1
-        var bedrockChestData: ChestData? = null // 【新增】專門記錄 Bedrock 的資料
+        var bedrockChestData: ChestData? = null
+        val bedrockEntry = foundChests.find { it.second.hoverName.string.contains("Bedrock", ignoreCase = true) }
 
-        for ((slotIndex, itemStack) in foundChests) {
-            val itemName = itemStack.hoverName.string.replace(Regex("§[0-9a-fk-or]"), "")
-            val chestData = calculateChestData(itemStack.lore, itemStack.loreString)
-
-            if (itemName.contains("Bedrock", ignoreCase = true)) {
-                bedrockChestSlot = slotIndex
-                bedrockChestData = chestData // 存下 Bedrock 的專屬資料
-            }
-
-            if (chestData.profit > maxProfit) {
-                maxProfit = chestData.profit
-                bestChestSlot = slotIndex
-                bestChestData = chestData
-            }
+        if (bedrockEntry != null) {
+            bedrockChestSlot = bedrockEntry.first
+            bedrockChestData = evaluatedChests.find { it.first == bedrockChestSlot }?.second
         }
 
-        // 將 bedrockChestData 也傳進去
-        makeDecision(menu.containerId, player, maxProfit, bestChestSlot, bestChestData, bedrockChestSlot, bedrockChestData, menu)
+        makeDecision(menu.containerId, player, maxProfit, bestChestSlot, bestChestData, bedrockChestSlot, bedrockChestData, secondChestSlot, secondChestData, menu)
     }
 
     fun go() {
@@ -371,9 +427,14 @@ object AutoCroesus : Module(
     }
 
 
-    fun stop() {
+    fun stop(clearPending: Boolean = true) {
         if (isWorking) {
             isWorking = false
+            if (clearPending) {
+                pendingKeyRun = false
+                pendingKeyChestSlot = -1
+                pendingKeyChestData = null
+            }
             modMessage("§c[AutoCroesus] AutoCroesus has been stopped")
 
             if (mc.screen != null) {
@@ -413,7 +474,9 @@ object AutoCroesus : Module(
         val globalData = trackerConfig.data
         val floorData = globalData.floors.getOrPut(currentFloor) { FloorTracker() }
 
-        floorData.runsOpened++
+        if (!currentRunIsKey) {
+            floorData.runsOpened++
+        }
 
         // 計算這局當下的 Kismet 羽毛總成本
         val kismetCost = PriceParser.parseItemValue("Kismet Feather") * currentRunKismets
@@ -426,6 +489,11 @@ object AutoCroesus : Module(
         if (boughtData != null) {
             floorData.chestCost += boughtData.cost
 
+
+            if (currentRunIsKey) {
+                floorData.keysUsed++
+                floorData.keyCost += PriceParser.parseItemValue("Dungeon Chest Key")
+            }
             // 存入這局當下的物品價值
             for (item in boughtData.items) {
                 val drop = floorData.items.getOrPut(item.cleanName) { TrackerItem("", 0, 0.0) }
@@ -514,7 +582,7 @@ object AutoCroesus : Module(
         return ChestData(cost, totalValue, totalValue - cost, items)
     }
 
-    private fun makeDecision(containerId: Int, player: Player, maxProfit: Double, bestChestSlot: Int, bestChestData: ChestData?, bedrockChestSlot: Int, bedrockChestData: ChestData?, menu: AbstractContainerMenu) {
+    private fun makeDecision(containerId: Int, player: Player, maxProfit: Double, bestChestSlot: Int, bestChestData: ChestData?, bedrockChestSlot: Int, bedrockChestData: ChestData?, secondChestSlot: Int, secondChestData: ChestData?, menu: AbstractContainerMenu) {
         val targetProfitCoins = targetProfit * 1_000_000.0
 
         // 1. 判斷是否需要重骰：只拿 Bedrock 寶箱的利潤來跟目標比較！
@@ -534,7 +602,13 @@ object AutoCroesus : Module(
         // 2. 判斷是購買還是略過 (當無法重骰，或 Bedrock 已經達標時，才來選全場最賺的)
         intendingToReroll = false
         if (maxProfit > 0 && bestChestSlot != -1 && bestChestData != null) {
-            // 【購買】：點擊利潤最高 (maxProfit) 的寶箱來止損或收成
+            val keyTargetProfitCoins = keyTargetProfit * 1_000_000.0
+            if (useKey && secondChestSlot != -1 && secondChestData != null && secondChestData.profit >= keyTargetProfitCoins) {
+                pendingKeyRun = true
+                pendingKeyChestSlot = secondChestSlot
+                pendingKeyChestData = secondChestData
+            }
+
             pendingChestData = bestChestData
             mc.gameMode?.handleContainerInput(containerId, bestChestSlot, 0, ContainerInput.PICKUP, player)
 
@@ -636,7 +710,8 @@ object AutoCroesus : Module(
         val runs = floorData.runsOpened
         val chestCost = floorData.chestCost
         val kismetCost = floorData.kismetCost
-        val totalCost = chestCost + kismetCost
+        val keyCost = floorData.keyCost
+        val totalCost = chestCost + kismetCost + keyCost
         val totalSell = floorData.items.values.sumOf { it.totalValue }
         val totalProfit = totalSell - totalCost
         val profitPerRun = if (runs > 0) totalProfit / runs else 0.0
@@ -669,6 +744,7 @@ object AutoCroesus : Module(
 
         // 把羽毛和開箱子的成本分開列出，更直觀
         hoverText.append(Component.literal("§cTotal Kismet Cost: ${"%,.0f".format(kismetCost)} §8(${floorData.kismetsUsed} used)\n"))
+        hoverText.append(Component.literal("§cTotal Key Cost: ${"%,.0f".format(keyCost)} §8(${floorData.keysUsed} used)\n"))
         hoverText.append(Component.literal("§cTotal Chest Cost: ${"%,.0f".format(chestCost)}\n"))
         hoverText.append(Component.literal("§cTotal Sell Price: ${"%,.0f".format(totalSell)}\n"))
         hoverText.append(Component.literal("§eTotal Profit: ${"%,.0f".format(totalProfit)}\n"))
