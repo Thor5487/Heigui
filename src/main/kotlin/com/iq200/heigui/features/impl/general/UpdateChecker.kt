@@ -132,7 +132,9 @@ object UpdateChecker : Module(
                                     }
                                 }
 
-                                mc.execute { sendUpdateMessage(latestActionVersion, actionUrl, true) }
+                                if (isUpdateAvailable(CURRENT_VERSION, latestActionVersion)) {
+                                    mc.execute { sendUpdateMessage(latestActionVersion, actionUrl, true) }
+                                }
                             }
                         }
                     }
@@ -147,23 +149,17 @@ object UpdateChecker : Module(
     // 只抓開頭的數字版本段，後面的 prerelease / build metadata 交給 isPrerelease 處理
     private val versionNumberRegex = Regex("""^\d+(?:\.\d+)*""")
 
-    private class ParsedVersion(val numbers: List<Int>, val isPrerelease: Boolean)
+    private class ParsedVersion(val numbers: List<Int>, val prerelease: List<String>) {
+        val isPrerelease: Boolean
+            get() = prerelease.isNotEmpty()
+    }
 
     private fun isUpdateAvailable(current: String, latest: String): Boolean {
         // 解析不出來就不通知，避免奇怪的 Tag 名稱洗玩家畫面
         val currentVersion = parseVersion(current) ?: return false
         val latestVersion = parseVersion(latest) ?: return false
 
-        val result = compareVersions(latestVersion.numbers, currentVersion.numbers)
-
-        // 數字段就分出勝負：只有線上嚴格較新才算有更新
-        // (本機是開發版、版本號比線上 Release 新的時候就不會誤報)
-        if (result != 0) return result > 0
-
-        // 數字段相同，例如本機 1.3.9-beta.5 對上線上正式版 v1.3.9。
-        // semver 規定 prerelease 小於正式版，所以這種情況要通知玩家正式版已發布。
-        // 不需要比較 beta.5 vs beta.6，因為 releases/latest 本來就會跳過 prerelease。
-        return currentVersion.isPrerelease && !latestVersion.isPrerelease
+        return compareVersions(latestVersion, currentVersion) > 0
     }
 
     /**
@@ -172,23 +168,48 @@ object UpdateChecker : Module(
      * 解析失敗回傳 null
      */
     private fun parseVersion(version: String): ParsedVersion? {
-        val cleaned = version.trim().removePrefix("v").removePrefix("V")
+        val cleaned = version.trim().removePrefix("v").removePrefix("V").substringBefore('+')
         val numeric = versionNumberRegex.find(cleaned)?.value ?: return null
         val numbers = numeric.split('.').map { it.toIntOrNull() ?: 0 }
 
         // 數字段後面剩下的東西以 "-" 開頭就是 semver 的 prerelease 標記；
         // 正式版剩下空字串，帶 build metadata 的 "+..." 不算 prerelease
-        val isPrerelease = cleaned.substring(numeric.length).startsWith("-")
+        val suffix = cleaned.substring(numeric.length)
+        val prerelease = if (suffix.startsWith("-")) {
+            suffix.removePrefix("-").split('.').filter { it.isNotEmpty() }
+        } else {
+            emptyList()
+        }
 
-        return ParsedVersion(numbers, isPrerelease)
+        return ParsedVersion(numbers, prerelease)
     }
 
     /** 逐段比對，長度不同時缺的那段補 0 (1.4 == 1.4.0) */
-    private fun compareVersions(left: List<Int>, right: List<Int>): Int {
-        for (i in 0 until maxOf(left.size, right.size)) {
-            val result = left.getOrElse(i) { 0 }.compareTo(right.getOrElse(i) { 0 })
+    private fun compareVersions(left: ParsedVersion, right: ParsedVersion): Int {
+        for (i in 0 until maxOf(left.numbers.size, right.numbers.size)) {
+            val result = left.numbers.getOrElse(i) { 0 }.compareTo(right.numbers.getOrElse(i) { 0 })
             if (result != 0) return result
         }
+
+        if (!left.isPrerelease && right.isPrerelease) return 1
+        if (left.isPrerelease && !right.isPrerelease) return -1
+        if (!left.isPrerelease && !right.isPrerelease) return 0
+
+        for (i in 0 until maxOf(left.prerelease.size, right.prerelease.size)) {
+            val leftPart = left.prerelease.getOrNull(i) ?: return -1
+            val rightPart = right.prerelease.getOrNull(i) ?: return 1
+            val leftNumber = leftPart.toIntOrNull()
+            val rightNumber = rightPart.toIntOrNull()
+
+            val result = when {
+                leftNumber != null && rightNumber != null -> leftNumber.compareTo(rightNumber)
+                leftNumber != null -> -1
+                rightNumber != null -> 1
+                else -> leftPart.compareTo(rightPart)
+            }
+            if (result != 0) return result
+        }
+
         return 0
     }
 
