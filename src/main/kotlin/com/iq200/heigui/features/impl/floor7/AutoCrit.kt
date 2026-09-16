@@ -4,6 +4,7 @@ import com.iq200.heigui.clickgui.settings.Setting.Companion.withDependency
 import com.iq200.heigui.clickgui.settings.impl.BooleanSetting
 import com.iq200.heigui.clickgui.settings.impl.NumberSetting
 import com.iq200.heigui.events.InputEvent
+import com.iq200.heigui.events.PacketEvent
 import com.iq200.heigui.events.TickEvent
 import com.iq200.heigui.events.WorldEvent
 import com.iq200.heigui.events.core.on
@@ -14,6 +15,7 @@ import com.iq200.heigui.utils.sendCommand
 import com.mojang.blaze3d.platform.InputConstants
 import net.minecraft.client.KeyMapping
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen
+import net.minecraft.network.protocol.game.ServerboundUseItemPacket
 import net.minecraft.world.inventory.ContainerInput
 
 object AutoCrit : Module (
@@ -36,6 +38,8 @@ object AutoCrit : Module (
 
     private var state = State.IDLE
     private var wait = true
+    private var chargeTicks = 0
+    private var chargingConfirmed = false
 
     init {
         on<WorldEvent.Load> {
@@ -49,8 +53,19 @@ object AutoCrit : Module (
             if (key.value != InputConstants.MOUSE_BUTTON_LEFT || !isHoldingDeathBow()) return@on
 
             state = State.SHOOT
+            chargeTicks = 0
+            chargingConfirmed = false
             KeyMapping.set(mc.options.keyUse.defaultKey, true)
             cancel()
+        }
+
+        on<PacketEvent.Send> {
+            if (state != State.SHOOT) return@on
+            if (packet !is ServerboundUseItemPacket) return@on
+            if (!isHoldingDeathBow()) return@on
+
+            chargeTicks = 0
+            chargingConfirmed = true
         }
 
         on<TickEvent.Server> {
@@ -58,8 +73,14 @@ object AutoCrit : Module (
 
             when (state) {
                 State.SHOOT -> {
-                    val heldTicks = player.useItem.getUseDuration(player) - player.useItemRemainingTicks
-                    if (heldTicks < 20) return@on
+                    if (!chargingConfirmed) return@on
+                    if (!isHoldingDeathBow() || !player.isUsingItem) {
+                        reset()
+                        return@on
+                    }
+
+                    chargeTicks++
+                    if (chargeTicks < 20) return@on
 
                     KeyMapping.set(mc.options.keyUse.defaultKey, false)
 
@@ -117,6 +138,8 @@ object AutoCrit : Module (
         state = State.IDLE
         KeyMapping.set(mc.options.keyUse.defaultKey, false)
         wait = true
+        chargeTicks = 0
+        chargingConfirmed = false
     }
 
     private fun isHoldingDeathBow() : Boolean {

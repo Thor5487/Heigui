@@ -7,7 +7,7 @@
   "authors": ["IQ200"],
   "contact": {},
   "icon": "assets/heigui/icon.png",
-  "license": "All Rights Reserved",
+  "license": "MIT",
   "environment": "client",
   "entrypoints": {
     "modmenu": [

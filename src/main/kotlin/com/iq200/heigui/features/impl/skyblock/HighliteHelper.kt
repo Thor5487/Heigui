@@ -16,7 +16,9 @@ import com.iq200.heigui.utils.render.drawStyledBox
 import com.iq200.heigui.utils.render.textDim
 import com.iq200.heigui.utils.skyblock.Island
 import com.iq200.heigui.utils.skyblock.LocationUtils
+import com.iq200.mixin.accessors.KeyMappingAccessor
 import com.mojang.blaze3d.platform.InputConstants
+import net.minecraft.client.KeyMapping
 import net.minecraft.core.BlockPos
 import net.minecraft.world.level.block.Blocks
 import net.minecraft.world.level.block.state.BlockState
@@ -301,12 +303,22 @@ object HighliteHelper : Module(
     }
 
     private fun resetHelper() {
-        mc.options.keyUse.isDown = false
-        mc.options.keyAttack.isDown = false
+        mc.options.keyUse.isDown = isPhysicallyDown(mc.options.keyUse)
+        mc.options.keyAttack.isDown = isPhysicallyDown(mc.options.keyAttack)
         shootingTargetPos = null
         lastBlockState = null
         doubleTimeShooting = false
         isHoldingGreen = false
+    }
+
+    private fun isPhysicallyDown(keyMapping: KeyMapping): Boolean {
+        val key = (keyMapping as KeyMappingAccessor).key
+        if (key == InputConstants.UNKNOWN) return false
+
+        return when (key.type) {
+            InputConstants.Type.MOUSE -> GLFW.glfwGetMouseButton(mc.window.handle(), key.value) == GLFW.GLFW_PRESS
+            else -> InputConstants.isKeyDown(mc.window, key.value)
+        }
     }
 
     private fun getInventoryItemCount(keyword: String): Int {
