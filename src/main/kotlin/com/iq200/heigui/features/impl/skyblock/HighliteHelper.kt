@@ -94,6 +94,8 @@ object HighliteHelper : Module(
         // 1. InputEvent：開關接管
         // ==========================================
         on<InputEvent> {
+            if (LocationUtils.currentArea != Island.Rift) return@on
+
             if (mc.player == null) return@on
 
             if (mc.screen != null) return@on
@@ -115,6 +117,8 @@ object HighliteHelper : Module(
         // 2. TickEvent：狀態機大腦 (所見即所得)
         // ==========================================
         on<TickEvent.Start> {
+            if (LocationUtils.currentArea != Island.Rift) return@on
+
             if (!enabled || mc.player == null || !isPhysicalLMBDown) {
                 return@on
             }
@@ -200,6 +204,8 @@ object HighliteHelper : Module(
 
 
         on<RenderEvent.Extract> {
+            if (LocationUtils.currentArea != Island.Rift) return@on
+
             if (!showProgress) return@on
             val target = shootingTargetPos ?: return@on
 

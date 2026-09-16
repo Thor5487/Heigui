@@ -19,6 +19,7 @@ import com.iq200.heigui.features.impl.dungeon.SecretDone
 import com.iq200.heigui.features.impl.dungeon.SkipSecrets
 import com.iq200.heigui.features.impl.dungeon.Triggerbot
 import com.iq200.heigui.features.impl.dungeon.ZPDB
+import com.iq200.heigui.features.impl.dungeon.icefill.IceFillHelper
 import com.iq200.heigui.features.impl.floor7.AutoCrit
 import com.iq200.heigui.features.impl.floor7.LBHelper
 import com.iq200.heigui.features.impl.floor7.SimonSays
@@ -71,7 +72,7 @@ object ModuleManager {
     init {
         registerModules(config = ModuleConfig(file = File(Heigui.configDir, "heigui-config.json")),
             // dungeon
-            AutoClose, ZPDB, Triggerbot, AutoClick, SecretDone, SkipSecrets, SATpFix, AutoCroesus,
+            AutoClose, ZPDB, Triggerbot, AutoClick, SecretDone, SkipSecrets, SATpFix, AutoCroesus, IceFillHelper,
 
             // floor 7
             SimonSays, WitherAimBot, LBHelper, AutoCrit,
