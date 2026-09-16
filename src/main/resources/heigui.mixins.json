@@ -14,6 +14,7 @@
     "mixins.MixinEntity",
     "mixins.MixinKeyboardHandler",
     "mixins.MixinKeyboardInput",
+    "mixins.MixinKeyMapping",
     "mixins.MixinLocalPlayer",
     "mixins.MixinMinecraft",
     "mixins.MixinMouseHandler",

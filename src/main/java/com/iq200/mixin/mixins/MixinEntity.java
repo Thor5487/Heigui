@@ -15,4 +15,5 @@ public class MixinEntity {
     private Vec3 pickPosition(Vec3 positionVector) {
         return CameraHandler.onGetPositionForHit(positionVector);
     }
+
 }

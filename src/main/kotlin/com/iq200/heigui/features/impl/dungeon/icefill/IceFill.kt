@@ -1,5 +1,6 @@
 package com.iq200.heigui.features.impl.dungeon.icefill
 
+import com.iq200.heigui.clickgui.settings.Setting.Companion.withDependency
 import com.iq200.heigui.clickgui.settings.impl.BooleanSetting
 import com.iq200.heigui.clickgui.settings.impl.NumberSetting
 import com.iq200.heigui.events.RenderEvent
@@ -13,18 +14,22 @@ import com.iq200.heigui.utils.skyblock.dungeon.ScanUtils
 import net.minecraft.core.BlockPos
 import net.minecraft.world.level.block.Blocks
 
-object IceFillHelper : Module(
-    name = "Ice Fill Helper",
+object IceFill : Module(
+    name = "IceFill",
     description = "Solves Ice Fill and walks the path.",
     category = Category.DUNGEON
 ) {
-    private val autoWalk by BooleanSetting("Auto Walk", false, desc = "Automatically walk the Ice Fill solution path.")
     private val renderSolution by BooleanSetting("Render Solution", true, desc = "Render the Ice Fill solution path.")
-    private val turnWaitTicks by NumberSetting("Turn Wait Ticks", 0, 0, 20, 1, "How many ticks to wait at sprint-related turns before entering the next segment.")
+    private val autoWalk by BooleanSetting("Auto Walk", false, desc = "Automatically walk the Ice Fill solution path.")
+    private val turnWaitTicks by NumberSetting("Turn Wait Ticks", 0, 0, 20, 1, "How many ticks to wait at sprint-related turns before entering the next segment.").withDependency { autoWalk }
+    private val sprintBlocks by NumberSetting("Sprint Blocks", 4, 2, 12, 1, "Minimum number of blocks in a segment required to sprint. The segment still needs a polished andesite stop.").withDependency { autoWalk }
+    private val disableSprintWhileNotSneaking by BooleanSetting("Disable Sprint", false, desc = "Prevent sprinting when Ice Fill is moving without sneak.").withDependency { autoWalk }
 
     private var path: List<BlockPos> = emptyList()
     private var walking = false
     private var lastSolveAttempt = 0L
+
+    fun shouldSuppressSprintKey(): Boolean = walking && IceFillWalker.shouldSuppressSprintKey()
 
     init {
         on<WorldEvent.Load> {
@@ -51,6 +56,14 @@ object IceFillHelper : Module(
                 return@on
             }
 
+            if (mc.screen != null) {
+                if (walking) {
+                    walking = false
+                    IceFillWalker.reset()
+                }
+                return@on
+            }
+
             if (IceFillWalker.isManualInputDown()) {
                 if (walking) {
                     walking = false
@@ -61,7 +74,7 @@ object IceFillHelper : Module(
 
             if (!walking && isStandingOnIce()) walking = true
 
-            if (walking && IceFillWalker.walk(path, turnWaitTicks)) {
+            if (walking && IceFillWalker.walk(path, turnWaitTicks, sprintBlocks, disableSprintWhileNotSneaking)) {
                 walking = false
                 IceFillWalker.reset()
             }
@@ -74,8 +87,7 @@ object IceFillHelper : Module(
     }
 
     private fun shouldRun(): Boolean {
-        if (!DungeonUtils.inClear) return false
-        return ScanUtils.currentRoom?.data?.name == "Ice Fill"
+        return DungeonUtils.inClear && ScanUtils.currentRoom?.data?.name == "Ice Fill"
     }
 
     private fun reset() {

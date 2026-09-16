@@ -6,6 +6,7 @@ import com.iq200.mixin.accessors.KeyMappingAccessor
 import com.mojang.blaze3d.platform.InputConstants
 import net.minecraft.client.KeyMapping
 import net.minecraft.core.BlockPos
+import net.minecraft.tags.BlockTags
 import net.minecraft.world.entity.player.Input
 import net.minecraft.world.level.block.Blocks
 import org.lwjgl.glfw.GLFW
@@ -15,6 +16,7 @@ import kotlin.math.floor
 object IceFillWalker {
     private data class Segment(
         val dir: Int,
+        val startIndex: Int,
         val endIndex: Int,
         val sprint: Boolean
     )
@@ -31,6 +33,9 @@ object IceFillWalker {
     private var waitingTicksLeft = 0
     private var completedWaitTurnIndex = -1
     private var completedSprintStopTurnIndex = -1
+    private var suppressSprintKey = false
+
+    fun shouldSuppressSprintKey(): Boolean = suppressSprintKey
 
     fun isManualInputDown(): Boolean {
         val options = mc.options
@@ -45,7 +50,9 @@ object IceFillWalker {
 
     fun walk(
         path: List<BlockPos>,
-        turnWaitTicks: Int
+        turnWaitTicks: Int,
+        sprintBlocks: Int,
+        disableSprintWhileNotSneaking: Boolean
     ): Boolean {
         val player = mc.player ?: return true
         if (player.y < 70.0) return true
@@ -67,12 +74,14 @@ object IceFillWalker {
             val dir = calcDir(current, next)
             val relativeKeys = rotatedMovementKeys(dirOffset)
 
-            val segment = getSegment(path, currentIndex) ?: return true
+            val segment = getSegment(path, currentIndex, sprintBlocks) ?: return true
             val atTurn = isSegmentBoundary(path, currentIndex)
+            val canWaitAtTurn = atTurn && !isStairBoundary(path, currentIndex)
             val previousDir = if (currentIndex > 0) calcDir(path[currentIndex - 1].to2d(), path[currentIndex].to2d()) else -1
-            val previousSegmentSprint = isPreviousSegmentSprint(path, currentIndex, previousDir)
+            val previousSegmentSprint = isPreviousSegmentSprint(path, currentIndex, previousDir, sprintBlocks)
 
             keyStates[InputKey.SNEAK] = !segment.sprint
+            suppressSprintIfNeeded(keyStates, disableSprintWhileNotSneaking)
 
             if (atTurn) {
                 if (previousSegmentSprint) {
@@ -89,6 +98,7 @@ object IceFillWalker {
                     ) {
                         keyStates[InputKey.SNEAK] = false
                         pressDirection(keyStates, relativeKeys, previousDir)
+                        suppressSprintIfNeeded(keyStates, disableSprintWhileNotSneaking)
                         applyKeyStates(keyStates)
                         return false
                     }
@@ -96,8 +106,9 @@ object IceFillWalker {
                     completedSprintStopTurnIndex = currentIndex
                 }
 
-                if ((previousSegmentSprint || segment.sprint) &&
-                    waitAtTurn(currentIndex, turnWaitTicks, !segment.sprint, keyStates)
+                if (canWaitAtTurn &&
+                    (previousSegmentSprint || segment.sprint) &&
+                    waitAtTurn(currentIndex, turnWaitTicks, !segment.sprint, disableSprintWhileNotSneaking, keyStates)
                 ) {
                     return false
                 }
@@ -107,6 +118,7 @@ object IceFillWalker {
             val correction = calcCorrection(x, z, motion.x, motion.z, current, dir)
             pressDirection(keyStates, relativeKeys, dir)
             pressDirection(keyStates, relativeKeys, correction)
+            suppressSprintIfNeeded(keyStates, disableSprintWhileNotSneaking)
 
             applyKeyStates(keyStates)
             return false
@@ -120,6 +132,7 @@ object IceFillWalker {
         waitingTicksLeft = 0
         completedWaitTurnIndex = -1
         completedSprintStopTurnIndex = -1
+        suppressSprintKey = false
 
         applyKeyStates(
             mapOf(
@@ -128,7 +141,8 @@ object IceFillWalker {
                 InputKey.BACKWARD to isPhysicallyDown(mc.options.keyDown),
                 InputKey.LEFT to isPhysicallyDown(mc.options.keyLeft),
                 InputKey.SNEAK to isPhysicallyDown(mc.options.keyShift),
-                InputKey.JUMP to isPhysicallyDown(mc.options.keyJump)
+                InputKey.JUMP to isPhysicallyDown(mc.options.keyJump),
+                InputKey.SPRINT to isPhysicallyDown(mc.options.keySprint)
             )
         )
     }
@@ -141,6 +155,10 @@ object IceFillWalker {
         keyStates[InputKey.RIGHT]?.let { options.keyRight.isDown = it }
         keyStates[InputKey.BACKWARD]?.let { options.keyDown.isDown = it }
         keyStates[InputKey.LEFT]?.let { options.keyLeft.isDown = it }
+        keyStates[InputKey.SPRINT]?.let {
+            options.keySprint.isDown = it
+            if (!it) player.isSprinting = false
+        }
         keyStates[InputKey.SNEAK]?.let {
             options.keyShift.isDown = it
             player.isShiftKeyDown = it
@@ -155,7 +173,7 @@ object IceFillWalker {
             keyStates[InputKey.RIGHT] ?: current.right,
             keyStates[InputKey.JUMP] ?: current.jump,
             keyStates[InputKey.SNEAK] ?: current.shift,
-            current.sprint
+            keyStates[InputKey.SPRINT] ?: current.sprint
         )
     }
 
@@ -163,6 +181,7 @@ object IceFillWalker {
         turnIndex: Int,
         waitTicks: Int,
         sneak: Boolean,
+        disableSprintWhileNotSneaking: Boolean,
         keyStates: MutableMap<InputKey, Boolean>
     ): Boolean {
         if (waitTicks <= 0 || completedWaitTurnIndex == turnIndex) return false
@@ -180,8 +199,16 @@ object IceFillWalker {
 
         waitingTicksLeft--
         keyStates[InputKey.SNEAK] = sneak
+        suppressSprintIfNeeded(keyStates, disableSprintWhileNotSneaking)
         applyKeyStates(keyStates)
         return true
+    }
+
+    private fun suppressSprintIfNeeded(keyStates: MutableMap<InputKey, Boolean>, disableSprintWhileNotSneaking: Boolean) {
+        suppressSprintKey = disableSprintWhileNotSneaking && keyStates[InputKey.SNEAK] == false
+        if (suppressSprintKey) {
+            keyStates[InputKey.SPRINT] = false
+        }
     }
 
     private fun hasReachedSprintStop(
@@ -234,38 +261,61 @@ object IceFillWalker {
             ?.index ?: -1
     }
 
-    private fun getSegment(path: List<BlockPos>, index: Int): Segment? {
+    private fun getSegment(path: List<BlockPos>, index: Int, sprintBlocks: Int): Segment? {
         if (index !in 0 until path.lastIndex) return null
 
         val dir = calcDir(path[index].to2d(), path[index + 1].to2d())
         if (dir == -1) return null
-        if (path[index].y != path[index + 1].y) return Segment(dir, index + 1, false)
+        if (isTransitionNode(path, index) || isSegmentBreak(path, index)) return Segment(dir, index, index + 1, false)
 
-        var endIndex = path.lastIndex
-        for (i in index + 1 until path.lastIndex) {
-            if (path[i].y != path[i + 1].y || calcDir(path[i].to2d(), path[i + 1].to2d()) != dir) {
-                endIndex = i
-                break
-            }
-        }
-
-        val length = endIndex - index
-        return Segment(dir, endIndex, length >= 3 && hasAndesiteStop(path[endIndex], dir))
-    }
-
-    private fun isPreviousSegmentSprint(path: List<BlockPos>, index: Int, dir: Int): Boolean {
-        if (index <= 0 || dir == -1) return false
-
-        var startIndex = index - 1
+        var startIndex = index
         while (startIndex > 0 &&
-            path[startIndex - 1].y == path[startIndex].y &&
+            !isTransitionNode(path, startIndex - 1) &&
+            !isStair(path[startIndex - 1]) &&
+            !isSegmentBreak(path, startIndex - 1) &&
             calcDir(path[startIndex - 1].to2d(), path[startIndex].to2d()) == dir
         ) {
             startIndex--
         }
 
-        val length = index - startIndex
-        return length >= 3 && hasAndesiteStop(path[index], dir)
+        var endIndex = path.lastIndex
+        for (i in index + 1 until path.lastIndex) {
+            if (isSegmentBreak(path, i) || calcDir(path[i].to2d(), path[i + 1].to2d()) != dir) {
+                endIndex = i
+                break
+            }
+        }
+
+        val blockCount = endIndex - startIndex + 1
+        val isLastSegment = isLastNormalSegment(path, endIndex)
+        return Segment(dir, startIndex, endIndex, isLastSegment || (blockCount >= sprintBlocks && hasAndesiteStop(path[endIndex], dir)))
+    }
+
+    private fun isLastNormalSegment(path: List<BlockPos>, endIndex: Int): Boolean {
+        if (endIndex >= path.lastIndex) return true
+
+        for (i in endIndex until path.lastIndex) {
+            if (!isSegmentBreak(path, i)) return false
+        }
+
+        return true
+    }
+
+    private fun isPreviousSegmentSprint(path: List<BlockPos>, index: Int, dir: Int, sprintBlocks: Int): Boolean {
+        if (index <= 0 || dir == -1) return false
+
+        var startIndex = index - 1
+        while (startIndex > 0 &&
+            !isTransitionNode(path, startIndex - 1) &&
+            !isStair(path[startIndex - 1]) &&
+            !isSegmentBreak(path, startIndex - 1) &&
+            calcDir(path[startIndex - 1].to2d(), path[startIndex].to2d()) == dir
+        ) {
+            startIndex--
+        }
+
+        val blockCount = index - startIndex + 1
+        return blockCount >= sprintBlocks && hasAndesiteStop(path[index], dir)
     }
 
     private fun hasAndesiteStop(end: BlockPos, dir: Int): Boolean {
@@ -303,8 +353,30 @@ object IceFillWalker {
         if (index <= 0 || index >= path.lastIndex) return false
 
         return isOnTurnBlock(path, index) ||
-                path[index - 1].y != path[index].y ||
-                path[index].y != path[index + 1].y
+                isSegmentBreak(path, index - 1) ||
+                isSegmentBreak(path, index)
+    }
+
+    private fun isSegmentBreak(path: List<BlockPos>, index: Int): Boolean {
+        if (index !in 0 until path.lastIndex) return false
+        if (isTransitionNode(path, index) || isTransitionNode(path, index + 1)) return true
+        if (path[index].y != path[index + 1].y) return true
+        if (isStair(path[index]) || isStair(path[index + 1])) return true
+
+        return false
+    }
+
+    private fun isTransitionNode(path: List<BlockPos>, index: Int): Boolean {
+        if (index <= 0 || index !in path.indices) return false
+        return path[index - 1].y != path[index].y
+    }
+
+    private fun isStairBoundary(path: List<BlockPos>, index: Int): Boolean {
+        if (index !in path.indices) return false
+
+        return isStair(path[index]) ||
+                path.getOrNull(index - 1)?.let { isStair(it) } == true ||
+                path.getOrNull(index + 1)?.let { isStair(it) } == true
     }
 
     private fun BlockPos.to2d(): Pair<Int, Int> = x to z
@@ -339,6 +411,10 @@ object IceFillWalker {
 
     private fun isStone(x: Int, y: Int, z: Int): Boolean {
         return mc.level?.getBlockState(BlockPos(x, y, z))?.`is`(Blocks.POLISHED_ANDESITE) == true
+    }
+
+    private fun isStair(pos: BlockPos): Boolean {
+        return mc.level?.getBlockState(pos)?.`is`(BlockTags.STAIRS) == true
     }
 
     private fun isPhysicallyDown(keyMapping: KeyMapping): Boolean {
