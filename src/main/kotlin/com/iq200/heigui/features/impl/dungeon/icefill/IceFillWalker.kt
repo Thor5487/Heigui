@@ -18,6 +18,7 @@ object IceFillWalker {
         val dir: Int,
         val startIndex: Int,
         val endIndex: Int,
+        val hasAndesiteStop: Boolean,
         val sprint: Boolean
     )
 
@@ -52,6 +53,7 @@ object IceFillWalker {
         path: List<BlockPos>,
         turnWaitTicks: Int,
         sprintBlocks: Int,
+        sneakUntilStopBlocks: Int,
         disableSprintWhileNotSneaking: Boolean
     ): Boolean {
         val player = mc.player ?: return true
@@ -80,7 +82,7 @@ object IceFillWalker {
             val previousDir = if (currentIndex > 0) calcDir(path[currentIndex - 1].to2d(), path[currentIndex].to2d()) else -1
             val previousSegmentSprint = isPreviousSegmentSprint(path, currentIndex, previousDir, sprintBlocks)
 
-            keyStates[InputKey.SNEAK] = !segment.sprint
+            keyStates[InputKey.SNEAK] = shouldSneak(path, currentIndex, segment, sneakUntilStopBlocks)
             suppressSprintIfNeeded(keyStates, disableSprintWhileNotSneaking)
 
             if (atTurn) {
@@ -106,11 +108,12 @@ object IceFillWalker {
                     completedSprintStopTurnIndex = currentIndex
                 }
 
-                if (canWaitAtTurn &&
-                    (previousSegmentSprint || segment.sprint) &&
-                    waitAtTurn(currentIndex, turnWaitTicks, !segment.sprint, disableSprintWhileNotSneaking, keyStates)
-                ) {
-                    return false
+                if (canWaitAtTurn && (previousSegmentSprint || segment.sprint)) {
+                    val nextSegmentSneak = shouldSneak(path, currentIndex, segment, sneakUntilStopBlocks)
+                    val sneakWhileWaiting = nextSegmentSneak || (!previousSegmentSprint && segment.sprint)
+                    if (waitAtTurn(currentIndex, turnWaitTicks, sneakWhileWaiting, disableSprintWhileNotSneaking, keyStates)) {
+                        return false
+                    }
                 }
 
             }
@@ -266,7 +269,7 @@ object IceFillWalker {
 
         val dir = calcDir(path[index].to2d(), path[index + 1].to2d())
         if (dir == -1) return null
-        if (isTransitionNode(path, index) || isSegmentBreak(path, index)) return Segment(dir, index, index + 1, false)
+        if (isTransitionNode(path, index) || isSegmentBreak(path, index)) return Segment(dir, index, index + 1, false, false)
 
         var startIndex = index
         while (startIndex > 0 &&
@@ -288,7 +291,16 @@ object IceFillWalker {
 
         val blockCount = endIndex - startIndex + 1
         val isLastSegment = isLastNormalSegment(path, endIndex)
-        return Segment(dir, startIndex, endIndex, isLastSegment || (blockCount >= sprintBlocks && hasAndesiteStop(path[endIndex], dir)))
+        val hasAndesiteStop = hasAndesiteStop(path[endIndex], dir)
+        return Segment(dir, startIndex, endIndex, hasAndesiteStop, isLastSegment || (blockCount >= sprintBlocks && hasAndesiteStop))
+    }
+
+    private fun shouldSneak(path: List<BlockPos>, currentIndex: Int, segment: Segment, sneakUntilStopBlocks: Int): Boolean {
+        if (!segment.sprint) return true
+        if (sneakUntilStopBlocks <= 0 || !segment.hasAndesiteStop) return false
+
+        val blocksToStop = segment.endIndex - currentIndex + 1
+        return blocksToStop > sneakUntilStopBlocks
     }
 
     private fun isLastNormalSegment(path: List<BlockPos>, endIndex: Int): Boolean {

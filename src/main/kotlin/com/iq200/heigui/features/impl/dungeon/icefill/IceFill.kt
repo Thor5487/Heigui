@@ -21,8 +21,9 @@ object IceFill : Module(
 ) {
     private val renderSolution by BooleanSetting("Render Solution", true, desc = "Render the Ice Fill solution path.")
     private val autoWalk by BooleanSetting("Auto Walk", false, desc = "Automatically walk the Ice Fill solution path.")
-    private val turnWaitTicks by NumberSetting("Turn Wait Ticks", 0, 0, 20, 1, "How many ticks to wait at sprint-related turns before entering the next segment.").withDependency { autoWalk }
-    private val sprintBlocks by NumberSetting("Sprint Blocks", 4, 2, 12, 1, "Minimum number of blocks in a segment required to sprint. The segment still needs a polished andesite stop.").withDependency { autoWalk }
+    private val turnWaitTicks by NumberSetting("Turn Wait Ticks", 0, 0, 5, 1, "How many ticks to wait at sprint-related turns before entering the next segment.").withDependency { autoWalk }
+    private val sprintBlocks by NumberSetting("Sprint Blocks", 4, 2, 8, 1, "Minimum number of blocks in a segment required to sprint. The segment still needs a polished andesite stop.").withDependency { autoWalk }
+    private val sneakUntilStopBlocks by NumberSetting("Sneak Until Stop Blocks", 0, 0, 8, 1, "On sprint segments, sneak while farther than this many blocks from the polished andesite stop. 0 disables this.").withDependency { autoWalk }
     private val disableSprintWhileNotSneaking by BooleanSetting("Disable Sprint", false, desc = "Prevent sprinting when Ice Fill is moving without sneak.").withDependency { autoWalk }
 
     private var path: List<BlockPos> = emptyList()
@@ -74,7 +75,7 @@ object IceFill : Module(
 
             if (!walking && isStandingOnIce()) walking = true
 
-            if (walking && IceFillWalker.walk(path, turnWaitTicks, sprintBlocks, disableSprintWhileNotSneaking)) {
+            if (walking && IceFillWalker.walk(path, turnWaitTicks, sprintBlocks, sneakUntilStopBlocks, disableSprintWhileNotSneaking)) {
                 walking = false
                 IceFillWalker.reset()
             }
