@@ -39,7 +39,8 @@ object TeleportOptimization : Module (
 
     private val noRotateEnabled by BooleanSetting("NoRotate", false, "No Rotation after TP (Hype/AOTV/Etherwarp)")
     private val zpcmEnabled by BooleanSetting("Zeroping Camera", false, "Visually 0 Ping on TP (Hype/AOTV/Etherwarp) Note: Require NoRotate Enabled").withDependency { noRotateEnabled }
-    private val hypeZpcm by BooleanSetting("Zeroping Camera Hyperion", false, "zpcm for hype").withDependency { zpcmEnabled }
+    private val instantTransmissionZpcm by BooleanSetting("ZPCM IT", true, "zpcm for AOTE/AOTV instant transmission").withDependency { zpcmEnabled }
+    private val hypeZpcm by BooleanSetting("ZPCM Hype", false, "zpcm for hype").withDependency { zpcmEnabled }
     private val timeOutMs by NumberSetting("Timeout", 500, 100, 1000, 50, unit = "ms", desc = "timeout for zeroping camera").withDependency { zpcmEnabled }
 
     private val noRotatePackets = mutableListOf<ClientboundPlayerPositionPacket>()
@@ -214,6 +215,7 @@ object TeleportOptimization : Module (
         } else if (!sneaking && zpcmEnabled) {
             val wimp = isWitherImpactItem(stack)
             if (wimp && !hypeZpcm) return
+            if (!wimp && !instantTransmissionZpcm) return
             val now = System.currentTimeMillis()
             if (wimp && (now - lastWIMP < 125L)) return
 
