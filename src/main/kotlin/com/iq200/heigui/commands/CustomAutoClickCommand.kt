@@ -6,6 +6,16 @@ import com.iq200.heigui.features.impl.dungeon.AutoClick
 
 fun LiteralNode.setupCustomAC() {
     literal("cac") {
+        runs {
+            AutoClick.help()
+        }
+
+        literal("help") {
+            runs {
+                AutoClick.help()
+            }
+        }
+
         literal("add") {
             runs {
                 AutoClick.addCurrentItem()

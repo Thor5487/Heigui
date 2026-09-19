@@ -65,7 +65,8 @@ object IceFillWalker {
         val z = player.z
         val motion = player.deltaMovement
         val path2d = path.map { it.x to it.z }.toMutableList()
-        val dirOffset = floor((((player.yRot + 360f) % 360f + 45f) / 90f).toDouble()).toInt() % 4
+        val normalizedYaw = ((player.yRot % 360f) + 360f) % 360f
+        val dirOffset = floor(((normalizedYaw + 45f) / 90f).toDouble()).toInt() % 4
 
         while (path2d.size > 1) {
             val current = path2d.removeAt(0)

@@ -393,6 +393,18 @@ object AutoCroesus : Module(
 
     }
 
+    fun help() {
+        modMessage("§aAutoCroesus Commands:")
+        modMessage("§e/hg ac go §8- §7Start AutoCroesus. Requires the module to be enabled and Croesus nearby.", prefix = "")
+        modMessage("§e/hg ac update §8- §7Update item prices used for chest profit checks.", prefix = "")
+        modMessage("§e/hg ac ignore add <item> §8- §7Ignore items matching the given name or keyword.", prefix = "")
+        modMessage("§e/hg ac ignore remove <item> §8- §7Remove a name or keyword from the ignore list.", prefix = "")
+        modMessage("§e/hg ac ignore list §8- §7Show the current ignore list.", prefix = "")
+        modMessage("§e/hg ac loot <floor> §8- §7Show tracked loot stats for a floor, for example m6 or f7.", prefix = "")
+        modMessage("§e/hg ac loot reset <floor> §8- §7Reset tracked loot stats for a floor.", prefix = "")
+        modMessage("§e/hg ac help §8- §7Show this help message.", prefix = "")
+    }
+
     private fun findCroesusNPC(maxDistance: Double): Player? {
         val level = mc.level ?: return null
 

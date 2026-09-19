@@ -120,6 +120,14 @@ object AutoClick : Module (
 
 
 
+    fun help() {
+        modMessage("§aCustom AutoClick Commands:")
+        modMessage("§e/hg cac add §8- §7Add the item in your hand to the Custom AC list.", prefix = "")
+        modMessage("§e/hg cac remove §8- §7Remove the item in your hand from the Custom AC list.", prefix = "")
+        modMessage("§e/hg cac list §8- §7Show all items saved in the Custom AC list.", prefix = "")
+        modMessage("§e/hg cac help §8- §7Show this help message.", prefix = "")
+    }
+
     fun addCurrentItem() {
         val player = mc.player ?: return
         val item = player.getItemInHand(InteractionHand.MAIN_HAND)
@@ -151,7 +159,6 @@ object AutoClick : Module (
             } else {
                 modMessage("§c'$itemName §8(§7$uuid§8)§c' was not found in the custom AC list.")
             }
-            data
         }
     }
 

@@ -2,15 +2,23 @@ package com.iq200.heigui.commands
 
 import com.github.stivais.commodore.nodes.LiteralNode
 import com.github.stivais.commodore.utils.GreedyString
-import com.iq200.heigui.Heigui
 import com.iq200.heigui.features.impl.dungeon.AutoCroesus
 import com.iq200.heigui.utils.modMessage
 import com.iq200.heigui.utils.skyblock.PriceUtils
-import net.minecraft.network.chat.Component
 
 fun LiteralNode.setupAutoCroesusCommand() {
 
     literal("ac") {
+        runs {
+            AutoCroesus.help()
+        }
+
+        literal("help") {
+            runs {
+                AutoCroesus.help()
+            }
+        }
+
         literal("update") {
             runs {
                 PriceUtils.fetchPrices(notifyPlayer = true)
