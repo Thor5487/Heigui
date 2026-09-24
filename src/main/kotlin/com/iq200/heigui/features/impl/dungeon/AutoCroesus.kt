@@ -74,10 +74,14 @@ object AutoCroesus : Module(
 
 
     private var pendingKeyRun = false
+    private var pendingKeyRunSlot = -1
+    private var pendingKeyRunMenuTitle = ""
     private var pendingKeyChestSlot = -1
     private var pendingKeyChestData: ChestData? = null
 
     private var currentRunIsKey = false
+    private var currentRunCroesusSlot = -1
+    private var currentRunCroesusMenuTitle = ""
 
     val ignoreConfig = JsonConfig(
         fileName = "ac-ignore.json",
@@ -163,6 +167,8 @@ object AutoCroesus : Module(
 
                     if (currentRunIsKey) {
                         pendingKeyRun = false
+                        pendingKeyRunSlot = -1
+                        pendingKeyRunMenuTitle = ""
                         pendingKeyChestSlot = -1
                         pendingKeyChestData = null
                     }
@@ -212,6 +218,7 @@ object AutoCroesus : Module(
     private fun handleScanningMainPage(currentScreen: AbstractContainerScreen<*>, currentTime: Long) {
         val menu = currentScreen.menu
         var foundUnopened = false
+        val cleanMenuTitle = currentScreen.title.string.replace(Regex("禮[0-9a-fk-or]"), "")
 
         val player = mc.player ?: return
 
@@ -223,7 +230,7 @@ object AutoCroesus : Module(
             val loreComponents = slot.item.lore
 
             val isValidTarget = if (pendingKeyRun) {
-                loreComponents.any {
+                cleanMenuTitle == pendingKeyRunMenuTitle && i == pendingKeyRunSlot && loreComponents.any {
                     it.string.contains("Dungeon Chest Key", ignoreCase = true) &&
                             !it.toString().contains("strikethrough", ignoreCase = true)
                 }
@@ -237,6 +244,8 @@ object AutoCroesus : Module(
                 currentRunKismets = 0
 
                 currentRunIsKey = pendingKeyRun
+                currentRunCroesusSlot = i
+                currentRunCroesusMenuTitle = cleanMenuTitle
 
                 val kismetComp = loreComponents.find { it.string.contains("Kismet Feather") }
                 if (kismetComp != null) {
@@ -270,6 +279,8 @@ object AutoCroesus : Module(
                     // 防呆：如果找不到鑰匙局數，自動重置狀態並停止
                     modMessage("§c[AutoCroesus] Warning: Pending key run, but no available Dungeon Chest Keys found.")
                     pendingKeyRun = false
+                    pendingKeyRunSlot = -1
+                    pendingKeyRunMenuTitle = ""
                     stop()
                 } else {
                     modMessage("§a[AutoCroesus] Finished! All pages have been scanned and no unopened chests remain.")
@@ -444,6 +455,8 @@ object AutoCroesus : Module(
             isWorking = false
             if (clearPending) {
                 pendingKeyRun = false
+                pendingKeyRunSlot = -1
+                pendingKeyRunMenuTitle = ""
                 pendingKeyChestSlot = -1
                 pendingKeyChestData = null
             }
@@ -617,6 +630,8 @@ object AutoCroesus : Module(
             val keyTargetProfitCoins = keyTargetProfit * 1_000_000.0
             if (useKey && secondChestSlot != -1 && secondChestData != null && secondChestData.profit >= keyTargetProfitCoins) {
                 pendingKeyRun = true
+                pendingKeyRunSlot = currentRunCroesusSlot
+                pendingKeyRunMenuTitle = currentRunCroesusMenuTitle
                 pendingKeyChestSlot = secondChestSlot
                 pendingKeyChestData = secondChestData
             }

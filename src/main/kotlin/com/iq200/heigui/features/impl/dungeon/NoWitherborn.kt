@@ -7,8 +7,6 @@ import com.iq200.heigui.events.core.on
 import com.iq200.heigui.features.Category
 import com.iq200.heigui.features.Module
 import com.iq200.heigui.utils.itemId
-import com.iq200.heigui.utils.loreString
-import com.iq200.heigui.utils.noControlCodes
 import net.minecraft.client.gui.screens.inventory.InventoryScreen
 import net.minecraft.world.entity.EquipmentSlot
 import net.minecraft.world.inventory.ContainerInput
@@ -90,14 +88,15 @@ object NoWitherborn : Module(
     }
 
     private fun hasFullWitherbornBonus(): Boolean {
-        val helmet = mc.player?.getItemBySlot(EquipmentSlot.HEAD) ?: return false
-        if (!helmet.isWitherArmorHelmet()) return false
+        val player = mc.player ?: return false
+        val armorFamilies = listOf(
+            player.getItemBySlot(EquipmentSlot.HEAD).witherArmorFamily("HELMET"),
+            player.getItemBySlot(EquipmentSlot.CHEST).witherArmorFamily("CHESTPLATE"),
+            player.getItemBySlot(EquipmentSlot.LEGS).witherArmorFamily("LEGGINGS"),
+            player.getItemBySlot(EquipmentSlot.FEET).witherArmorFamily("BOOTS")
+        )
 
-        val cleanLore = helmet.loreString.map { it.noControlCodes }
-        return cleanLore.withIndex().any { (index, line) ->
-            line.contains("Witherborn", ignoreCase = true) &&
-                    cleanLore.subList(index, (index + 4).coerceAtMost(cleanLore.size)).any { it.contains("4/4") }
-        }
+        return armorFamilies.all { it != null } && armorFamilies.distinct().size == 1
     }
 
     private fun isPlayerMoving(): Boolean {
@@ -105,8 +104,8 @@ object NoWitherborn : Module(
         return abs(motion.x) > 0.003 || abs(motion.z) > 0.003
     }
 
-    private fun ItemStack.isWitherArmorHelmet(): Boolean {
+    private fun ItemStack.witherArmorFamily(piece: String): String? {
         val id = itemId
-        return witherArmorPrefixes.any { prefix -> id == "${prefix}_HELMET" }
+        return witherArmorPrefixes.firstOrNull { prefix -> id == "${prefix}_$piece" }
     }
 }
