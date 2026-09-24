@@ -115,5 +115,11 @@ gradle-app.setting
 run/
 runs/
 
+# Local source archives for optional mod integrations
+/libs/sources/
+
+# Local Codex configuration
+/.codex/config.toml
+
 # Avoid ignoring Gradle wrapper jar file (.jar files are usually ignored)
 !gradle-wrapper.jar

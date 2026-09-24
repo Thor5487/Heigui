@@ -96,6 +96,11 @@ dependencies {
     }
 
     compileOnly("maven.modrinth:iris:${property("iris")}")
+
+    // Optional terminal solver integrations. These are available at compile time only
+    // and are never bundled into Heigui or required at runtime.
+    compileOnly("maven.modrinth:odin:${property("odin_version")}")
+    compileOnly("maven.modrinth:noammaddons:${property("noammaddons_version")}")
 }
 // ====================================================
 

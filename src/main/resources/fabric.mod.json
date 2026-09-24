@@ -29,6 +29,10 @@
     "minecraft": "~${minecraft_version}",
     "fabric-language-kotlin": ">=${fabric_kotlin_version}"
   },
+  "suggests": {
+    "odin": "*",
+    "noammaddons": "*"
+  },
   "custom": {
     "modmenu": {
       "links": {
