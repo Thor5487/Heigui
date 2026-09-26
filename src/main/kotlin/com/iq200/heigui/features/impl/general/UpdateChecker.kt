@@ -22,7 +22,9 @@ import kotlin.concurrent.thread
 object UpdateChecker : Module(
     name = "Update Checker",
     description = "Check Update on Opening Game",
-    category = Category.GENERAL
+    category = Category.GENERAL,
+    toggled = true,
+    canToggle = false
 ) {
     private val checkAction by BooleanSetting("Check Actions", false, desc = "Check Updates for Actions")
 

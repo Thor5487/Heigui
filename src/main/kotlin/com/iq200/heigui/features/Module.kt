@@ -22,6 +22,7 @@ abstract class Module(
     category: Category? = null,
     @Transient var description: String,
     toggled: Boolean = false,
+    @Transient val canToggle: Boolean = true,
 ) {
 
     /**
@@ -60,7 +61,7 @@ abstract class Module(
     val isDevModule = this::class.hasAnnotation<DevModule>()
 
     init {
-        if (alwaysActive) {
+        if (alwaysActive || enabled) {
             @Suppress("LeakingThis")
             EventBus.subscribe(this)
         }
@@ -90,6 +91,7 @@ abstract class Module(
      * By default, it toggles the module.
      */
     open fun onKeybind() {
+        if (!canToggle) return
         toggle()
         if (ClickGUIModule.enableNotification) modMessage("$name ${if (enabled) "§aenabled" else "§cdisabled"}.")
     }
@@ -98,6 +100,7 @@ abstract class Module(
      * Toggles the module and invokes [onEnable]/[onDisable].
      */
     fun toggle() {
+        if (!canToggle) return
         enabled = !enabled
         if (enabled) onEnable()
         else onDisable()
