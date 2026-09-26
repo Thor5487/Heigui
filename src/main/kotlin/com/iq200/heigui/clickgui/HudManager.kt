@@ -1,5 +1,7 @@
 package com.iq200.heigui.clickgui
 
+import com.mojang.blaze3d.platform.InputConstants
+
 import com.iq200.heigui.Heigui.mc
 import com.iq200.heigui.clickgui.settings.impl.HudElement
 import com.iq200.heigui.features.ModuleManager
@@ -10,7 +12,6 @@ import net.minecraft.client.gui.screens.Screen
 import net.minecraft.client.input.KeyEvent
 import net.minecraft.client.input.MouseButtonEvent
 import net.minecraft.network.chat.Component
-import org.lwjgl.glfw.GLFW
 import kotlin.math.sign
 import com.iq200.heigui.utils.ui.mouseX as heiguiMouseX
 import com.iq200.heigui.utils.ui.mouseY as heiguiMouseY
@@ -92,12 +93,12 @@ object HudManager : Screen(Component.literal("HUD Manager")) {
     override fun keyPressed(keyEvent: KeyEvent): Boolean {
         hudSettingsCache.firstOrNull { it.isEnabled && it.value.isHovered() }?.let { hovered ->
             when (keyEvent.key) {
-                GLFW.GLFW_KEY_EQUAL -> hovered.value.scale = (hovered.value.scale + 0.1f).coerceIn(1f, 10f)
-                GLFW.GLFW_KEY_MINUS -> hovered.value.scale = (hovered.value.scale - 0.1f).coerceIn(1f, 10f)
-                GLFW.GLFW_KEY_RIGHT -> hovered.value.x += 10
-                GLFW.GLFW_KEY_LEFT -> hovered.value.x -= 10
-                GLFW.GLFW_KEY_UP -> hovered.value.y -= 10
-                GLFW.GLFW_KEY_DOWN -> hovered.value.y += 10
+                InputConstants.KEY_EQUALS -> hovered.value.scale = (hovered.value.scale + 0.1f).coerceIn(1f, 10f)
+                InputConstants.KEY_MINUS -> hovered.value.scale = (hovered.value.scale - 0.1f).coerceIn(1f, 10f)
+                InputConstants.KEY_RIGHT -> hovered.value.x += 10
+                InputConstants.KEY_LEFT -> hovered.value.x -= 10
+                InputConstants.KEY_UP -> hovered.value.y -= 10
+                InputConstants.KEY_DOWN -> hovered.value.y += 10
             }
         }
 

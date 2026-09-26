@@ -21,6 +21,7 @@ import com.iq200.heigui.utils.skyblock.dungeon.DungeonUtils
 import com.iq200.heigui.utils.skyblock.dungeon.M7Phases
 import net.minecraft.core.BlockPos
 import net.minecraft.world.InteractionHand
+import net.minecraft.world.item.component.SwingAnimation
 import net.minecraft.world.level.block.Blocks
 import net.minecraft.world.level.block.state.properties.BlockStateProperties
 import net.minecraft.world.phys.AABB
@@ -104,7 +105,7 @@ object SimonSays : Module(
         }
 
         on<RenderEvent.Extract> {
-            if (!triggerbot|| !triggerBotClock.hasTimePassed(triggerBotDelay) || mc.screen != null) return@on
+            if (!triggerbot|| !triggerBotClock.hasTimePassed(triggerBotDelay) || mc.gui.screen() != null) return@on
 
             // 如果還沒有解答，或者已經點完了，就跳出
             if (clickInOrder.isEmpty() || clickNeeded >= clickInOrder.size) return@on
@@ -124,7 +125,7 @@ object SimonSays : Module(
                 firstClickClock.update()
                 val player = mc.player ?: return@on
                 mc.gameMode?.useItemOn(player, InteractionHand.MAIN_HAND, hitResult)
-                mc.player?.swing(InteractionHand.MAIN_HAND)
+                mc.player?.swing(InteractionHand.MAIN_HAND, SwingAnimation.DEFAULT, false)
                 serverResponded = false
                 return@on
             }
@@ -134,7 +135,7 @@ object SimonSays : Module(
             val player = mc.player ?: return@on
             mc.gameMode?.useItemOn(player, InteractionHand.MAIN_HAND, hitResult)
             serverResponded = false
-            player.swing(InteractionHand.MAIN_HAND)
+            player.swing(InteractionHand.MAIN_HAND, SwingAnimation.DEFAULT, false)
         }
 
         on<PlayerInputEvent.Use> {

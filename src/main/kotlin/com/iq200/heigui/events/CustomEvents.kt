@@ -2,7 +2,6 @@ package com.iq200.heigui.events
 
 import com.iq200.heigui.events.core.CancellableEvent
 import com.iq200.heigui.events.core.Event
-import com.iq200.heigui.utils.render.RenderConsumer
 import com.iq200.heigui.utils.skyblock.dungeon.tiles.Room
 import com.mojang.blaze3d.platform.InputConstants
 import net.fabricmc.fabric.api.client.rendering.v1.level.AbstractLevelRenderContext
@@ -21,17 +20,16 @@ import net.minecraft.world.entity.item.ItemEntity
 import net.minecraft.world.level.block.state.BlockState
 import net.minecraft.world.phys.HitResult
 import net.minecraft.world.phys.Vec3
-import org.lwjgl.glfw.GLFW
 
 class InputEvent(val key: InputConstants.Key, val action : Int) : CancellableEvent() {
     val isPress: Boolean
-        get() = action == GLFW.GLFW_PRESS
+        get() = action == InputConstants.PRESS
 
     val isRelease: Boolean
-        get() = action == GLFW.GLFW_RELEASE
+        get() = action == InputConstants.RELEASE
 
     val isRepeat: Boolean
-        get() = action == GLFW.GLFW_REPEAT
+        get() = action == InputConstants.REPEAT
 } // better mixin is prob ideal no need for cancellable
 
 class BlockUpdateEvent(val pos: BlockPos, val old: BlockState, val updated: BlockState) : Event
@@ -69,8 +67,7 @@ interface WorldEvent : Event {
 }
 
 abstract class RenderEvent(open val context: AbstractLevelRenderContext) : Event {
-    class Extract(override val context: LevelRenderContext, val consumer: RenderConsumer) : RenderEvent(context)
-    class Last(override val context: LevelRenderContext) : RenderEvent(context)
+    class Extract(override val context: LevelRenderContext) : RenderEvent(context)
 }
 
 abstract class PartyEvent(val members: List<String>) : Event {

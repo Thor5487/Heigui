@@ -1,5 +1,7 @@
 package com.iq200.heigui.features
 
+import com.mojang.blaze3d.platform.InputConstants
+
 import com.iq200.heigui.Heigui
 import com.iq200.heigui.clickgui.settings.AlwaysActive
 import com.iq200.heigui.clickgui.settings.DevModule
@@ -9,7 +11,6 @@ import com.iq200.heigui.events.core.EventBus
 import com.iq200.heigui.features.impl.render.ClickGUIModule
 import com.iq200.heigui.utils.modMessage
 import net.minecraft.client.gui.GuiGraphicsExtractor
-import org.lwjgl.glfw.GLFW
 import kotlin.reflect.full.hasAnnotation
 
 /**
@@ -18,7 +19,7 @@ import kotlin.reflect.full.hasAnnotation
  */
 abstract class Module(
     val name: String,
-    val key: Int? = GLFW.GLFW_KEY_UNKNOWN,
+    val key: Int? = InputConstants.UNKNOWN.value,
     category: Category? = null,
     @Transient var description: String,
     toggled: Boolean = false,

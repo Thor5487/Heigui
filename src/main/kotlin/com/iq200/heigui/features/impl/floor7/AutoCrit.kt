@@ -48,7 +48,7 @@ object AutoCrit : Module (
 
         on<InputEvent> {
             if (state != State.IDLE) return@on
-            if (mc.screen != null) return@on
+            if (mc.gui.screen() != null) return@on
 
             if (key.value != InputConstants.MOUSE_BUTTON_LEFT || !isHoldingDeathBow()) return@on
 
@@ -114,7 +114,7 @@ object AutoCrit : Module (
                         return@on
                     }
 
-                    val screen = mc.screen as? AbstractContainerScreen<*> ?: return@on
+                    val screen = mc.gui.screen() as? AbstractContainerScreen<*> ?: return@on
                     if (!screen.title.string.contains("Loadouts")) return@on
 
                     val zeroBasedIndex = slotIndex - 1

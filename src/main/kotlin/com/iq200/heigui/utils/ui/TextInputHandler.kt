@@ -1,5 +1,7 @@
 package com.iq200.heigui.utils.ui
 
+import com.mojang.blaze3d.platform.InputConstants
+
 import com.iq200.heigui.Heigui.mc
 import com.iq200.heigui.utils.Colors
 import com.iq200.heigui.utils.ui.rendering.NVGRenderer
@@ -7,7 +9,6 @@ import net.minecraft.client.input.CharacterEvent
 import net.minecraft.client.input.KeyEvent
 import net.minecraft.client.input.MouseButtonEvent
 import net.minecraft.util.StringUtil
-import org.lwjgl.glfw.GLFW
 import kotlin.math.max
 import kotlin.math.min
 
@@ -124,7 +125,7 @@ class TextInputHandler(
     fun keyPressed(input: KeyEvent): Boolean {
         if (!listening) return false
         val returnValue = when (input.key) {
-            GLFW.GLFW_KEY_BACKSPACE -> {
+            InputConstants.KEY_BACKSPACE -> {
                 if (selection != caret) deleteSelection()
                 else if (input.hasControlDown()) {
                     val previousSpace = getPreviousSpace()
@@ -138,7 +139,7 @@ class TextInputHandler(
                 selection != caret || input.hasControlDown() || caret != 0
             }
 
-            GLFW.GLFW_KEY_DELETE -> {
+            InputConstants.KEY_DELETE -> {
                 if (selection != caret) deleteSelection()
                 else if (input.hasControlDown()) {
                     val nextSpace = getNextSpace()
@@ -152,7 +153,7 @@ class TextInputHandler(
                 selection != caret || input.hasControlDown() || caret != text.length
             }
 
-            GLFW.GLFW_KEY_RIGHT -> {
+            InputConstants.KEY_RIGHT -> {
                 if (caret != text.length) {
                     caret = if (input.hasControlDown()) getNextSpace() else caret + 1
                     if (!input.hasShiftDown()) selection = caret
@@ -160,7 +161,7 @@ class TextInputHandler(
                 } else false
             }
 
-            GLFW.GLFW_KEY_LEFT -> {
+            InputConstants.KEY_LEFT -> {
                 if (caret != 0) {
                     caret = if (input.hasControlDown()) getPreviousSpace() else caret - 1
                     if (!input.hasShiftDown()) selection = caret
@@ -168,19 +169,19 @@ class TextInputHandler(
                 } else false
             }
 
-            GLFW.GLFW_KEY_HOME -> {
+            InputConstants.KEY_HOME -> {
                 caret = 0
                 if (!input.hasShiftDown()) selection = caret
                 true
             }
 
-            GLFW.GLFW_KEY_END -> {
+            InputConstants.KEY_END -> {
                 caret = text.length
                 if (!input.hasShiftDown()) selection = caret
                 true
             }
 
-            GLFW.GLFW_KEY_ESCAPE, GLFW.GLFW_KEY_ENTER -> {
+            InputConstants.KEY_ESCAPE, InputConstants.KEY_RETURN -> {
                 listening = false
                 true
             }
@@ -188,19 +189,19 @@ class TextInputHandler(
             else -> {
                 if (input.hasControlDown() && !input.hasShiftDown()) {
                     when (input.key) {
-                        GLFW.GLFW_KEY_V -> {
+                        InputConstants.KEY_V -> {
                             insert(mc.keyboardHandler.clipboard)
                             true
                         }
 
-                        GLFW.GLFW_KEY_C -> {
+                        InputConstants.KEY_C -> {
                             if (caret != selection) {
                                 mc.keyboardHandler.clipboard = text.substringSafe(caret, selection)
                                 true
                             } else false
                         }
 
-                        GLFW.GLFW_KEY_X -> {
+                        InputConstants.KEY_X -> {
                             if (caret != selection) {
                                 mc.keyboardHandler.clipboard = text.substringSafe(caret, selection)
                                 deleteSelection()
@@ -208,23 +209,23 @@ class TextInputHandler(
                             } else false
                         }
 
-                        GLFW.GLFW_KEY_A -> {
+                        InputConstants.KEY_A -> {
                             selection = 0
                             caret = text.length
                             true
                         }
 
-                        GLFW.GLFW_KEY_W -> {
+                        InputConstants.KEY_W -> {
                             selectWord()
                             true
                         }
 
-                        GLFW.GLFW_KEY_Z -> {
+                        InputConstants.KEY_Z -> {
                             undo()
                             true
                         }
 
-                        GLFW.GLFW_KEY_Y -> {
+                        InputConstants.KEY_Y -> {
                             redo()
                             true
                         }

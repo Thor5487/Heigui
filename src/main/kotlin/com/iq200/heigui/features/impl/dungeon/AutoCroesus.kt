@@ -23,6 +23,7 @@ import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen
 import net.minecraft.network.chat.Component
 import net.minecraft.network.chat.HoverEvent
 import net.minecraft.world.InteractionHand
+import net.minecraft.world.item.component.SwingAnimation
 import net.minecraft.world.entity.Entity
 import net.minecraft.world.entity.decoration.ArmorStand
 import net.minecraft.world.entity.player.Player
@@ -161,7 +162,7 @@ object AutoCroesus : Module(
             if (currentTime - lastActionTime < clickDelay) return@on
 
             if (currentState == CroesusState.WAITING_FOR_REOPEN) {
-                if (mc.screen == null) { // 只有當介面真的被伺服器關閉後，才進行下一步
+                if (mc.gui.screen() == null) { // 只有當介面真的被伺服器關閉後，才進行下一步
                     saveRunRecord(pendingChestData)
                     pendingChestData = null
 
@@ -182,7 +183,7 @@ object AutoCroesus : Module(
                             return@execute
                         }
                         mc.gameMode?.attack(player, npc as Entity)
-                        player.swing(InteractionHand.MAIN_HAND)
+                        player.swing(InteractionHand.MAIN_HAND, SwingAnimation.DEFAULT, false)
                         currentState = CroesusState.WAITING_FOR_MENU
                         lastActionTime = System.currentTimeMillis()
                     }
@@ -191,7 +192,7 @@ object AutoCroesus : Module(
                 return@on
             }
 
-            val currentScreen = mc.screen as? AbstractContainerScreen<*> ?: return@on
+            val currentScreen = mc.gui.screen() as? AbstractContainerScreen<*> ?: return@on
             val menuTitle = currentScreen.title.string.replace(Regex("§[0-9a-fk-or]"), "")
 
             // 就像路由台一樣，把任務指派給對應的函式處理
@@ -382,7 +383,7 @@ object AutoCroesus : Module(
             mc.execute {
                 val player = mc.player ?: return@execute
 
-                if (mc.screen != null) {
+                if (mc.gui.screen() != null) {
                     player.closeContainer()
                 }
 
@@ -396,7 +397,7 @@ object AutoCroesus : Module(
 
                 modMessage("§a[AutoCroesus] Started! Attempting to open Croesus menu...")
                 mc.gameMode?.attack(player, npc as Entity)
-                player.swing(InteractionHand.MAIN_HAND)
+                player.swing(InteractionHand.MAIN_HAND, SwingAnimation.DEFAULT, false)
                 startProcess()
 
             }
@@ -462,7 +463,7 @@ object AutoCroesus : Module(
             }
             modMessage("§c[AutoCroesus] AutoCroesus has been stopped")
 
-            if (mc.screen != null) {
+            if (mc.gui.screen() != null) {
                 mc.player?.closeContainer()
             }
         }

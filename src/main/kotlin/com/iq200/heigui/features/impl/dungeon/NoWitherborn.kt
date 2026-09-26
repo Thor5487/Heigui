@@ -52,7 +52,7 @@ object NoWitherborn : Module(
             }
 
             if (pendingClickTicks < 0) return@on
-            if (mc.screen != null && mc.screen !is InventoryScreen) return@on
+            if (mc.gui.screen() != null && mc.gui.screen() !is InventoryScreen) return@on
 
             if (pendingClickTicks > 0) {
                 pendingClickTicks--
@@ -61,9 +61,9 @@ object NoWitherborn : Module(
 
             if (isPlayerMoving()) return@on
 
-            val openedInventory = mc.screen == null
+            val openedInventory = mc.gui.screen() == null
             if (openedInventory) {
-                mc.setScreen(InventoryScreen(player))
+                mc.setScreenAndShow(InventoryScreen(player))
             }
 
             mc.gameMode?.handleContainerInput(

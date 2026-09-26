@@ -74,7 +74,7 @@ object AutoClick : Module (
                 return@on
             }
 
-            if (mc.screen != null) return@on
+            if (mc.gui.screen() != null) return@on
 
             if (Vampire.enabled && Vampire.isHandlingKillerSpring) {
                 return@on

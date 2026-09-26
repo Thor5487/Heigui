@@ -7,7 +7,6 @@ import com.iq200.heigui.utils.ChatManager
 import com.iq200.heigui.utils.containsOneOf
 import com.iq200.heigui.utils.equalsOneOf
 import com.iq200.heigui.utils.noControlCodes
-import com.iq200.heigui.utils.render.RenderBatchManager
 import com.iq200.heigui.utils.skyblock.dungeon.DungeonUtils
 import com.iq200.heigui.utils.skyblock.dungeon.DungeonUtils.isSecret
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents
@@ -35,9 +34,8 @@ object EventDispatcher {
         ClientTickEvents.START_LEVEL_TICK.register { world -> TickEvent.Start(world).postAndCatch() }
         ClientTickEvents.END_LEVEL_TICK.register { world -> TickEvent.End(world).postAndCatch() }
 
-        LevelRenderEvents.AFTER_TRANSLUCENT_TERRAIN.register {
-                context -> RenderEvent.Extract(context, RenderBatchManager.renderConsumer).postAndCatch()
-                RenderEvent.Last(context).postAndCatch()
+        LevelRenderEvents.AFTER_TRANSLUCENT_TERRAIN.register { context ->
+            RenderEvent.Extract(context).postAndCatch()
         }
 
         ClientReceiveMessageEvents.ALLOW_GAME.register { text, overlay ->

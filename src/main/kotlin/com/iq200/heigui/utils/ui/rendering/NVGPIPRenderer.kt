@@ -1,31 +1,40 @@
 package com.iq200.heigui.utils.ui.rendering
 
-import com.mojang.blaze3d.opengl.GlConst
-import com.mojang.blaze3d.opengl.GlDevice
-import com.mojang.blaze3d.opengl.GlStateManager
-import com.mojang.blaze3d.opengl.GlTexture
 import com.mojang.blaze3d.systems.RenderSystem
 import com.mojang.blaze3d.vertex.PoseStack
+import com.mojang.renderpearl.backend.opengl.GlConst
+import com.mojang.renderpearl.backend.opengl.GlDevice
+import com.mojang.renderpearl.backend.opengl.GlStateManager
+import com.mojang.renderpearl.backend.opengl.GlTextureView
+import com.mojang.renderpearl.frontend.FrontendGpuDevice
 import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.client.gui.navigation.ScreenRectangle
 import net.minecraft.client.gui.render.pip.PictureInPictureRenderer
-import net.minecraft.client.renderer.MultiBufferSource
+import net.minecraft.client.renderer.SubmitNodeCollector
 import net.minecraft.client.renderer.state.gui.pip.PictureInPictureRenderState
 import org.joml.Matrix3x2f
 import org.lwjgl.opengl.GL33C
 
-class NVGPIPRenderer(vertexConsumers: MultiBufferSource.BufferSource) : PictureInPictureRenderer<NVGPIPRenderer.NVGRenderState>(vertexConsumers) {
+class NVGPIPRenderer : PictureInPictureRenderer<NVGPIPRenderer.NVGRenderState>() {
 
-    override fun renderToTexture(state: NVGRenderState, poseStack: PoseStack) {
-        val colorTex = RenderSystem.outputColorTextureOverride ?: return
-        val bufferManager = (RenderSystem.getDevice().backend as? GlDevice)?.directStateAccess() ?: return
-        val glDepthTex = (RenderSystem.outputDepthTextureOverride?.texture() as? GlTexture) ?: return
+    private val fboCache = HashMap<Long, Int>()
+
+    override fun renderToTexture(state: NVGRenderState, poseStack: PoseStack, collector: SubmitNodeCollector) {
+        val colorTex = textureView ?: return
+        val depthTex = depthTextureView ?: return
+        val bufferManager = ((RenderSystem.getDevice() as? FrontendGpuDevice)?.backend as? GlDevice)?.directStateAccess() ?: return
+        val glDepthTex = depthTex as? GlTextureView ?: return
+        val glColorTex = colorTex as? GlTextureView ?: return
 
         val (width, height) = colorTex.let { it.getWidth(0) to it.getHeight(0) }
-        (colorTex.texture() as? GlTexture)?.getFbo(bufferManager, glDepthTex)?.apply {
-            GlStateManager._glBindFramebuffer(GlConst.GL_FRAMEBUFFER, this)
-            GlStateManager._viewport(0, 0, width, height)
+        val key = (glColorTex.glId().toLong() shl 32) or (glDepthTex.glId().toLong() and 0xFFFFFFFFL)
+        val fbo = fboCache.getOrPut(key) {
+            bufferManager.createFrameBufferObject().also {
+                bufferManager.bindFrameBufferTextures(it, glColorTex.glId(), glDepthTex.glId(), 0, GlConst.GL_FRAMEBUFFER)
+            }
         }
+        GlStateManager._glBindFramebuffer(GlConst.GL_FRAMEBUFFER, fbo)
+        GlStateManager._viewport(0, 0, width, height)
 
         GL33C.glBindSampler(0, 0)
         NVGRenderer.beginFrame(width.toFloat(), height.toFloat())
@@ -34,7 +43,7 @@ class NVGPIPRenderer(vertexConsumers: MultiBufferSource.BufferSource) : PictureI
 
         GlStateManager._disableDepthTest()
         GlStateManager._disableCull()
-        GlStateManager._enableBlend()
+        GlStateManager._enableBlend(0)
         GlStateManager._blendFuncSeparate(770, 771, 1, 0)
     }
 
@@ -60,6 +69,7 @@ class NVGPIPRenderer(vertexConsumers: MultiBufferSource.BufferSource) : PictureI
         override fun y1(): Int = y + height
         override fun scissorArea(): ScreenRectangle? = scissor
         override fun bounds(): ScreenRectangle? = bounds
+        override fun pose() = poseMatrix
     }
 
     companion object {

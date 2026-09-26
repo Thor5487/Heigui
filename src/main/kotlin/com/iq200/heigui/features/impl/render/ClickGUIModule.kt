@@ -1,5 +1,7 @@
 package com.iq200.heigui.features.impl.render
 
+import com.mojang.blaze3d.platform.InputConstants
+
 import com.google.gson.annotations.SerializedName
 import com.iq200.heigui.Heigui
 import com.iq200.heigui.clickgui.ClickGUI
@@ -20,7 +22,6 @@ import kotlinx.coroutines.launch
 import net.minecraft.network.chat.ClickEvent
 import net.minecraft.network.chat.Component
 import net.minecraft.network.chat.HoverEvent
-import org.lwjgl.glfw.GLFW
 import java.net.URI
 import kotlin.math.max
 import kotlin.math.round
@@ -29,7 +30,7 @@ import kotlin.math.round
 object ClickGUIModule : Module(
     name = "Click GUI",
     description = "Allows you to customize the UI.",
-    key = GLFW.GLFW_KEY_RIGHT_SHIFT,
+    key = InputConstants.KEY_RSHIFT,
     category = Category.RENDER
 ) {
     val enableNotification by BooleanSetting("Chat notifications", true, desc = "Sends a message when you toggle a module with a keybind")
@@ -39,7 +40,7 @@ object ClickGUIModule : Module(
 
     val hypixelApiUrl by StringSetting("API URL", "https://api.odtheking.com/hypixel/", 128, "The Hypixel API server to connect to.").hide()
 
-    private val action by ActionSetting("Open HUD Editor", desc = "Opens the HUD editor when clicked.") { mc.setScreen(HudManager) }
+    private val action by ActionSetting("Open HUD Editor", desc = "Opens the HUD editor when clicked.") { mc.setScreenAndShow(HudManager) }
     val devMessage by BooleanSetting("Developer Message", false, desc = "Sends development related messages to the chat.")
 
     override fun onKeybind() {
@@ -47,7 +48,7 @@ object ClickGUIModule : Module(
     }
 
     override fun onEnable() {
-        mc.setScreen(ClickGUI)
+        mc.setScreenAndShow(ClickGUI)
         super.onEnable()
         toggle()
     }

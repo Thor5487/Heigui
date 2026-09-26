@@ -57,7 +57,7 @@ object LBHelper : Module (
 
 
         on<TickEvent.Server> {
-            if (mc.screen != null) return@on reset()
+            if (mc.gui.screen() != null) return@on reset()
             if (!isHolding && !isCharging) return@on
 
             val itemName = mc.player?.mainHandItem?.hoverName?.string?.lowercase() ?: return@on reset()
@@ -87,7 +87,7 @@ object LBHelper : Module (
         mc.options.keyUse.isDown = false
         reset()
         schedule(2, false) {
-            if (isHolding && mc.screen == null) mc.options.keyUse.isDown = true
+            if (isHolding && mc.gui.screen() == null) mc.options.keyUse.isDown = true
 
         }
 

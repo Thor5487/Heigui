@@ -16,7 +16,7 @@ import com.iq200.heigui.utils.ui.rendering.NVGRenderer
 import net.minecraft.client.input.CharacterEvent
 import net.minecraft.client.input.KeyEvent
 import net.minecraft.client.input.MouseButtonEvent
-import org.lwjgl.glfw.GLFW
+import com.mojang.blaze3d.platform.InputConstants
 import java.awt.Color
 import kotlin.math.abs
 import kotlin.math.floor
@@ -236,20 +236,20 @@ class NumberSetting<E>(
         if (isEditing) {
             // ===== 核心：自己處理方向鍵與刪除鍵 =====
             when (input.key) {
-                GLFW.GLFW_KEY_LEFT -> if (cursorIndex > 0) cursorIndex--
-                GLFW.GLFW_KEY_RIGHT -> if (cursorIndex < inputText.length) cursorIndex++
-                GLFW.GLFW_KEY_BACKSPACE -> {
+                InputConstants.KEY_LEFT -> if (cursorIndex > 0) cursorIndex--
+                InputConstants.KEY_RIGHT -> if (cursorIndex < inputText.length) cursorIndex++
+                InputConstants.KEY_BACKSPACE -> {
                     if (cursorIndex > 0) {
                         inputText = inputText.removeRange(cursorIndex - 1, cursorIndex)
                         cursorIndex--
                     }
                 }
-                GLFW.GLFW_KEY_DELETE -> {
+                InputConstants.KEY_DELETE -> {
                     if (cursorIndex < inputText.length) {
                         inputText = inputText.removeRange(cursorIndex, cursorIndex + 1)
                     }
                 }
-                GLFW.GLFW_KEY_ENTER, GLFW.GLFW_KEY_KP_ENTER, GLFW.GLFW_KEY_ESCAPE -> {
+                InputConstants.KEY_RETURN, InputConstants.KEY_NUMPADENTER, InputConstants.KEY_ESCAPE -> {
                     saveInput()
                     isEditing = false
                     if (activeSetting == this) activeSetting = null
@@ -261,8 +261,8 @@ class NumberSetting<E>(
         if (!isHovered) return false
 
         val amount = when (input.key) {
-            GLFW.GLFW_KEY_RIGHT, GLFW.GLFW_KEY_EQUAL -> incrementDouble
-            GLFW.GLFW_KEY_LEFT, GLFW.GLFW_KEY_MINUS -> -incrementDouble
+            InputConstants.KEY_RIGHT, InputConstants.KEY_EQUALS -> incrementDouble
+            InputConstants.KEY_LEFT, InputConstants.KEY_MINUS -> -incrementDouble
             else -> return false
         }
 

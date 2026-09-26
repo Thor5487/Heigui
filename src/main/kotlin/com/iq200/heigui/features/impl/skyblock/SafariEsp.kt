@@ -22,7 +22,7 @@ object SafariEsp : Module(
 
     init {
         on<RenderEvent.Extract> {
-            val pt =  context.gameRenderer().mainCamera.getCameraEntityPartialTicks(mc.deltaTracker)
+            val pt =  context.gameRenderer().mainCamera().getCameraEntityPartialTicks(mc.deltaTracker)
 
             sparklingList.forEach { armorStand ->
                 val lerpedPos = armorStand.getPosition(pt)

@@ -143,7 +143,7 @@ object TeleportOptimization : Module (
 
         player.setOldPosAndRot(newOldPlayerPos.position(), player.yRotO, player.xRotO)
 
-        connection.send(ServerboundAcceptTeleportationPacket(packet.id))
+        connection.send(ServerboundAcceptTeleportationPacket(packet.id, newPos.position().x, newPos.position().y, newPos.position().z, newPos.yRot(), newPos.xRot()))
         connection.send(ServerboundMovePlayerPacket.PosRot(player.x, player.y, player.z, newPos.yRot(), newPos.xRot(), false, false))
 
         val accessor = player as LocalPlayerAccessor

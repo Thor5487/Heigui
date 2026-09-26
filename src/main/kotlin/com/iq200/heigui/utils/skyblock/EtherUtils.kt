@@ -40,7 +40,7 @@ object EtherUtils {
             LiquidBlock::class.java, VineBlock::class.java, MushroomBlock::class.java, TallGrassBlock::class.java,
             PistonHeadBlock::class.java, WebBlock::class.java, ShortDryGrassBlock::class.java,
             DryVegetationBlock::class.java, SmallDripleafBlock::class.java, LeverBlock::class.java,
-            NetherWartBlock::class.java, NetherPortalBlock::class.java, RedStoneWireBlock::class.java,
+            NetherWartBlock::class.java, NetherPortalBlock::class.java, RedstoneWireBlock::class.java,
             ComparatorBlock::class.java, RedstoneTorchBlock::class.java, RepeaterBlock::class.java
         )
     )
@@ -66,7 +66,7 @@ object EtherUtils {
             ButtonBlock::class.java,
             AirBlock::class.java,
             CarpetBlock::class.java,
-            RedStoneWireBlock::class.java,
+            RedstoneWireBlock::class.java,
             MushroomBlock::class.java,
             FlowerBlock::class.java,
             StemBlock::class.java,
@@ -145,7 +145,7 @@ object EtherUtils {
 
     fun fastGetEtherFromOrigin(start: Vec3, yaw: Float, pitch: Float, dist: Int, fullOnly: Boolean): BlockPos? {
         if (Minecraft.getInstance().player == null || Minecraft.getInstance().level == null) return null
-        val end = Minecraft.getInstance().player!!.calculateViewVector(pitch, yaw).scale(dist.toDouble()).add(start)
+        val end = Vec3.directionFromRotation(pitch, yaw).scale(dist.toDouble()).add(start)
         val world: ClientLevel = Minecraft.getInstance().level!!
 
         val direction = end.subtract(start)
@@ -245,7 +245,7 @@ object EtherUtils {
     fun getEtherPosFromOrigin(origin: Vec3, yaw: Float, pitch: Float, dist: Int): Pair<BlockPos?, Boolean> {
         if (mc.player == null) return Pair(null, false)
 
-        val endPos = mc.player!!.calculateViewVector(pitch, yaw).scale(dist.toDouble()).add(origin)
+        val endPos = Vec3.directionFromRotation(pitch, yaw).scale(dist.toDouble()).add(origin)
         return traverseVoxels(origin, endPos)
     }
 

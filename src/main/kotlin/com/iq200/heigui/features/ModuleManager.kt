@@ -158,7 +158,7 @@ object ModuleManager {
     }
 
     fun render(guiGraphics: GuiGraphicsExtractor, tickCounter: DeltaTracker) {
-        if (mc.level == null || mc.player == null || mc.screen == HudManager || mc.options.hideGui) return
+        if (mc.level == null || mc.player == null || mc.gui.screen() == HudManager || mc.gui.hud.isHidden) return
 
         guiGraphics.pose().pushMatrix()
         val sf = mc.window.guiScale

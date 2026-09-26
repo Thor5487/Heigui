@@ -2,16 +2,15 @@ package com.iq200.heigui.utils.render
 
 import com.mojang.blaze3d.platform.Lighting
 import com.mojang.blaze3d.systems.RenderSystem
-import com.mojang.blaze3d.textures.FilterMode
-import com.mojang.blaze3d.textures.GpuTextureView
 import com.mojang.blaze3d.vertex.PoseStack
+import com.mojang.renderpearl.api.textures.FilterMode
 import com.iq200.heigui.Heigui.mc
 import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.client.gui.navigation.ScreenRectangle
 import net.minecraft.client.gui.render.TextureSetup
 import net.minecraft.client.gui.render.pip.PictureInPictureRenderer
-import net.minecraft.client.renderer.MultiBufferSource
 import net.minecraft.client.renderer.RenderPipelines
+import net.minecraft.client.renderer.SubmitNodeCollector
 import net.minecraft.client.renderer.item.TrackingItemStackRenderState
 import net.minecraft.client.renderer.state.gui.BlitRenderState
 import net.minecraft.client.renderer.state.gui.GuiItemRenderState
@@ -24,23 +23,18 @@ import net.minecraft.world.item.ItemStack
 import org.joml.Matrix3x2f
 import java.util.*
 
-class ItemStateRenderer(vertexConsumers: MultiBufferSource.BufferSource)
-    : PictureInPictureRenderer<ItemStateRenderer.State>(vertexConsumers) {
+class ItemStateRenderer : PictureInPictureRenderer<ItemStateRenderer.State>() {
 
-    private var textureView: GpuTextureView? = null
     private var lastState: State? = null
 
-    override fun renderToTexture(renderState: State, poseStack: PoseStack) {
-        textureView = RenderSystem.outputColorTextureOverride
+    override fun renderToTexture(renderState: State, poseStack: PoseStack, collector: SubmitNodeCollector) {
         lastState = renderState
         poseStack.scale(1f, -1f, -1f)
 
-        if (renderState.state.itemStackRenderState().usesBlockLight()) mc.gameRenderer.lighting.setupFor(Lighting.Entry.ITEMS_3D)
-        else mc.gameRenderer.lighting.setupFor(Lighting.Entry.ITEMS_FLAT)
+        if (renderState.state.itemStackRenderState().usesBlockLight()) mc.gameRenderer.lighting().setupFor(Lighting.Entry.ITEMS_3D)
+        else mc.gameRenderer.lighting().setupFor(Lighting.Entry.ITEMS_FLAT)
 
-        val dispatcher = mc.gameRenderer.featureRenderDispatcher
-        renderState.state.itemStackRenderState().submit(poseStack, dispatcher.submitNodeStorage, LightCoordsUtil.FULL_BRIGHT, OverlayTexture.NO_OVERLAY, 0)
-        dispatcher.renderAllFeatures()
+        renderState.state.itemStackRenderState().submit(poseStack, collector, LightCoordsUtil.FULL_BRIGHT, OverlayTexture.NO_OVERLAY, 0)
     }
 
     override fun blitTexture(renderState: State, state: GuiRenderState) {

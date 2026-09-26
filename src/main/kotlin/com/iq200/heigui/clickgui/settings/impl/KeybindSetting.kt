@@ -14,7 +14,6 @@ import com.iq200.heigui.utils.ui.isAreaHovered
 import com.iq200.heigui.utils.ui.rendering.NVGRenderer
 import net.minecraft.client.input.KeyEvent
 import net.minecraft.client.input.MouseButtonEvent
-import org.lwjgl.glfw.GLFW
 
 class KeybindSetting(
     name: String,
@@ -22,7 +21,7 @@ class KeybindSetting(
     desc: String
 ) : RenderableSetting<InputConstants.Key>(name, desc), Saving {
 
-    constructor(name: String, defaultKeyCode: Int, desc: String = "") : this(name, InputConstants.Type.KEYSYM.getOrCreate(defaultKeyCode), desc)
+    constructor(name: String, defaultKeyCode: Int, desc: String = "") : this(name, InputConstants.Type.KEYBOARD.getOrCreate(defaultKeyCode), desc)
 
     override var value: InputConstants.Key = default
     var onPress: (() -> Unit)? = null
@@ -71,8 +70,8 @@ class KeybindSetting(
         if (!listening) return false
 
         when (input.key) {
-            GLFW.GLFW_KEY_ESCAPE, GLFW.GLFW_KEY_BACKSPACE -> key = InputConstants.UNKNOWN
-            GLFW.GLFW_KEY_ENTER -> listening = false
+            InputConstants.KEY_ESCAPE, InputConstants.KEY_BACKSPACE -> key = InputConstants.UNKNOWN
+            InputConstants.KEY_RETURN -> listening = false
             else -> key = InputConstants.getKey(input)
         }
 
@@ -86,7 +85,7 @@ class KeybindSetting(
     }
 
     fun isDown(): Boolean =
-        value != InputConstants.UNKNOWN && InputConstants.isKeyDown(mc.window, value.value)
+        value != InputConstants.UNKNOWN && InputConstants.isKeyDown(value.value)
 
     override val isHovered: Boolean
         get() =

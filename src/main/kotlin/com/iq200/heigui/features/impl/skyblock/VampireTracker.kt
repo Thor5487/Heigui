@@ -20,6 +20,7 @@ import com.iq200.heigui.utils.render.textDim
 import com.iq200.heigui.utils.texture
 import net.minecraft.ChatFormatting
 import net.minecraft.network.chat.Component
+import net.minecraft.network.chat.TextColor
 import net.minecraft.world.entity.EquipmentSlot
 import net.minecraft.world.entity.decoration.ArmorStand
 import net.minecraft.world.item.Items
@@ -258,7 +259,7 @@ object VampireTracker: Module(
                         val textColor = part.style.color
 
                         // 比對顏色值是否等於 ChatFormatting.GOLD (整數值)
-                        if (textColor != null && textColor.value == ChatFormatting.GOLD.color) {
+                        if (textColor == TextColor.GOLD) {
                             isGold = true
                         }
 

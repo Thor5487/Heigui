@@ -1,7 +1,6 @@
 package com.iq200.heigui.utils
 
 import com.iq200.heigui.utils.render.drawLine
-import com.mojang.blaze3d.systems.RenderSystem
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.world.phys.Vec3
@@ -49,7 +48,7 @@ object Render2DUtils {
     fun worldToScreen(worldPos: Vec3): Vector2f? {
         val mc = Minecraft.getInstance()
         val gameRenderer = mc.gameRenderer
-        val camera = gameRenderer.mainCamera
+        val camera = gameRenderer.mainCamera()
 
         val camPos = camera.position()
 
@@ -57,7 +56,7 @@ object Render2DUtils {
         val relY = (worldPos.y - camPos.y).toFloat()
         val relZ = (worldPos.z - camPos.z).toFloat()
 
-        val viewMatrix = Matrix4f(RenderSystem.getModelViewMatrix())
+        val viewMatrix = Matrix4f().rotation(camera.rotation()).invert()
         val fov = mc.options.fov().get().toDouble()
         val fovRadians = Math.toRadians(fov).toFloat()
         val window = mc.window

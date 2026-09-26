@@ -10,7 +10,6 @@ import com.iq200.heigui.utils.ServerUtils
 import com.iq200.heigui.utils.handlers.TickTasks
 import com.iq200.heigui.utils.ui.rendering.NVGPIPRenderer
 import com.iq200.heigui.utils.render.ItemStateRenderer
-import com.iq200.heigui.utils.render.RenderBatchManager
 import com.iq200.heigui.utils.skyblock.ActionBarParser
 import com.iq200.heigui.utils.skyblock.LocationUtils
 import com.iq200.heigui.utils.skyblock.PartyUtils
@@ -71,11 +70,11 @@ object Heigui : ClientModInitializer {
             arrayOf(mainCommand).forEach { it.register(dispatcher) }
         }
 
-        PictureInPictureRendererRegistry.register { context ->
-            NVGPIPRenderer(context.bufferSource())
+        PictureInPictureRendererRegistry.register {
+            NVGPIPRenderer()
         }
-        PictureInPictureRendererRegistry.register { context ->
-            ItemStateRenderer(context.bufferSource())
+        PictureInPictureRendererRegistry.register {
+            ItemStateRenderer()
         }
 
 
@@ -93,7 +92,7 @@ object Heigui : ClientModInitializer {
             SkyblockPlayer, ServerUtils, EventDispatcher,
             DungeonListener, PartyUtils,
             ScanUtils, DungeonUtils, SplitsManager,
-            IrisCompatability, RenderBatchManager,
+            IrisCompatability,
             ModuleManager, DeathTickUtil, ActionBarParser
         ).forEach { EventBus.subscribe(it) }
 

@@ -24,7 +24,6 @@ import net.minecraft.world.level.block.Blocks
 import net.minecraft.world.level.block.state.BlockState
 import net.minecraft.world.phys.AABB
 import net.minecraft.world.phys.BlockHitResult
-import org.lwjgl.glfw.GLFW
 
 object HighliteHelper : Module(
     name = "Highlite Helper",
@@ -98,9 +97,9 @@ object HighliteHelper : Module(
 
             if (mc.player == null) return@on
 
-            if (mc.screen != null) return@on
+            if (mc.gui.screen() != null) return@on
 
-            if (key.type == InputConstants.Type.MOUSE && key.value == GLFW.GLFW_MOUSE_BUTTON_LEFT) {
+            if (key.type == InputConstants.Type.MOUSE && key.value == InputConstants.MOUSE_BUTTON_LEFT) {
                 if (isPress) {
                     isPhysicalLMBDown = true
                 }
@@ -258,14 +257,14 @@ object HighliteHelper : Module(
     // ==========================================
     private fun getActionForBlock(pos: BlockPos, state: BlockState): BlockAction {
         val currentLevel = when {
-            state.`is`(Blocks.LIGHT_BLUE_STAINED_GLASS) ||
-                    state.`is`(Blocks.LIGHT_BLUE_STAINED_GLASS_PANE) -> 1
+            state.`is`(Blocks.STAINED_GLASS.lightBlue()) ||
+                    state.`is`(Blocks.STAINED_GLASS_PANE.lightBlue()) -> 1
 
-            state.`is`(Blocks.BLUE_STAINED_GLASS) ||
-                    state.`is`(Blocks.BLUE_STAINED_GLASS_PANE) -> 2
+            state.`is`(Blocks.STAINED_GLASS.blue()) ||
+                    state.`is`(Blocks.STAINED_GLASS_PANE.blue()) -> 2
 
-            state.`is`(Blocks.PURPLE_STAINED_GLASS) ||
-                    state.`is`(Blocks.PURPLE_STAINED_GLASS_PANE) -> 3
+            state.`is`(Blocks.STAINED_GLASS.purple()) ||
+                    state.`is`(Blocks.STAINED_GLASS_PANE.purple()) -> 3
 
             else -> -1
         }
@@ -322,8 +321,13 @@ object HighliteHelper : Module(
         if (key == InputConstants.UNKNOWN) return false
 
         return when (key.type) {
-            InputConstants.Type.MOUSE -> GLFW.glfwGetMouseButton(mc.window.handle(), key.value) == GLFW.GLFW_PRESS
-            else -> InputConstants.isKeyDown(mc.window, key.value)
+            InputConstants.Type.MOUSE -> when (key.value) {
+                InputConstants.MOUSE_BUTTON_LEFT -> mc.mouseHandler.isLeftPressed
+                InputConstants.MOUSE_BUTTON_RIGHT -> mc.mouseHandler.isRightPressed
+                InputConstants.MOUSE_BUTTON_MIDDLE -> mc.mouseHandler.isMiddlePressed
+                else -> false
+            }
+            else -> InputConstants.isKeyDown(key.value)
         }
     }
 

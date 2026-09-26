@@ -9,7 +9,6 @@ import net.minecraft.core.BlockPos
 import net.minecraft.tags.BlockTags
 import net.minecraft.world.entity.player.Input
 import net.minecraft.world.level.block.Blocks
-import org.lwjgl.glfw.GLFW
 import kotlin.math.abs
 import kotlin.math.floor
 
@@ -435,8 +434,13 @@ object IceFillWalker {
         if (key == InputConstants.UNKNOWN) return false
 
         return when (key.type) {
-            InputConstants.Type.MOUSE -> GLFW.glfwGetMouseButton(mc.window.handle(), key.value) == GLFW.GLFW_PRESS
-            else -> InputConstants.isKeyDown(mc.window, key.value)
+            InputConstants.Type.MOUSE -> when (key.value) {
+                InputConstants.MOUSE_BUTTON_LEFT -> mc.mouseHandler.isLeftPressed
+                InputConstants.MOUSE_BUTTON_RIGHT -> mc.mouseHandler.isRightPressed
+                InputConstants.MOUSE_BUTTON_MIDDLE -> mc.mouseHandler.isMiddlePressed
+                else -> false
+            }
+            else -> InputConstants.isKeyDown(key.value)
         }
     }
 }

@@ -88,7 +88,7 @@ object RotationUtils {
 
     fun getBlockHitResult(d: Double, yaw: Float, pitch: Float, eyePos: Vec3): HitResult? {
         if (Minecraft.getInstance().player == null || Minecraft.getInstance().level == null) return null
-        val vec32 = Minecraft.getInstance().player!!.calculateViewVector(pitch, yaw) // Reversed for some reason
+        val vec32 = Vec3.directionFromRotation(pitch, yaw) // Reversed for some reason
         val vec33 = eyePos.add(vec32.x * d, vec32.y * d, vec32.z * d)
         return Minecraft.getInstance().level!!.clip(
             ClipContext(

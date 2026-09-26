@@ -1,6 +1,6 @@
 package com.iq200.heigui.utils
 
-import com.mojang.blaze3d.pipeline.RenderPipeline
+import com.mojang.renderpearl.api.pipeline.RenderPipeline
 import com.iq200.heigui.utils.render.CustomRenderType
 import net.fabricmc.loader.api.FabricLoader
 import net.irisshaders.iris.api.v0.IrisApi

@@ -57,7 +57,7 @@ object IceFill : Module(
                 return@on
             }
 
-            if (mc.screen != null) {
+            if (mc.gui.screen() != null) {
                 if (walking) {
                     walking = false
                     IceFillWalker.reset()

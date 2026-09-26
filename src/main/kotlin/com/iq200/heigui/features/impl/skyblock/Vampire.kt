@@ -191,7 +191,7 @@ object Vampire : Module(
             val myBoss = myActiveBoss ?: return@on
             if (packet is ClientboundBlockUpdatePacket) {
                 val state = packet.blockState
-                if (state.`is`(Blocks.GREEN_TERRACOTTA)) {
+                if (state.`is`(Blocks.DYED_TERRACOTTA.green())) {
                     val pos = packet.pos
                     // 放寬條件，收集玩家周圍 50 格內的 Mania 更新
                     if (mc.player != null && pos.closerToCenterThan(myBoss.position(), 30.0)) {
@@ -201,7 +201,7 @@ object Vampire : Module(
             }
             else if (packet is ClientboundSectionBlocksUpdatePacket) {
                 packet.runUpdates { pos, state ->
-                    if (state.`is`(Blocks.GREEN_TERRACOTTA)) {
+                    if (state.`is`(Blocks.DYED_TERRACOTTA.green())) {
                         if (mc.player != null && pos.closerToCenterThan(myBoss.position(), 30.0)) {
                             greenBlocksBuffer.add(pos.immutable())
                         }
@@ -726,7 +726,7 @@ object Vampire : Module(
                 while (mc.options.keyAttack.consumeClick()) { }
             }
 
-            val pt = context.gameRenderer().mainCamera.getCameraEntityPartialTicks(mc.deltaTracker)
+            val pt = context.gameRenderer().mainCamera().getCameraEntityPartialTicks(mc.deltaTracker)
 
             if (bossEsp && myActiveRealBoss != null) {
                 val realBoss = myActiveRealBoss!! // 直接拿找好的 NPC
