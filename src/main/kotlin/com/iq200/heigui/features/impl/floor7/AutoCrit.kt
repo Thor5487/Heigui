@@ -68,7 +68,11 @@ object AutoCrit : Module (
             chargingConfirmed = true
         }
 
+        //#if PRIVATE
         on<TickEvent.Server> {
+        //#else
+        //$on<TickEvent.Start> {
+        //#endif
             val player = mc.player ?: return@on
 
             when (state) {

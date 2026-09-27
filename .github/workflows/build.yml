@@ -35,8 +35,8 @@ jobs:
       - name: make gradle wrapper executable
         run: chmod +x ./gradlew
 
-      - name: build
-        run: ./gradlew build
+      - name: build public version
+        run: ./gradlew buildPublic
 
       - name: locate built jars
         id: jars

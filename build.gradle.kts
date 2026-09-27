@@ -89,6 +89,12 @@ dependencies {
         include("com.github.stivais:Commodore:$it")
     }
 
+    // Discover and register modules without maintaining a manual registry.
+    property("classgraph_version").let {
+        implementation("io.github.classgraph:classgraph:$it")
+        include("io.github.classgraph:classgraph:$it")
+    }
+
     compileOnly("com.terraformersmc:modmenu:${property("modmenu_version")}")
 
     // Bundle NanoVG and its platform natives for the ClickGUI renderer.
@@ -216,40 +222,62 @@ tasks.named("assemble") {
 }
 
 // ====================================================
-// Combined public and private build task
+// Public and private build tasks
 // ====================================================
-tasks.register("buildAllVersions") {
-    group = "build"
-    description = "Automatically cleans and builds both Public and Private versions."
+fun runVariantBuild(isPrivate: Boolean) {
+    val isWindows = System.getProperty("os.name").lowercase().contains("windows")
+    val gradlew = if (isWindows) rootDir.resolve("gradlew.bat") else rootDir.resolve("gradlew")
+    val variantName = if (isPrivate) "Private" else "Public"
+    val command = mutableListOf(
+        gradlew.absolutePath,
+        "build",
+        "-PisPrivate=$isPrivate"
+    )
 
-    val rootDirFile = project.rootDir
-    val rootDirPath = rootDirFile.absolutePath
+    if (project.hasProperty("release")) command += "-Prelease"
+
+    println("Building $variantName version...")
+    val exitCode = ProcessBuilder(command)
+        .directory(rootDir)
+        .inheritIO()
+        .start()
+        .waitFor()
+
+    if (exitCode != 0) {
+        throw GradleException("$variantName build failed with exit code $exitCode.")
+    }
+}
+
+tasks.named("build") {
+    group = null
+    description = "Internal lifecycle task used by the variant build tasks."
+}
+
+tasks.register("buildPublic") {
+    group = "build"
+    description = "Builds the Public version."
 
     doLast {
-        val isWindows = System.getProperty("os.name").lowercase().contains("windows")
-        val gradlew = if (isWindows) "$rootDirPath\\gradlew.bat" else "$rootDirPath/gradlew"
-        println("============================================")
-        println("🔨 [1/2] Building PRIVATE Version...")
-        println("============================================")
+        runVariantBuild(isPrivate = false)
+    }
+}
 
-        ProcessBuilder(gradlew, "build", "-PisPrivate=true")
-            .directory(rootDirFile)
-            .inheritIO()
-            .start()
-            .waitFor()
-        println("============================================")
-        println("🔨 [2/2] Building PUBLIC Version...")
-        println("============================================")
+tasks.register("buildPrivate") {
+    group = "build"
+    description = "Builds the Private version."
 
-        ProcessBuilder(gradlew, "build", "-PisPrivate=false")
-            .directory(rootDirFile)
-            .inheritIO()
-            .start()
-            .waitFor()
+    doLast {
+        runVariantBuild(isPrivate = true)
+    }
+}
 
+tasks.register("buildAllVersions") {
+    group = "build"
+    description = "Builds both Public and Private versions."
 
-        println("============================================")
-        println("✅ Done! Check build/libs/$modVersionBase-$mcVersion/$buildOutputDirectory.")
-        println("============================================")
+    doLast {
+        runVariantBuild(isPrivate = false)
+        runVariantBuild(isPrivate = true)
+        println("Both versions are available in build/libs/$modVersionBase-$mcVersion/$buildOutputDirectory.")
     }
 }

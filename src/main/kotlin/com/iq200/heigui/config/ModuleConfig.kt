@@ -66,24 +66,55 @@ class ModuleConfig internal constructor(file: File) {
 
     fun save() {
         try {
-            val jsonArray = JsonArray().apply {
-                for ((_, module) in modules) {
-                    add(JsonObject().apply {
-                        add("name", JsonPrimitive(module.name))
-                        add("enabled", JsonPrimitive(module.enabled))
-                        add("settings", JsonObject().apply {
-                            for ((name, setting) in module.settings) {
+            val jsonArray = readExistingConfig()
+            val moduleIndices = mutableMapOf<String, Int>()
 
-                                if (setting is Saving) add(name, setting.write(gson))
-                            }
-                        })
-                    })
-                }
+            jsonArray.forEachIndexed { index, element ->
+                val moduleName = element
+                    .takeIf(JsonElement::isJsonObject)
+                    ?.asJsonObject
+                    ?.get("name")
+                    ?.takeIf(JsonElement::isJsonPrimitive)
+                    ?.asString
+                    ?.lowercase()
+
+                if (moduleName != null) moduleIndices.putIfAbsent(moduleName, index)
             }
+
+            for ((moduleName, module) in modules) {
+                val existingIndex = moduleIndices[moduleName]
+                val moduleObj = existingIndex
+                    ?.let { jsonArray[it].takeIf(JsonElement::isJsonObject)?.asJsonObject?.deepCopy() }
+                    ?: JsonObject()
+
+                val settingObj = moduleObj
+                    .get("settings")
+                    ?.takeIf(JsonElement::isJsonObject)
+                    ?.asJsonObject
+                    ?.deepCopy()
+                    ?: JsonObject()
+
+                for ((name, setting) in module.settings) {
+                    if (setting is Saving) settingObj.add(name, setting.write(gson))
+                }
+
+                moduleObj.add("name", JsonPrimitive(module.name))
+                moduleObj.add("enabled", JsonPrimitive(module.enabled))
+                moduleObj.add("settings", settingObj)
+
+                if (existingIndex == null) jsonArray.add(moduleObj)
+                else jsonArray.set(existingIndex, moduleObj)
+            }
+
             file.bufferedWriter().use { it.write(gson.toJson(jsonArray)) }
         } catch (e: Exception) {
             logger.error("Error saving module config.", e)
         }
+    }
+
+    private fun readExistingConfig(): JsonArray {
+        if (!file.exists() || file.length() == 0L) return JsonArray()
+        return JsonParser.parseReader(file.reader()).asJsonArray.deepCopy()
     }
 
     private companion object {

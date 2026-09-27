@@ -10,34 +10,7 @@ import com.iq200.heigui.clickgui.settings.impl.KeybindSetting
 import com.iq200.heigui.config.ModuleConfig
 import com.iq200.heigui.events.InputEvent
 import com.iq200.heigui.events.core.on
-import com.iq200.heigui.features.impl.dev.DevMode
-import com.iq200.heigui.features.impl.dungeon.AutoClick
-import com.iq200.heigui.features.impl.dungeon.AutoClose
-import com.iq200.heigui.features.impl.dungeon.AutoCroesus
-import com.iq200.heigui.features.impl.dungeon.NoWitherborn
-import com.iq200.heigui.features.impl.dungeon.SATpFix
-import com.iq200.heigui.features.impl.dungeon.SecretDone
-import com.iq200.heigui.features.impl.dungeon.SkipSecrets
-import com.iq200.heigui.features.impl.dungeon.Triggerbot
-import com.iq200.heigui.features.impl.dungeon.ZPDB
-import com.iq200.heigui.features.impl.dungeon.icefill.IceFill
-import com.iq200.heigui.features.impl.floor7.AutoCrit
-import com.iq200.heigui.features.impl.floor7.hoverterm.HoverTerm
-import com.iq200.heigui.features.impl.floor7.LBHelper
-import com.iq200.heigui.features.impl.floor7.SimonSays
-import com.iq200.heigui.features.impl.floor7.WitherAimBot
-import com.iq200.heigui.features.impl.general.UpdateChecker
-import com.iq200.heigui.features.impl.mining.BigPane
-import com.iq200.heigui.features.impl.mining.GDragonEggScanner
-import com.iq200.heigui.features.impl.mining.MSB
-import com.iq200.heigui.features.impl.mining.Mineshaft
-import com.iq200.heigui.features.impl.render.*
-import com.iq200.heigui.features.impl.skyblock.HighliteHelper
-import com.iq200.heigui.features.impl.general.RatProtection
-import com.iq200.heigui.features.impl.skyblock.SafariEsp
-import com.iq200.heigui.features.impl.skyblock.TeleportOptimization
-import com.iq200.heigui.features.impl.skyblock.Vampire
-import com.iq200.heigui.features.impl.skyblock.VampireTracker
+import io.github.classgraph.ClassGraph
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry
 import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements
 import net.fabricmc.loader.api.FabricLoader
@@ -72,27 +45,9 @@ object ModuleManager {
     private val HUD_LAYER: Identifier = fromNamespaceAndPath(Heigui.MOD_ID, "heigui_hud")
 
     init {
-        registerModules(config = ModuleConfig(file = File(Heigui.configDir, "heigui-config.json")),
-            // dungeon
-            AutoClose, ZPDB, Triggerbot, AutoClick, SecretDone, SkipSecrets, SATpFix, AutoCroesus, NoWitherborn, IceFill,
-
-            // floor 7
-            SimonSays, WitherAimBot, LBHelper, AutoCrit, HoverTerm,
-
-            // render
-            ClickGUIModule,
-
-            // skyblock
-            TeleportOptimization, Vampire, VampireTracker, SafariEsp, HighliteHelper,
-
-            // mining
-            BigPane, Mineshaft, MSB, GDragonEggScanner,
-
-            // dev
-            DevMode,
-
-            // general
-            UpdateChecker, RatProtection
+        registerModules(
+            config = ModuleConfig(file = File(Heigui.configDir, "heigui-config.json")),
+            modules = discoverModules().toTypedArray()
         )
 
         // hashmap, but would need to keep track when setting values change
@@ -106,6 +61,23 @@ object ModuleManager {
 
         HudElementRegistry.attachElementBefore(VanillaHudElements.SLEEP, HUD_LAYER, ModuleManager::render)
     }
+
+    private fun discoverModules(): List<Module> = ClassGraph()
+        .enableClassInfo()
+        .acceptPackages(MODULE_PACKAGE)
+        .overrideClassLoaders(Thread.currentThread().contextClassLoader)
+        .scan()
+        .use { scanResult ->
+            scanResult.getSubclasses(Module::class.java.name)
+                .filterNot { it.isAbstract }
+                .sortedBy { it.name }
+                .map { classInfo ->
+                    val moduleClass = classInfo.loadClass()
+                    val instance = moduleClass.getDeclaredField("INSTANCE").get(null)
+                    instance as? Module
+                        ?: error("${classInfo.name} is a Module subclass but not a Kotlin object.")
+                }
+        }
 
     /**
      * Registers modules to the [ModuleManager] and initializes them.
@@ -168,5 +140,7 @@ object ModuleManager {
         }
         guiGraphics.pose().popMatrix()
     }
+
+    private const val MODULE_PACKAGE = "com.iq200.heigui.features.impl"
 }
 
