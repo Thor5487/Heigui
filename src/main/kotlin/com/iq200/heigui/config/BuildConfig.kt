@@ -17,12 +17,6 @@ object BuildConfig {
         loaded
     }
 
-    val isPrivate: Boolean by lazy {
-        props.getProperty("is_private", "false").toBoolean()
-    }
-
-    // "release" 或 "beta"。開發環境 (IDE) 找不到檔案時預設為 beta —
-    // 誤判成測試版比誤判成正式版安全
     val channel: String by lazy {
         props.getProperty("channel", "beta")
     }

@@ -4,7 +4,6 @@ import com.iq200.heigui.clickgui.settings.Setting.Companion.withDependency
 import com.iq200.heigui.clickgui.settings.impl.BooleanSetting
 import com.iq200.heigui.clickgui.settings.impl.ColorSetting
 import com.iq200.heigui.clickgui.settings.impl.NumberSetting
-import com.iq200.heigui.config.BuildConfig
 import com.iq200.heigui.events.HudRenderEvent
 import com.iq200.heigui.events.InputEvent
 import com.iq200.heigui.events.PacketEvent
