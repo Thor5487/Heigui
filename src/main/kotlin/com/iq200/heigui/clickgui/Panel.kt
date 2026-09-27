@@ -8,6 +8,7 @@ import com.iq200.heigui.features.impl.render.ClickGUIModule
 import com.iq200.heigui.utils.Colors
 import com.iq200.heigui.utils.ui.isAreaHovered
 import com.iq200.heigui.utils.ui.rendering.NVGRenderer
+import com.mojang.blaze3d.platform.InputConstants
 import net.minecraft.client.input.CharacterEvent
 import net.minecraft.client.input.KeyEvent
 import net.minecraft.client.input.MouseButtonEvent
@@ -102,12 +103,12 @@ class Panel(private val category: Category) {
 
     fun mouseClicked(mouseX: Float, mouseY: Float, click: MouseButtonEvent): Boolean {
         if (isAreaHovered(panelSetting.x, panelSetting.y, WIDTH, HEIGHT, true)) {
-            if (click.button() == 0) {
+            if (click.button() == InputConstants.MOUSE_BUTTON_LEFT) {
                 deltaX = (panelSetting.x - mouseX)
                 deltaY = (panelSetting.y - mouseY)
                 dragging = true
                 return true
-            } else if (click.button() == 1) {
+            } else if (click.button() == InputConstants.MOUSE_BUTTON_RIGHT) {
                 panelSetting.extended = !panelSetting.extended
                 return true
             }

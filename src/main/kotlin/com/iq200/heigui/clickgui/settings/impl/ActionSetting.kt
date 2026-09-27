@@ -6,6 +6,7 @@ import com.iq200.heigui.features.impl.render.ClickGUIModule
 import com.iq200.heigui.utils.Color.Companion.darker
 import com.iq200.heigui.utils.Colors
 import com.iq200.heigui.utils.ui.rendering.NVGRenderer
+import com.mojang.blaze3d.platform.InputConstants
 import net.minecraft.client.input.MouseButtonEvent
 
 class ActionSetting(
@@ -31,7 +32,7 @@ class ActionSetting(
     }
 
     override fun mouseClicked(mouseX: Float, mouseY: Float, click: MouseButtonEvent): Boolean {
-        return if (click.button() != 0 || !isHovered) false
+        return if (click.button() != InputConstants.MOUSE_BUTTON_LEFT || !isHovered) false
         else {
             action()
             true

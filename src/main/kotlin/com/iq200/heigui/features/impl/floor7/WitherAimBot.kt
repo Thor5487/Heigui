@@ -12,6 +12,9 @@ import com.iq200.heigui.features.Category
 import com.iq200.heigui.features.Module
 import com.iq200.heigui.utils.Colors
 import com.iq200.heigui.utils.skyblock.SplitsManager
+import com.iq200.mixin.accessors.KeyMappingAccessor
+import com.mojang.blaze3d.platform.InputConstants
+import net.minecraft.client.KeyMapping
 import net.minecraft.world.entity.Entity
 import net.minecraft.world.entity.boss.wither.WitherBoss
 import net.minecraft.world.phys.Vec3
@@ -121,7 +124,7 @@ object WitherAimBot : Module(
             currentTarget = bestTarget
 
             if (bestTarget != null) {
-                if (!mc.options.keyAttack.isDown) return@on
+                if (!isPhysicallyDown(mc.options.keyAttack)) return@on
 
                 val mainHandItem = player.mainHandItem
                 val itemName = mainHandItem.hoverName.string
@@ -133,7 +136,7 @@ object WitherAimBot : Module(
                 val playerLerpedPos = player.getPosition(partialTick)
                 val playerEyePos = Vec3(playerLerpedPos.x, playerLerpedPos.y + player.eyeHeight, playerLerpedPos.z)
 
-                val targetLerpedPos = bestTarget!!.getPosition(partialTick)
+                val targetLerpedPos = bestTarget.getPosition(partialTick)
                 val targetAimPos = Vec3(targetLerpedPos.x, targetLerpedPos.y + 1.25, targetLerpedPos.z)
 
                 val dx = targetAimPos.x - playerEyePos.x
@@ -149,6 +152,22 @@ object WitherAimBot : Module(
                 player.yRotO = yaw
                 player.xRotO = pitch
             }
+        }
+    }
+
+    private fun isPhysicallyDown(keyMapping: KeyMapping): Boolean {
+        val key = (keyMapping as KeyMappingAccessor).key
+        if (key == InputConstants.UNKNOWN) return false
+
+        return when (key.type) {
+            InputConstants.Type.MOUSE -> when (key.value) {
+                InputConstants.MOUSE_BUTTON_LEFT -> mc.mouseHandler.isLeftPressed
+                InputConstants.MOUSE_BUTTON_RIGHT -> mc.mouseHandler.isRightPressed
+                InputConstants.MOUSE_BUTTON_MIDDLE -> mc.mouseHandler.isMiddlePressed
+                else -> false
+            }
+
+            else -> InputConstants.isKeyDown(key.value)
         }
     }
 

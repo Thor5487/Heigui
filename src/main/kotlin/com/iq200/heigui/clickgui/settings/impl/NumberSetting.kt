@@ -175,13 +175,13 @@ class NumberSetting<E>(
         val isHoveringText = mouseX >= textBoundsLeftX - 5f && mouseX <= (lastX + width) &&
                 mouseY >= textBoundsY - 5f && mouseY <= textBoundsY + textBoundsHeight + 5f
 
-        if (isEditing && (!isHoveringText || click.button() != 0)) {
+        if (isEditing && (!isHoveringText || click.button() != InputConstants.MOUSE_BUTTON_LEFT)) {
             saveInput()
             isEditing = false
             if (activeSetting == this) activeSetting = null
         }
 
-        if (click.button() == 0) {
+        if (click.button() == InputConstants.MOUSE_BUTTON_LEFT) {
             if (isHoveringText) {
                 if (activeSetting != null && activeSetting != this) {
                     activeSetting!!.saveInput()

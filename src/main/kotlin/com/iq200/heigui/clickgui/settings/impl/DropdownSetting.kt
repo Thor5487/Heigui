@@ -7,6 +7,7 @@ import com.iq200.heigui.utils.ui.HoverHandler
 import com.iq200.heigui.utils.ui.animations.LinearAnimation
 import com.iq200.heigui.utils.ui.isAreaHovered
 import com.iq200.heigui.utils.ui.rendering.NVGRenderer
+import com.mojang.blaze3d.platform.InputConstants
 import net.minecraft.client.input.MouseButtonEvent
 
 /**
@@ -48,7 +49,7 @@ class DropdownSetting(
     }
 
     override fun mouseClicked(mouseX: Float, mouseY: Float, click: MouseButtonEvent): Boolean {
-        if (click.button() != 0 || !isHovered) return false
+        if (click.button() != InputConstants.MOUSE_BUTTON_LEFT || !isHovered) return false
         enabled = !enabled
         toggleAnimation.start()
         return true

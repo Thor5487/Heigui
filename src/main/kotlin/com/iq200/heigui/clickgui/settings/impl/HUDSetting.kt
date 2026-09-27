@@ -17,6 +17,7 @@ import com.iq200.heigui.utils.ui.HoverHandler
 import com.iq200.heigui.utils.ui.animations.LinearAnimation
 import com.iq200.heigui.utils.ui.isAreaHovered
 import com.iq200.heigui.utils.ui.rendering.NVGRenderer
+import com.mojang.blaze3d.platform.InputConstants
 import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.client.input.MouseButtonEvent
 
@@ -84,7 +85,7 @@ class HUDSetting(
     }
 
     override fun mouseClicked(mouseX: Float, mouseY: Float, click: MouseButtonEvent): Boolean {
-        if (click.button() != 0) return false
+        if (click.button() != InputConstants.MOUSE_BUTTON_LEFT) return false
         return if (isHovered) {
             mc.setScreenAndShow(HudManager)
             true

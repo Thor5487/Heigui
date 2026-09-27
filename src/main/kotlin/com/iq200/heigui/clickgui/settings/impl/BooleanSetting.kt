@@ -12,6 +12,7 @@ import com.iq200.heigui.utils.Colors
 import com.iq200.heigui.utils.ui.animations.LinearAnimation
 import com.iq200.heigui.utils.ui.isAreaHovered
 import com.iq200.heigui.utils.ui.rendering.NVGRenderer
+import com.mojang.blaze3d.platform.InputConstants
 import net.minecraft.client.input.MouseButtonEvent
 
 class BooleanSetting(
@@ -60,7 +61,7 @@ class BooleanSetting(
     }
 
     override fun mouseClicked(mouseX: Float, mouseY: Float, click: MouseButtonEvent): Boolean {
-        return if (click.button() != 0 || !isHovered) false
+        return if (click.button() != InputConstants.MOUSE_BUTTON_LEFT || !isHovered) false
         else {
             toggleAnimation.start()
             enabled = !enabled

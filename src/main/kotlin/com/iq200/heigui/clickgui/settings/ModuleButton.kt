@@ -14,6 +14,7 @@ import com.iq200.heigui.utils.ui.animations.EaseInOutAnimation
 import com.iq200.heigui.utils.ui.mouseX
 import com.iq200.heigui.utils.ui.mouseY
 import com.iq200.heigui.utils.ui.rendering.NVGRenderer
+import com.mojang.blaze3d.platform.InputConstants
 import net.minecraft.client.input.CharacterEvent
 import net.minecraft.client.input.MouseButtonEvent
 import kotlin.math.floor
@@ -76,11 +77,11 @@ class ModuleButton(val module: Module, val panel: Panel) {
 
     fun mouseClicked(mouseX: Float, mouseY: Float, click: MouseButtonEvent): Boolean {
         if (hover.isHovered) {
-            if (click.button() == 0) {
+            if (click.button() == InputConstants.MOUSE_BUTTON_LEFT) {
                 colorAnim.start()
                 module.toggle()
                 return true
-            } else if (click.button() == 1) {
+            } else if (click.button() == InputConstants.MOUSE_BUTTON_RIGHT) {
                 if (module.settings.isNotEmpty()) {
                     extendAnim.start()
                     extended = !extended

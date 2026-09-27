@@ -11,6 +11,7 @@ import com.iq200.heigui.features.impl.render.ClickGUIModule
 import com.iq200.heigui.utils.Colors
 import com.iq200.heigui.utils.ui.TextInputHandler
 import com.iq200.heigui.utils.ui.rendering.NVGRenderer
+import com.mojang.blaze3d.platform.InputConstants
 import net.minecraft.client.input.CharacterEvent
 import net.minecraft.client.input.KeyEvent
 import net.minecraft.client.input.MouseButtonEvent
@@ -51,7 +52,7 @@ class StringSetting(
     }
 
     override fun mouseClicked(mouseX: Float, mouseY: Float, click: MouseButtonEvent): Boolean {
-        return if (click.button() == 0) textInputHandler.mouseClicked(mouseX, mouseY, click)
+        return if (click.button() == InputConstants.MOUSE_BUTTON_LEFT) textInputHandler.mouseClicked(mouseX, mouseY, click)
         else false
     }
 

@@ -59,7 +59,7 @@ class KeybindSetting(
             key = InputConstants.Type.MOUSE.getOrCreate(click.button())
             listening = false
             return true
-        } else if (click.button() == 0 && isHovered) {
+        } else if (click.button() == InputConstants.MOUSE_BUTTON_LEFT && isHovered) {
             listening = true
             return true
         }

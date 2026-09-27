@@ -92,7 +92,7 @@ class TextInputHandler(
             resetState()
             return false
         }
-        if (click.button() != 0) return false
+        if (click.button() != InputConstants.MOUSE_BUTTON_LEFT) return false
 
         listening = true
         dragging = true

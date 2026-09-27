@@ -15,6 +15,7 @@ import com.iq200.heigui.utils.ui.HoverHandler
 import com.iq200.heigui.utils.ui.animations.EaseInOutAnimation
 import com.iq200.heigui.utils.ui.isAreaHovered
 import com.iq200.heigui.utils.ui.rendering.NVGRenderer
+import com.mojang.blaze3d.platform.InputConstants
 import net.minecraft.client.input.MouseButtonEvent
 
 class SelectorSetting(
@@ -89,7 +90,7 @@ class SelectorSetting(
     }
 
     override fun mouseClicked(mouseX: Float, mouseY: Float, click: MouseButtonEvent): Boolean {
-        if (click.button() == 0) {
+        if (click.button() == InputConstants.MOUSE_BUTTON_LEFT) {
             if (isHovered) {
                 settingAnim.start()
                 extended = !extended
@@ -106,7 +107,7 @@ class SelectorSetting(
                     return true
                 }
             }
-        } else if (click.button() == 1) {
+        } else if (click.button() == InputConstants.MOUSE_BUTTON_RIGHT) {
             if (isHovered) {
                 index++
                 return true
