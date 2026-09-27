@@ -25,7 +25,6 @@ import net.minecraft.network.chat.Component
 import net.minecraft.network.chat.HoverEvent
 import net.minecraft.network.protocol.game.ServerboundPunchPacket
 import net.minecraft.world.InteractionHand
-import net.minecraft.world.item.component.SwingAnimation
 import net.minecraft.world.entity.Entity
 import net.minecraft.world.entity.decoration.ArmorStand
 import net.minecraft.world.entity.player.Player

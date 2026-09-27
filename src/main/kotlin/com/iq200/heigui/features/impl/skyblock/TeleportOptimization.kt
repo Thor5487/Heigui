@@ -145,7 +145,7 @@ object TeleportOptimization : Module (
 
         // Since 26.3 this acknowledgement includes movement; sending another PosRot packet duplicates it.
         connection.send(ServerboundAcceptTeleportationPacket(packet.id, newPos.position().x, newPos.position().y, newPos.position().z, newPos.yRot(), newPos.xRot()))
-        mc.level?.blockStatePredictionHandler?.onTeleport()
+        mc.level?.getBlockStatePredictionHandler()?.onTeleport()
         mc.gameMode?.stopDestroyBlock()
 
         val accessor = player as LocalPlayerAccessor

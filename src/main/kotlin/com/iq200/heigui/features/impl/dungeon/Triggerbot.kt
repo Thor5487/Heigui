@@ -13,7 +13,6 @@ import com.iq200.heigui.utils.skyblock.dungeon.DungeonUtils
 import com.iq200.heigui.utils.skyblock.dungeon.ScanUtils
 import net.minecraft.core.BlockPos
 import net.minecraft.world.InteractionHand
-import net.minecraft.world.item.component.SwingAnimation
 import net.minecraft.world.level.block.AbstractSkullBlock
 import net.minecraft.world.level.block.Blocks
 import net.minecraft.world.level.block.entity.SkullBlockEntity
@@ -132,6 +131,6 @@ object Triggerbot : Module (
         val player = mc.player ?: return
         val gameMode = mc.gameMode ?: return
         gameMode.useItemOn(player, InteractionHand.MAIN_HAND, hitResult)
-        player.swing(InteractionHand.MAIN_HAND, SwingAnimation.DEFAULT, false)
+        player.swing(InteractionHand.MAIN_HAND, player.mainHandItem.interactAnimation, false)
     }
 }

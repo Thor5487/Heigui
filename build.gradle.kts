@@ -40,6 +40,7 @@ val commitHash = gitOutput("rev-parse", "--short", "HEAD") ?: "unknown"
 val betaNumber = gitOutput("rev-list", "--count", "HEAD", "--not", "--tags")?.toIntOrNull() ?: 0
 
 val buildChannel = if (isReleaseBuild) "release" else "beta"
+val buildOutputDirectory = if (isReleaseBuild) "release" else "beta.$betaNumber"
 
 // Release: 1.4.2; beta: 1.4.2-beta.3.
 val modVersion = if (isReleaseBuild) {
@@ -130,8 +131,9 @@ afterEvaluate {
 
 tasks {
     withType<AbstractArchiveTask>().configureEach {
-        // Keep every beta of a base version in the same output directory.
-        destinationDirectory.set(layout.buildDirectory.dir("libs/$modVersionBase-$mcVersion"))
+        destinationDirectory.set(
+            layout.buildDirectory.dir("libs/$modVersionBase-$mcVersion/$buildOutputDirectory")
+        )
     }
 
     processResources {
@@ -214,7 +216,7 @@ tasks.register("buildAllVersions") {
 
 
         println("============================================")
-        println("✅ Done! Check your build/libs folder.")
+        println("✅ Done! Check build/libs/$modVersionBase-$mcVersion/$buildOutputDirectory.")
         println("============================================")
     }
 }

@@ -7,7 +7,6 @@ import com.mojang.blaze3d.platform.InputConstants
 import net.minecraft.client.KeyMapping
 import net.minecraft.core.BlockPos
 import net.minecraft.tags.BlockTags
-import net.minecraft.world.entity.player.Input
 import net.minecraft.world.level.block.Blocks
 import kotlin.math.abs
 import kotlin.math.floor
@@ -144,40 +143,24 @@ object IceFillWalker {
                 InputKey.BACKWARD to isPhysicallyDown(mc.options.keyDown),
                 InputKey.LEFT to isPhysicallyDown(mc.options.keyLeft),
                 InputKey.SNEAK to isPhysicallyDown(mc.options.keyShift),
-                InputKey.JUMP to isPhysicallyDown(mc.options.keyJump),
-                InputKey.SPRINT to isPhysicallyDown(mc.options.keySprint)
+                InputKey.JUMP to isPhysicallyDown(mc.options.keyJump)
             )
         )
     }
 
     private fun applyKeyStates(keyStates: Map<InputKey, Boolean>) {
-        val player = mc.player ?: return
         val options = mc.options
 
         keyStates[InputKey.FORWARD]?.let { options.keyUp.isDown = it }
         keyStates[InputKey.RIGHT]?.let { options.keyRight.isDown = it }
         keyStates[InputKey.BACKWARD]?.let { options.keyDown.isDown = it }
         keyStates[InputKey.LEFT]?.let { options.keyLeft.isDown = it }
-        keyStates[InputKey.SPRINT]?.let {
-            options.keySprint.isDown = it
-            if (!it) player.isSprinting = false
-        }
-        keyStates[InputKey.SNEAK]?.let {
-            options.keyShift.isDown = it
-            player.isShiftKeyDown = it
-        }
+        keyStates[InputKey.SNEAK]?.let { options.keyShift.isDown = it }
         keyStates[InputKey.JUMP]?.let { options.keyJump.isDown = it }
 
-        val current = player.input.keyPresses
-        player.input.keyPresses = Input(
-            keyStates[InputKey.FORWARD] ?: current.forward,
-            keyStates[InputKey.BACKWARD] ?: current.backward,
-            keyStates[InputKey.LEFT] ?: current.left,
-            keyStates[InputKey.RIGHT] ?: current.right,
-            keyStates[InputKey.JUMP] ?: current.jump,
-            keyStates[InputKey.SNEAK] ?: current.shift,
-            keyStates[InputKey.SPRINT] ?: current.sprint
-        )
+        if (keyStates[InputKey.SPRINT] == false) {
+            mc.player?.isSprinting = false
+        }
     }
 
     private fun waitAtTurn(

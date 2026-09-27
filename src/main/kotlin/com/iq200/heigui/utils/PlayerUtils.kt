@@ -9,13 +9,11 @@ import net.minecraft.client.KeyMapping
 import net.minecraft.client.resources.sounds.SimpleSoundInstance
 import net.minecraft.core.BlockPos
 import net.minecraft.network.chat.Component
-import net.minecraft.network.protocol.game.ServerboundPlayerInputPacket
 import net.minecraft.resources.Identifier
 import net.minecraft.sounds.SoundEvent
 import net.minecraft.sounds.SoundEvents
 import net.minecraft.util.Mth
 import net.minecraft.util.StringUtil
-import net.minecraft.world.entity.player.Input
 import net.minecraft.world.item.Item
 import net.minecraft.world.phys.Vec3
 import kotlin.math.abs
@@ -92,10 +90,7 @@ object PlayerUtils {
 
     fun setKeyState(key: InputKey, state: Boolean) {
         val options = mc.options
-        val player = mc.player ?: return
-
-
-        val keyMapping: KeyMapping? = when (key) {
+        val keyMapping: KeyMapping = when (key) {
             InputKey.FORWARD -> options.keyUp
             InputKey.BACKWARD -> options.keyDown
             InputKey.LEFT -> options.keyLeft
@@ -103,31 +98,9 @@ object PlayerUtils {
             InputKey.JUMP -> options.keyJump
             InputKey.SNEAK -> options.keyShift
             InputKey.SPRINT -> options.keySprint
-
-            else -> null
         }
 
-        if (keyMapping != null) {
-            keyMapping.isDown = state
-        }
-
-        val current = player.input.keyPresses
-
-        val newInput = Input(
-            if (key == InputKey.FORWARD) state else current.forward,
-            if (key == InputKey.BACKWARD) state else current.backward,
-            if (key == InputKey.LEFT) state else current.left,
-            if (key == InputKey.RIGHT) state else current.right,
-            if (key == InputKey.JUMP) state else current.jump,
-            if (key == InputKey.SNEAK) state else current.shift,
-            if (key == InputKey.SPRINT) state else current.sprint
-        )
-
-        player.input.keyPresses = newInput
-        mc.connection?.send(ServerboundPlayerInputPacket(newInput))
-        if (key == InputKey.SNEAK) {
-            player.isShiftKeyDown = state
-        }
+        keyMapping.isDown = state
     }
 
     fun leftClick() {
