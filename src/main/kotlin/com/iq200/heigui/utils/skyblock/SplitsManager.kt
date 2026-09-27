@@ -15,7 +15,7 @@ object SplitsManager {
     private var tickCounter: Long = 0L
 
     init {
-        // 監聽聊天訊息來觸發計時點
+
         on<ChatPacketEvent> {
             if (value == "Starting in 1 second.") {
                 tickCounter = 0L
@@ -40,7 +40,7 @@ object SplitsManager {
 
                 currentSplit.time = System.currentTimeMillis()
                 currentSplit.ticks = tickCounter
-                // 這裡不再呼叫任何發送訊息的代碼，僅更新數據
+
             }
         }
 
@@ -51,9 +51,9 @@ object SplitsManager {
         }
     }
 
-    /**
-     * 計算並回傳目前的分割時間
-     */
+
+
+
     fun getAndUpdateSplitsTimes(currentSplits: SplitsGroup): Triple<List<Long>, List<Long>, Int> {
         if (currentSplits.splits.isEmpty() || currentSplits.splits[0].time == 0L)
             return Triple(List(currentSplits.splits.size) { 0L }, List(currentSplits.splits.size) { 0L }, -1)

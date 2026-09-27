@@ -113,7 +113,7 @@ object CameraHandler {
         }
     }
 
-    // 這些方法是提供給 Mixin 呼叫的 Hook
+
     @JvmStatic
     fun onGetCameraPos(cir : CallbackInfoReturnable<Vec3>) {
         if ((flags.toInt() and POSITION_FLAG.toInt()) == 0 || cameraPos == null) return
@@ -137,21 +137,21 @@ object CameraHandler {
 
     @JvmStatic
     fun onGetPositionForHit(vec: Vec3): Vec3 {
-        // 如果沒有設定 HIT_POS_FLAG，就回傳原本肉體的位置
+
         if ((flags.toInt() and HIT_POS_FLAG.toInt()) == 0 || hitPos == null) return vec
         return hitPos!!
     }
 
     @JvmStatic
     fun onGetRotationForHit(vec: Vec3): Vec3 {
-        // 如果沒有設定 HIT_ROT_FLAG，就回傳原本肉體的視角
+
         if ((flags.toInt() and HIT_ROT_FLAG.toInt()) == 0) return vec
         return hitRot
     }
 
     @JvmStatic
     fun hasAnyRotation(): Boolean {
-        // 檢查 flags 裡面是否包含 PITCH_FLAG 或 YAW_FLAG
+
         return (flags.toInt() and (PITCH_FLAG.toInt() or YAW_FLAG.toInt())) != 0
     }
 

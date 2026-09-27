@@ -51,7 +51,7 @@ class NumberSetting<E>(
     var isEditing = false
     private var inputText = ""
 
-    // ===== 自己維護的游標位置 =====
+
     private var cursorIndex = 0
 
     private var textBoundsLeftX = 0f
@@ -125,9 +125,9 @@ class NumberSetting<E>(
             val darkBgColor = Color(30, 30, 30, 255).rgb
             val borderColor = ClickGUIModule.clickGUIColor.rgba
 
-            val paddingLeft = 4f     // 左邊界距離文字多遠
-            val paddingRight = 4f    // 👉 右邊界距離文字多遠 (調整這個數字！)
-            val paddingTop = 3f      // 上邊界
+            val paddingLeft = 4f
+            val paddingRight = 4f
+            val paddingTop = 3f
             val paddingBottom = 1f
 
             val minBoxWidth = 20f
@@ -143,13 +143,13 @@ class NumberSetting<E>(
 
             NVGRenderer.text(currentNumberText, textBoundsLeftX, textBoundsY, fontSize, Colors.WHITE.rgba, font)
 
-            // ===== 核心：動態計算閃爍游標的精準位置 =====
+
             if ((System.currentTimeMillis() % 1000) > 500) {
-                // 算出「游標左邊的文字」有多寬，就能知道游標應該畫在哪個 X 座標上
+
                 val textBeforeCursor = currentNumberText.substring(0, cursorIndex.coerceIn(0, currentNumberText.length))
                 val cursorOffset = NVGRenderer.textWidth(textBeforeCursor, fontSize, font)
 
-                // 將游標精準畫在那個字元間隙
+
                 val cursorX = textBoundsLeftX + cursorOffset
                 NVGRenderer.rect(cursorX, textBoundsY - 1f, 1.2f, fontSize + 2f, Colors.WHITE.rgba, 0f)
             }
@@ -192,9 +192,9 @@ class NumberSetting<E>(
                 if (!isEditing) {
                     isEditing = true
                     inputText = getNumberDisplay()
-                    cursorIndex = inputText.length // 預設把游標放在最後面
+                    cursorIndex = inputText.length
                 } else {
-                    // ===== 核心：滑鼠點擊時，精準尋找離滑鼠最近的游標位置 =====
+
                     var bestIndex = 0
                     var minDiff = Float.MAX_VALUE
                     for (i in 0..inputText.length) {
@@ -234,7 +234,7 @@ class NumberSetting<E>(
 
     override fun keyPressed(input: KeyEvent): Boolean {
         if (isEditing) {
-            // ===== 核心：自己處理方向鍵與刪除鍵 =====
+
             when (input.key) {
                 InputConstants.KEY_LEFT -> if (cursorIndex > 0) cursorIndex--
                 InputConstants.KEY_RIGHT -> if (cursorIndex < inputText.length) cursorIndex++
@@ -274,10 +274,10 @@ class NumberSetting<E>(
 
     override fun keyTyped(input: CharacterEvent): Boolean {
         if (isEditing) {
-            // 注意：如果你的 CharacterEvent 屬性不叫 character (例如叫 char)，請自行修改下面這行
+
             val c = input.codepoint.toChar()
 
-            // ===== 核心：字元精準插入游標位置 =====
+
             if (c.isDigit() || c == '.' || c == '-') {
                 inputText = inputText.substring(0, cursorIndex) + c + inputText.substring(cursorIndex)
                 cursorIndex++

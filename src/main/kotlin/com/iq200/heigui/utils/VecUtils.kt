@@ -175,7 +175,7 @@ fun Vec3.divide(x: Double, y: Double, z: Double): Vec3 =
 fun Vec3.divide(f: Double): Vec3 =
     Vec3(this.x / f, this.y / f, this.z / f)
 
-// 2. 四捨五入與進位 (對應 RSM 的 round)
+
 fun Vec3.round(places: Int = 0): Vec3 {
     if (places == 0) return Vec3(x.roundToInt().toDouble(), y.roundToInt().toDouble(), z.roundToInt().toDouble())
     val factor = 10.0.pow(places.toDouble())
@@ -186,7 +186,7 @@ fun Vec3.round(places: Int = 0): Vec3 {
     )
 }
 
-// 3. 根據麥塊方向 (Direction) 位移 (對應 RSM 的 shift)
+
 fun Vec3.shift(dir: Direction, amount: Double): Vec3 =
     when (dir) {
         Direction.UP -> this.add(0.0, amount, 0.0)
@@ -197,7 +197,7 @@ fun Vec3.shift(dir: Direction, amount: Double): Vec3 =
         Direction.EAST -> this.add(amount, 0.0, 0.0)
     }
 
-// 4. JSON 序列化 (對應 RSM 的 getAsJsonPrimitive / fromJsonPrimitive)
+
 fun Vec3.toJsonPrimitive(): JsonPrimitive =
     JsonPrimitive("$x $y $z")
 
@@ -207,9 +207,9 @@ fun JsonPrimitive.toVec3(): Vec3 {
     return Vec3(parts[0].toDouble(), parts[1].toDouble(), parts[2].toDouble())
 }
 
-// 5. 伴生物件工廠方法 (對應 RSM 的 static fromRotation)
-// 因為 Kotlin 無法直接對未聲明 Companion 的 Java 類別 (Vec3) 加 Companion 擴充
-// 所以我們提供一個檔案層級的靜態函數
+
+
+
 fun vec3FromRotation(pitch: Float, yaw: Float): Vec3 {
     val f = cos(-yaw * 0.017453292 - Math.PI)
     val f1 = sin(-yaw * 0.017453292 - Math.PI)

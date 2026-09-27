@@ -97,7 +97,7 @@ object VampireTracker: Module(
 
         val sortedLoots = displayLoots.entries.sortedByDescending { getLootPriority(it.key) }
 
-        // 遍歷所有記錄的掉落物並畫在 HUD 上
+
         for ((itemName, count) in sortedLoots) {
             y += 10
 
@@ -108,7 +108,7 @@ object VampireTracker: Module(
                 .append(itemComp)
                 .append(Component.literal(": $count").withStyle(ChatFormatting.GRAY))
 
-            // 渲染
+
             text(fullComponent, 0, y, Colors.WHITE)
 
             val w = mc.font.width(fullComponent)
@@ -135,7 +135,7 @@ object VampireTracker: Module(
     init {
         loadTrackerData()
 
-        on<TickEvent.Start> { // 或是 TickEvent.Start，依據你的架構
+        on<TickEvent.Start> {
             if (mc.player == null || mc.level == null) {
                 lastTickTime = 0L
                 return@on
@@ -151,26 +151,26 @@ object VampireTracker: Module(
 
             val lines = getScoreboardLines()
 
-            var currentlyHasQuest = false // 本回合是否在計分板找到任務
+            var currentlyHasQuest = false
             var currentKills = -1
             var currentlyBossSpawned = false
 
-            // --- 解析計分板 ---
+
             for (i in lines.indices) {
                 val cleanLine = lines[i].noControlCodes.trim()
 
                 if (cleanLine == "Slayer Quest") {
-                    // 往下找 1~3 行確認是不是 Bloodfiend 以及進度
+
                     for (j in 1..3) {
                         if (i + j >= lines.size) break
                         val subLine = lines[i + j].noControlCodes.trim()
 
-                        // 👇 確認任務是 Riftstalker Bloodfiend
+
                         if (subLine.contains("Riftstalker Bloodfiend")) {
                             currentlyHasQuest = true
                         }
 
-                        // 確認狀態
+
                         if (subLine.contains("Slay the boss!")) {
                             currentlyBossSpawned = true
                         } else {
@@ -180,7 +180,7 @@ object VampireTracker: Module(
                             }
                         }
                     }
-                    break // 找到 Slayer Quest 區塊就可以跳出迴圈了
+                    break
                 }
             }
 
@@ -247,30 +247,30 @@ object VampireTracker: Module(
 
             var itemName: String? = null
 
-            // 特殊處理：這兩本書必須強制定色（依據你的指示：第二個是 Quantum III，最後一個是 The One IV）
+
             if (cleanMsg.contains("DROP!") && cleanMsg.contains("(Enchanted Book Bundle)")) {
                 var isGold = false
 
-                // 拆解整句聊天訊息，尋找包含 "Enchanted Book Bundle" 的片段
+
                 for (part in component.toFlatList()) {
                     if (part.string.contains("Enchanted Book Bundle")) {
 
-                        // 取得該片段的顏色
+
                         val textColor = part.style.color
 
-                        // 比對顏色值是否等於 ChatFormatting.GOLD (整數值)
+
                         if (textColor == TextColor.GOLD) {
                             isGold = true
                         }
 
-                        break // 找到了就跳出迴圈，不用繼續往下找
+                        break
                     }
                 }
 
                 if (isGold) {
-                    itemName = "The One IV" // 金色書是 The One IV
+                    itemName = "The One IV"
                 } else {
-                    itemName = "Quantum III" // 其他顏色 (例如藍色) 則是 Quantum III
+                    itemName = "Quantum III"
                 }
             }
             else if (cleanMsg.contains("(")) {
@@ -307,7 +307,7 @@ object VampireTracker: Module(
                 }
             }
 
-            // 3. 寫入以 String 為 Key 的 Map 與 Config
+
             if (itemName != null) {
                 loots[itemName] = loots.getOrDefault(itemName, 0) + 1
                 saveTrackerData()
@@ -318,12 +318,12 @@ object VampireTracker: Module(
 
 
     private fun saveTrackerData() {
-        // 先複製目前的狀態，避免在多執行緒環境下讀寫同一個 Map 導致 ConcurrentModificationException
+
         val currentKills = bossesKilled
         val currentUptime = totalUptimeMs
         val currentLoots = loots.toMutableMap()
 
-        // 放到背景執行，防止卡頓主執行緒
+
         thread {
             trackerConfig.update { data ->
                 data.bossesKilled = currentKills

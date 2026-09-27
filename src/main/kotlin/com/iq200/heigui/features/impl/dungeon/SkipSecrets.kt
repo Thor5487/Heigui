@@ -32,7 +32,7 @@ object SkipSecrets : Module (
 
         val maxSkippable = DungeonUtils.totalSecrets - DungeonUtils.idealNeededSecretsAmoount
 
-        // 🌟 直接將 Map 裡面所有的 values 加總，就是目前的總 Skipped 數量！
+
         val totalSkippedSecrets = skippedRoomsMap.values.sum()
 
 
@@ -82,22 +82,22 @@ object SkipSecrets : Module (
                     lastKnownRoomFound = ActionBarParser.currentSecrets
                     lastKnownRoomTotal = ActionBarParser.maxSecrets
 
-                    // 🌟 新增機制：如果是第二次回來的房間 (本來就存在於 Map 中)，隨時即時更新數值！
+
                     if (skippedRoomsMap.containsKey(currentRoomName) || lastKnownRoomFound > 0) {
                         val currentSkipped = lastKnownRoomTotal - lastKnownRoomFound
                         if (currentSkipped > 0) {
                             skippedRoomsMap[currentRoomName] = currentSkipped
                         } else {
-                            // 如果回頭把這間完全清乾淨了 (變為 0)，立刻從 Map 拔除，減少已跳過計數
+
                             skippedRoomsMap.remove(currentRoomName)
                         }
                     }
                 }
-                // 🌟 如果地圖掃描器明確表示這間房根本沒有 Secret (例如 Miniboss 房)
+
                 else if (currentRoomTotalSecrets == 0) {
                     lastKnownRoomFound = 0
                     lastKnownRoomTotal = 0
-                    // 確保絕對不會有髒資料殘留在這間房
+
                     skippedRoomsMap.remove(currentRoomName)
                 }
             }

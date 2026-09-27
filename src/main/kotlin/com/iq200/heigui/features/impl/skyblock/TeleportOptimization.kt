@@ -110,12 +110,12 @@ object TeleportOptimization : Module (
 
             val startPos = PositionMoveRotation.of(player)
             val newPos = PositionMoveRotation.calculateAbsolute(startPos, packet.change(), packet.relatives())
-            // ZPCM 邏輯：就算不是我們觸發的 TP，只要設定開啟 ZPCM，就去跑比對邏輯
+
             if (zpcmEnabled) {
                 handleZpcm(newPos)
             }
 
-            // NoRotate 邏輯：判斷這是不是我們預期的武器傳送
+
             if (noRotateSent.isNotEmpty()) {
                 noRotateSent.removeAt(0)
                 noRotatePackets.add(packet)
@@ -126,7 +126,7 @@ object TeleportOptimization : Module (
 
     @JvmStatic
     fun handleTp(packet: ClientboundPlayerPositionPacket, connection: Connection, ci: CallbackInfo) {
-        // 如果這個封包不在我們的攔截清單裡（例如普通的 /warp），就放行給原版處理
+
         if (!noRotatePackets.contains(packet)) return
 
         noRotatePackets.remove(packet)
@@ -143,8 +143,10 @@ object TeleportOptimization : Module (
 
         player.setOldPosAndRot(newOldPlayerPos.position(), player.yRotO, player.xRotO)
 
+        // Since 26.3 this acknowledgement includes movement; sending another PosRot packet duplicates it.
         connection.send(ServerboundAcceptTeleportationPacket(packet.id, newPos.position().x, newPos.position().y, newPos.position().z, newPos.yRot(), newPos.xRot()))
-        connection.send(ServerboundMovePlayerPacket.PosRot(player.x, player.y, player.z, newPos.yRot(), newPos.xRot(), false, false))
+        mc.level?.blockStatePredictionHandler?.onTeleport()
+        mc.gameMode?.stopDestroyBlock()
 
         val accessor = player as LocalPlayerAccessor
         accessor.setYRotLast(newPos.yRot())
@@ -222,14 +224,14 @@ object TeleportOptimization : Module (
             val distance = getTpDistance(stack)
             if (distance == 0) return
 
-            // 預測傳送目標
+
             val prediction = EtherUtils.predictTeleport(distance.toInt(), currentPos, yaw, pitch) ?: return
 
-            // 修正目標 (將 feet 位置轉為可站立的中心)
+
             var target = prediction.subtract(0.0, 1.0, 0.0)
             target = resolveZptpTarget(target) ?: return
 
-            // 如果位置沒變，直接 return
+
             if (target.toBlockPos() == currentPos.toBlockPos()) return
 
             renderPos = target
@@ -305,24 +307,24 @@ object TeleportOptimization : Module (
         val id = stack.itemId
 
         return when {
-            // Wither Impact 武器系列 (設定為 >= 150，對應終極明智 V)
+
             id.containsOneOf("NECRON_BLADE", "SCYLLA", "HYPERION", "VALKYRIE", "ASTRAEA") -> {
                 currentMana >= 150
             }
-            // AOTE / AOTV 傳送系列 (設定為 >= 50)
+
             id.containsOneOf("ASPECT_OF_THE_END", "ASPECT_OF_THE_VOID", "ETHERWARP_CONDUIT", "ASPECT_OF_THE_LEECH_1", "ASPECT_OF_THE_LEECH_2", "ASPECT_OF_THE_LEECH_3") -> {
                 currentMana >= 50
             }
-            else -> true // 其他未知傳送物品預設放行，避免誤擋
+            else -> true
         }
     }
 
     // ==========================================
-    // CameraPositionProvider 介面實作區
+
     // ==========================================
 
     override fun shouldOverridePosition(): Boolean {
-        // 嚴格遵守條件：必須開啟 ZPCM + 開啟 NoRotate + 已經有算好預判座標
+
         return enabled && zpcmEnabled && renderPos != null
     }
 
@@ -331,7 +333,7 @@ object TeleportOptimization : Module (
     }
 
     override fun shouldOverrideHitPos(): Boolean {
-        // 讓你在預判的相機位置可以左鍵/右鍵方塊與實體
+
         return false
     }
 

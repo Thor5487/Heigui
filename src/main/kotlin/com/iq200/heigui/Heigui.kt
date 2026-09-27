@@ -21,7 +21,7 @@ import com.iq200.heigui.utils.skyblock.dungeon.ScanUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import net.fabricmc.api.ClientModInitializer
-import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback // 🌟 引入 Fabric 指令註冊
+import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents
 import net.fabricmc.fabric.api.client.rendering.v1.PictureInPictureRendererRegistry
 import net.fabricmc.loader.api.FabricLoader
@@ -63,7 +63,7 @@ object Heigui : ClientModInitializer {
 
         ClientLifecycleEvents.CLIENT_STOPPING.register {
             logger.info("[Heigui] Saving configurations before shutdown...")
-            ModuleManager.saveConfigurations() // 存 ModuleConfig
+            ModuleManager.saveConfigurations()
         }
 
         ClientCommandRegistrationCallback.EVENT.register { dispatcher, _ ->
@@ -82,10 +82,10 @@ object Heigui : ClientModInitializer {
         loadCoreFeatures()
     }
 
-    /**
-     * 將牽涉到遊戲底層邏輯與模組掛載的程式碼集中在這裡。
-     * 只有驗證成功（或是免費版）才會被呼叫，確保未授權時模組只是一具空殼。
-     */
+
+
+
+
     private fun loadCoreFeatures() {
         listOf(
             this, LocationUtils, TickTasks,

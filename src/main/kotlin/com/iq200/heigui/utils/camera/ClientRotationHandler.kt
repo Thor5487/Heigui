@@ -90,17 +90,17 @@ object ClientRotationHandler : CameraRotationProvider {
 
     @JvmStatic
     fun adjustInputsForRotation(inputs: Input): Input {
-        // 1. 檢查是否要完全禁用鍵盤
+
         if (!allowInputs) return Input(false, false, false, false, false, false, false)
 
-        // 2. 檢查是否有任何 Provider 不希望我們調整移動方向
+
         val shouldAdjust = providers.all { it.shouldAdjustMovement() }
         if (!shouldAdjust) {
-            // 如果不調整，就直接回傳原始的輸入，這樣移動就會跟隨本體
+
             return inputs
         }
 
-        // 3. 如果以上都通過了，才執行原本的視角跟隨移動邏輯
+
         val player = mc.player ?: return inputs
         if (!desynced || clientYaw.isNaN()) return inputs
 
@@ -200,6 +200,6 @@ object ClientRotationHandler : CameraRotationProvider {
         forwardRemainder = 0f
         strafeRemainder = 0f
         lastPausedState = false
-        // 我們不需要手動清除 providers，因為 CameraHandler 會自動處理
+
     }
 }

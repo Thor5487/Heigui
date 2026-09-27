@@ -15,6 +15,7 @@ import com.iq200.heigui.utils.PlayerUtils
 import com.iq200.heigui.utils.lore
 import com.iq200.heigui.utils.loreString
 import com.iq200.heigui.utils.modMessage
+import com.iq200.heigui.utils.noControlCodes
 import com.iq200.heigui.utils.skyblock.PriceParser
 import com.iq200.heigui.utils.skyblock.PriceUtils
 import com.iq200.heigui.utils.toComponent
@@ -22,6 +23,7 @@ import com.iq200.heigui.utils.toJsonString
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen
 import net.minecraft.network.chat.Component
 import net.minecraft.network.chat.HoverEvent
+import net.minecraft.network.protocol.game.ServerboundPunchPacket
 import net.minecraft.world.InteractionHand
 import net.minecraft.world.item.component.SwingAnimation
 import net.minecraft.world.entity.Entity
@@ -41,20 +43,20 @@ data class IgnoreData(
 data class TrackerItem(
     var coloredName: String = "",
     var count: Int = 0,
-    var totalValue: Double = 0.0 // 物品開出當下的歷史總價值
+    var totalValue: Double = 0.0
 )
 
 data class FloorTracker(
     var runsOpened: Int = 0,
     var kismetsUsed: Int = 0,
-    var kismetCost: Double = 0.0,     // 該樓層消耗的羽毛歷史總成本
-    var keysUsed: Int = 0,            // 【新增】該樓層消耗的鑰匙總量
+    var kismetCost: Double = 0.0,
+    var keysUsed: Int = 0,
     var keyCost: Double = 0.0,
-    var chestCost: Double = 0.0,      // 該樓層開箱歷史總花費
+    var chestCost: Double = 0.0,
     val items: MutableMap<String, TrackerItem> = mutableMapOf()
 )
 
-// 包含全域總計與各樓層明細
+
 data class TrackerConfigData(
     val floors: MutableMap<String, FloorTracker> = mutableMapOf()
 )
@@ -110,7 +112,7 @@ object AutoCroesus : Module(
         WAITING_FOR_MENU,
         WAITING_FOR_NEXT_PAGE,
         SCANNING_MAIN_PAGE,
-        WAITING_FOR_CHEST_MENU, // 點擊局數後，等待該局的寶箱畫面加載
+        WAITING_FOR_CHEST_MENU,
         INSIDE_LOOT_CHEST,
         WAITING_FOR_CONFIRM_MENU,
         IN_CONFIRM_MENU,
@@ -139,11 +141,11 @@ object AutoCroesus : Module(
                 modMessage("§c[AutoCroesus] Out of Dungeon Chest Keys! Script paused.")
                 modMessage("§e[AutoCroesus] Buy a key and type /hg ac go to resume.")
 
-                // 阻斷後續的紀錄與開啟邏輯
+
                 currentState = CroesusState.IDLE
                 pendingChestData = null
 
-                // 暫停腳本，但保留 pendingKeyRun 等狀態不清除
+
                 stop(clearPending = false)
             }
         }
@@ -162,7 +164,7 @@ object AutoCroesus : Module(
             if (currentTime - lastActionTime < clickDelay) return@on
 
             if (currentState == CroesusState.WAITING_FOR_REOPEN) {
-                if (mc.gui.screen() == null) { // 只有當介面真的被伺服器關閉後，才進行下一步
+                if (mc.gui.screen() == null) {
                     saveRunRecord(pendingChestData)
                     pendingChestData = null
 
@@ -179,23 +181,24 @@ object AutoCroesus : Module(
                         val npc = findCroesusNPC(5.0)
                         if (npc == null) {
                             modMessage("§c[AutoCroesus] Error: Croesus NPC not found nearby after reopening!")
-                            stop() // 找不到就停止腳本
+                            stop()
                             return@execute
                         }
                         mc.gameMode?.attack(player, npc as Entity)
-                        player.swing(InteractionHand.MAIN_HAND, SwingAnimation.DEFAULT, false)
+                        player.swing(InteractionHand.MAIN_HAND, player.mainHandItem.attackAnimation, false)
+                        player.connection.send(ServerboundPunchPacket.INSTANCE)
                         currentState = CroesusState.WAITING_FOR_MENU
                         lastActionTime = System.currentTimeMillis()
                     }
                 }
-                // 如果介面還開著（可能是伺服器延遲，或是背包滿了買失敗），就繼續在原地等待
+
                 return@on
             }
 
             val currentScreen = mc.gui.screen() as? AbstractContainerScreen<*> ?: return@on
             val menuTitle = currentScreen.title.string.replace(Regex("§[0-9a-fk-or]"), "")
 
-            // 就像路由台一樣，把任務指派給對應的函式處理
+
             when (currentState) {
                 CroesusState.WAITING_FOR_MENU -> handleWaitingForMenu(menuTitle)
                 CroesusState.WAITING_FOR_NEXT_PAGE -> handleWaitingForNextPage(menuTitle)
@@ -219,7 +222,7 @@ object AutoCroesus : Module(
     private fun handleScanningMainPage(currentScreen: AbstractContainerScreen<*>, currentTime: Long) {
         val menu = currentScreen.menu
         var foundUnopened = false
-        val cleanMenuTitle = currentScreen.title.string.replace(Regex("禮[0-9a-fk-or]"), "")
+        val cleanMenuTitle = currentScreen.title.string.noControlCodes
 
         val player = mc.player ?: return
 
@@ -277,7 +280,7 @@ object AutoCroesus : Module(
                 lastActionTime = currentTime
             } else {
                 if (pendingKeyRun) {
-                    // 防呆：如果找不到鑰匙局數，自動重置狀態並停止
+
                     modMessage("§c[AutoCroesus] Warning: Pending key run, but no available Dungeon Chest Keys found.")
                     pendingKeyRun = false
                     pendingKeyRunSlot = -1
@@ -345,7 +348,7 @@ object AutoCroesus : Module(
         val bestChestData = sortedChests.getOrNull(0)?.second
         val maxProfit = bestChestData?.profit ?: Double.NEGATIVE_INFINITY
 
-        // 🌟 抓取第二名寶箱
+
         val secondChestSlot = sortedChests.getOrNull(1)?.first ?: -1
         val secondChestData = sortedChests.getOrNull(1)?.second
 
@@ -397,7 +400,8 @@ object AutoCroesus : Module(
 
                 modMessage("§a[AutoCroesus] Started! Attempting to open Croesus menu...")
                 mc.gameMode?.attack(player, npc as Entity)
-                player.swing(InteractionHand.MAIN_HAND, SwingAnimation.DEFAULT, false)
+                player.swing(InteractionHand.MAIN_HAND, player.mainHandItem.attackAnimation, false)
+                player.connection.send(ServerboundPunchPacket.INSTANCE)
                 startProcess()
 
             }
@@ -430,16 +434,16 @@ object AutoCroesus : Module(
 
         if (croesusStands.isEmpty()) return null
 
-        // 2. 遍歷所有玩家實體 (Player)
-        // 我們只搜尋距離 ArmorStand 極近的實體 (距離 < 0.5 格)
+
+
         for (stand in croesusStands) {
             val standPos = stand.position()
 
             val targetPlayer = level.players().find { player ->
-                // 排除自己
+
                 if (player == mc.player) return@find false
 
-                // 計算距離 (位置重合度)
+
                 val dist = player.position().distanceToSqr(standPos)
                 dist == 0.0
             }
@@ -504,14 +508,14 @@ object AutoCroesus : Module(
             floorData.runsOpened++
         }
 
-        // 計算這局當下的 Kismet 羽毛總成本
+
         val kismetCost = PriceParser.parseItemValue("Kismet Feather") * currentRunKismets
 
-        // 累加羽毛耗損 (全域 + 樓層)
+
         floorData.kismetsUsed += currentRunKismets
         floorData.kismetCost += kismetCost
 
-        // 如果這局有買寶箱，累加開箱成本與收益
+
         if (boughtData != null) {
             floorData.chestCost += boughtData.cost
 
@@ -520,7 +524,7 @@ object AutoCroesus : Module(
                 floorData.keysUsed++
                 floorData.keyCost += PriceParser.parseItemValue("Dungeon Chest Key")
             }
-            // 存入這局當下的物品價值
+
             for (item in boughtData.items) {
                 val drop = floorData.items.getOrPut(item.cleanName) { TrackerItem("", 0, 0.0) }
                 if (drop.coloredName.isEmpty()) {
@@ -545,7 +549,7 @@ object AutoCroesus : Module(
                         val lastIndex = validParts.lastIndex
                         val lastPart = validParts[lastIndex]
 
-                        // trimEnd() 只會清除字串右邊的空白
+
                         validParts[lastIndex] = Pair(lastPart.first.trimEnd(), lastPart.second)
                     }
 
@@ -590,7 +594,7 @@ object AutoCroesus : Module(
                 }
 
                 if (!isIgnored && cleanLine.isNotEmpty()) {
-                    val itemValue = PriceParser.parseItemValue(cleanLine) // 取得當下物價
+                    val itemValue = PriceParser.parseItemValue(cleanLine)
                     totalValue += itemValue
 
                     var count = 1
@@ -611,10 +615,10 @@ object AutoCroesus : Module(
     private fun makeDecision(containerId: Int, player: Player, maxProfit: Double, bestChestSlot: Int, bestChestData: ChestData?, bedrockChestSlot: Int, bedrockChestData: ChestData?, secondChestSlot: Int, secondChestData: ChestData?, menu: AbstractContainerMenu) {
         val targetProfitCoins = targetProfit * 1_000_000.0
 
-        // 1. 判斷是否需要重骰：只拿 Bedrock 寶箱的利潤來跟目標比較！
+
         if (useKismets && currentKismetAvailable && bedrockChestSlot != -1 && bedrockChestData != null) {
 
-            // 如果 Bedrock 箱子沒達標，直接無視其他箱子，果斷重骰！
+
             if (bedrockChestData.profit < targetProfitCoins) {
                 intendingToReroll = true
                 mc.gameMode?.handleContainerInput(containerId, bedrockChestSlot, 0, ContainerInput.PICKUP, player)
@@ -625,7 +629,7 @@ object AutoCroesus : Module(
             }
         }
 
-        // 2. 判斷是購買還是略過 (當無法重骰，或 Bedrock 已經達標時，才來選全場最賺的)
+
         intendingToReroll = false
         if (maxProfit > 0 && bestChestSlot != -1 && bestChestData != null) {
             val keyTargetProfitCoins = keyTargetProfit * 1_000_000.0
@@ -643,7 +647,7 @@ object AutoCroesus : Module(
             currentState = CroesusState.WAITING_FOR_CONFIRM_MENU
             lastActionTime = System.currentTimeMillis()
         } else {
-            // 【略過】：全場都是垃圾，連買都不買，直接返回
+
             saveRunRecord(null)
 
             val backSlot = findSlotByItemName(menu, "Go Back") ?: findSlotByItemName(menu, "Back")
@@ -662,7 +666,7 @@ object AutoCroesus : Module(
     private fun handleWaitingForConfirmMenu(menuTitle: String) {
         val targetChestTitles = listOf("Wood", "Gold", "Diamond", "Emerald", "Obsidian", "Bedrock")
 
-        // 如果標題包含任何一個寶箱名稱，代表已經成功進入確認畫面
+
         if (targetChestTitles.any { menuTitle.contains(it, ignoreCase = true) }) {
             currentState = CroesusState.IN_CONFIRM_MENU
         }
@@ -675,21 +679,21 @@ object AutoCroesus : Module(
         val player = mc.player ?: return
 
 
-        // 根據你的截圖，尋找名稱包含 "Open Reward Chest" 的格子
+
         if (intendingToReroll) {
             // ============================
-            // 情況 A：為了重骰而進入此介面
+
             // ============================
             val rerollSlot = findSlotByItemName(menu, "Reroll")
             if (rerollSlot != -1) {
                 mc.gameMode?.handleContainerInput(menu.containerId, rerollSlot, 0, ContainerInput.PICKUP, player)
 
-                // 更新羽毛使用狀態與統計資料
+
                 currentRunKismets++
-                currentKismetAvailable = false // 標記這局已經骰過了
+                currentKismetAvailable = false
                 intendingToReroll = false
 
-                // 點擊重骰後，伺服器會把我們退回寶箱選擇介面 (第二層)，準備讀取新箱子
+
                 currentState = CroesusState.WAITING_FOR_CHEST_MENU
                 lastActionTime = currentTime
             } else {
@@ -698,13 +702,13 @@ object AutoCroesus : Module(
             }
         } else {
             // ============================
-            // 情況 B：為了購買而進入此介面
+
             // ============================
             val confirmSlot = findSlotByItemName(menu, "Open Reward Chest")
             if (confirmSlot != -1) {
                 mc.gameMode?.handleContainerInput(menu.containerId, confirmSlot, 0, ContainerInput.PICKUP, player)
 
-                // 點擊後，伺服器會扣款、給予物品，並將介面關閉
+
                 currentState = CroesusState.WAITING_FOR_REOPEN
                 lastActionTime = currentTime
             } else {
@@ -757,7 +761,7 @@ object AutoCroesus : Module(
                 val percent = if (totalSell > 0) (item.totalValue / totalSell) * 100 else 0.0
                 val originalComponent = item.coloredName.toComponent()
                 hoverText.append(Component.literal("§b${item.count}x "))
-                hoverText.append(originalComponent) // 直接塞入還原後的 Component
+                hoverText.append(originalComponent)
                 hoverText.append(Component.literal(" §8(§6${"%,.0f".format(unitPrice)}§8) §f= §e${"%,.0f".format(item.totalValue)} §7(${String.format("%.2f", percent)}%)\n"))
                 displayed++
             } else {
@@ -770,7 +774,7 @@ object AutoCroesus : Module(
             hoverText.append(Component.literal("§a... and $remainingTypes more §8(§6${"%,.0f".format(remainingValue)}§8)\n"))
         }
 
-        // 把羽毛和開箱子的成本分開列出，更直觀
+
         hoverText.append(Component.literal("§cTotal Kismet Cost: ${"%,.0f".format(kismetCost)} §8(${floorData.kismetsUsed} used)\n"))
         hoverText.append(Component.literal("§cTotal Key Cost: ${"%,.0f".format(keyCost)} §8(${floorData.keysUsed} used)\n"))
         hoverText.append(Component.literal("§cTotal Chest Cost: ${"%,.0f".format(chestCost)}\n"))
@@ -789,17 +793,17 @@ object AutoCroesus : Module(
         val floor = floorInput.lowercase()
         val globalData = trackerConfig.data
 
-        // 檢查該樓層是否存在，或者是否有開過局數
+
         val floorData = globalData.floors[floor]
         if (floorData == null || floorData.runsOpened == 0) {
             modMessage("§c[AutoCroesus] No tracker data found to reset for floor: §e${floor.uppercase()}")
             return
         }
 
-        // 從 floors 移除該樓層的資料
+
         globalData.floors.remove(floor)
 
-        // 立即儲存設定檔
+
         trackerConfig.save()
 
         modMessage("§a[AutoCroesus] Successfully reset all tracker data for floor: §e${floor.uppercase()}")

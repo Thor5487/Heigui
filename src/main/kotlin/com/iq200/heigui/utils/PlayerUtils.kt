@@ -29,7 +29,7 @@ enum class InputKey {
 
 fun playSoundSettings(soundSettings: Triple<String, Float, Float>) {
     val (soundName, volume, pitch) = soundSettings
-    // 在官方映射中，Identifier 已改名為 ResourceLocation
+
     val identifier = Identifier.tryParse(StringUtil.filterText(soundName)) ?: return
     playSoundAtPlayer(SoundEvent.createVariableRangeEvent(identifier), volume, pitch)
 }
@@ -49,7 +49,7 @@ fun alert(title: String, playSound: Boolean = true) {
 }
 
 fun getPositionString(): String {
-    // 這裡加上了 () 來適應最新的官方映射
+
     with(mc.player?.blockPosition() ?: BlockPos(0, 0, 0)) {
         return "x: $x, y: $y, z: $z"
     }
@@ -86,15 +86,15 @@ object PlayerUtils {
         }
     }
 
-    /**
-     * @param key 要控制的按鍵 (例如 InputKey.SNEAK)
-     * @param state true代表按下，false代表鬆開
-     */
+
+
+
+
     fun setKeyState(key: InputKey, state: Boolean) {
         val options = mc.options
         val player = mc.player ?: return
 
-        // 建立一個全新的 Input，繼承舊狀態，唯獨把你指定的 key 替換成新的 state
+
         val keyMapping: KeyMapping? = when (key) {
             InputKey.FORWARD -> options.keyUp
             InputKey.BACKWARD -> options.keyDown
@@ -103,7 +103,7 @@ object PlayerUtils {
             InputKey.JUMP -> options.keyJump
             InputKey.SNEAK -> options.keyShift
             InputKey.SPRINT -> options.keySprint
-            // 如果有擴充其他按鍵，可以加在這裡
+
             else -> null
         }
 
@@ -140,14 +140,14 @@ object PlayerUtils {
         (key as KeyMappingAccessor).clickCount++
     }
 
-    /**
-     * @param yaw 左右旋轉角度 (Y軸)
-     * @param pitch 上下俯仰角度 (X軸)
-     */
+
+
+
+
     fun setYawPitch(yaw: Float, pitch: Float) {
         val player = mc.player ?: return
 
-        // 這裡確保不用加上括號，因為這是直接寫入屬性
+
         player.yRot = yaw
         player.xRot = pitch
     }
@@ -187,11 +187,11 @@ object PlayerUtils {
     }
 
 
-    // 用來記錄旋轉狀態的內部變數
+
     enum class RotationMode {
         INACTIVE,
-        NORMAL, // 正常模式，直接修改 player 視角
-        BODY_ONLY // 只更新內部變數，等待 Mixin 注入
+        NORMAL,
+        BODY_ONLY
     }
 
     private var rotationMode = RotationMode.INACTIVE
@@ -206,17 +206,17 @@ object PlayerUtils {
     private var rotationSpeed: Float = 0f
     private var isFirstTick = true
 
-    // 內部儲存的身體邏輯視角
+
     private var bodyYaw: Float = 0f
     private var bodyPitch: Float = 0f
-    // 新增：一個可以提供動態目標的函式
+
     private var targetProvider: (() -> Pair<Float?, Float?>)? = null
 
 
-    /**
-     * 啟動平滑旋轉
-     * @param bodyOnly 如果為 true，則啟用安全模式，避免與渲染衝突
-     */
+
+
+
+
     fun smoothRotate(
         yaw: Float?,
         pitch: Float?,
@@ -230,28 +230,28 @@ object PlayerUtils {
             return
         }
 
-        // 儲存目標提供者和旋轉速度
+
         this.targetProvider = targetProvider
         this.rotationSpeed = speed
 
-        // 如果不是動態目標，才設定靜態目標
+
         if (targetProvider == null) {
             this.targetYaw = yaw?.let { Mth.wrapDegrees(it) }
             this.targetPitch = pitch?.coerceIn(-90f, 90f)
         }
         else {
-            // 【重要修正】：如果使用了動態目標 (targetProvider)，
-            // 必須把殘留的靜態目標清空，確保 Tick 1 能正確與真實視角同步！
+
+
             this.targetYaw = null
             this.targetPitch = null
         }
 
-        // 設定旋轉模式
+
         rotationMode = if (bodyOnly) RotationMode.BODY_ONLY else RotationMode.NORMAL
 
         this.isFirstTick = true
 
-        // 初始化時，從當前玩家視角開始
+
         bodyYaw = player.yRot
         bodyPitch = player.xRot
     }
@@ -261,22 +261,22 @@ object PlayerUtils {
         targetProvider = null
     }
 
-    // 這個方法將由 MixinLocalPlayer 在每個 Tick 的最開始呼叫
+
     fun onAiStep() {
         if (rotationMode != RotationMode.BODY_ONLY) return
         val player = mc.player ?: return
 
         handleRotationLogic()
 
-        // 在最早的時機更新玩家的邏輯視角
+
         if (targetYaw != null) {
             player.yRot = bodyYaw
         } else {
-            // 如果沒指定目標，把內部的 bodyYaw 與真實視角同步
+
             bodyYaw = player.yRot
         }
 
-        // 【修正點】：同理，處理 pitch
+
         if (targetPitch != null) {
             player.xRot = bodyPitch
         } else {
@@ -284,7 +284,7 @@ object PlayerUtils {
         }
     }
 
-    // 在 on<TickEvent.Start> 中，我們只處理 NORMAL 模式
+
     init {
         EventBus.subscribe(this)
         on<TickEvent.Start> {
@@ -293,7 +293,7 @@ object PlayerUtils {
 
             handleRotationLogic()
 
-            // NORMAL 模式下一樣的判斷
+
             if (targetYaw != null) {
                 player.yRot = bodyYaw
             } else {
@@ -310,8 +310,8 @@ object PlayerUtils {
 
     private fun handleRotationLogic() {
         if (isFirstTick) {
-            isFirstTick = false // 消耗掉旗標
-            return              // 直接返回，不做任何旋轉計算
+            isFirstTick = false
+            return
         }
 
         targetProvider?.let {

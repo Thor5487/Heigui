@@ -11,9 +11,9 @@ data class DungeonPlayer(
     var clazz: DungeonClass,
     var clazzLvl: Int,
     val playerSkin: PlayerSkin?,
-    var entity: Player? = null, // 做 ESP (透視外框) 或是判斷距離時會用到
+    var entity: Player? = null,
     var isDead: Boolean = false,
-    var deaths: Int = 0         // 計算分數時會用到
+    var deaths: Int = 0
 )
 
 enum class DungeonClass(

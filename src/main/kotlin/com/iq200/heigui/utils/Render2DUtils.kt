@@ -11,15 +11,15 @@ import kotlin.math.cos
 import kotlin.math.sin
 
 object Render2DUtils {
-    /**
-     * @param guiGraphics 遊戲傳遞過來的畫筆 (必須傳入！)
-     * @param centerX 圓心 X 座標
-     * @param centerY 圓心 Y 座標
-     * @param radius 圓的半徑
-     * @param color 圓的顏色
-     * @param thickness 線條粗細
-     * @param segments 圓的精細度
-     */
+
+
+
+
+
+
+
+
+
 
     fun drawHollowCircle(
         graphics: GuiGraphicsExtractor,
@@ -63,7 +63,7 @@ object Render2DUtils {
         val aspectRatio = window.screenWidth.toFloat() / window.screenHeight.toFloat()
         val farPlane = mc.options.renderDistance().get() * 16f * 4.0f
 
-        // 這行就是 26.1+ 版本的解答
+
         val projMatrix = Matrix4f().setPerspective(fovRadians, aspectRatio, 0.05f, farPlane)
 
         val clipPos = Vector4f(relX, relY, relZ, 1.0f)

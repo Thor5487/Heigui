@@ -111,7 +111,7 @@ object Vampire : Module(
         3 to setOf(
             Pair(7, 3), Pair(8, 2), Pair(7, 4), Pair(8, 1), Pair(8, 0), Pair(6, 5), Pair(6, 6),
             Pair(9, 3), Pair(8, 3), Pair(9, 2), Pair(9, 1), Pair(7, 6), Pair(8, 5), Pair(7, 5), Pair(8, 4), Pair(9, 0),
-            Pair(9, 4), Pair(7, 7) // 修正：確保這組乾淨歸屬第三層
+            Pair(9, 4), Pair(7, 7)
         ),
         4 to setOf(
             Pair(10, 1), Pair(10, 2), Pair(10, 3), Pair(10, 0), Pair(8, 6), Pair(9, 5),
@@ -130,7 +130,7 @@ object Vampire : Module(
     private var isWaitingForIchorSpawn = false
     private var ichorGraceTicks = 0
 
-    private val trackedKillerSpringIds = ConcurrentHashMap.newKeySet<Int>() // 判定是你的，用來畫線的白名單
+    private val trackedKillerSpringIds = ConcurrentHashMap.newKeySet<Int>()
     private val knownKillerSpringIds = ConcurrentHashMap.newKeySet<Int>()
 
     private var currentState: ImpelState = ImpelState.IDLE
@@ -167,7 +167,7 @@ object Vampire : Module(
     private var isHoldingAttack = false
 
     private val greenBlocksBuffer = ConcurrentHashMap.newKeySet<BlockPos>()
-    // --- ClientRotationProvider 實作 ---
+
     override fun isClientRotationActive() = isDecoupled
     override fun allowClientKeyInputs() = true
     override fun shouldAdjustMovement() = true
@@ -193,7 +193,7 @@ object Vampire : Module(
                 val state = packet.blockState
                 if (state.`is`(Blocks.DYED_TERRACOTTA.green())) {
                     val pos = packet.pos
-                    // 放寬條件，收集玩家周圍 50 格內的 Mania 更新
+
                     if (mc.player != null && pos.closerToCenterThan(myBoss.position(), 30.0)) {
                         greenBlocksBuffer.add(pos.immutable())
                     }
@@ -270,16 +270,16 @@ object Vampire : Module(
                     if (hit is EntityHitResult) {
                         val targetEntity = hit.entity
 
-                        // 檢查是否為 Killer Spring，且距離在 5 格以內
+
                         if (targetEntity.isKillerSpring() && mc.player!!.distanceTo(targetEntity) < 5.0) {
                             isHandlingKillerSpring = true
                             clickTickTimer++
 
-                            if (clickTickTimer >= 2) { // 每 2 ticks 觸發一次動作
+                            if (clickTickTimer >= 2) {
                                 PlayerUtils.leftClick()
                                 PlayerUtils.rightClick()
 
-                                // 歸零計時器，等待下個 2 ticks
+
                                 clickTickTimer = 0
                             }
                         } else {
@@ -305,17 +305,17 @@ object Vampire : Module(
                 if (entity is ArmorStand) {
                     val entityName = entity.name.string.noControlCodes.lowercase()
 
-                    // 只要周圍有包含 "spawned by" 的盔甲座，就視為進入打王狀態 (支援 Lootshare)
+
                     if (entityName.contains("spawned by")) {
                         anyBossNearby = true
 
-                        // 進一步確認是不是你自己的王 (用來處理 Twinclaws 和 Auto Ice)
+
                         if (entityName.contains(playerName)) {
                             myActiveBoss = entity
 
                             if (currentBossId != entity.id) {
                                 currentBossId = entity.id
-                                hasUsedTubaForBossSpawn = false // 標記這隻新王還沒吹過 Tuba
+                                hasUsedTubaForBossSpawn = false
 
                                 maxBossHealth = null
                                 currentBossHealth = null
@@ -341,7 +341,7 @@ object Vampire : Module(
 
                             if (skinBase64 == BOSS_SKIN_TEXTURE) {
                                 closestDistSqr = distSqr
-                                myActiveRealBoss = entity // 鎖定這隻真實的 NPC
+                                myActiveRealBoss = entity
                             }
                         }
                     }
@@ -353,19 +353,19 @@ object Vampire : Module(
                 if (entity.isKillerSpring()) {
                     currentSpringsInWorld.add(entity.id)
 
-                    // 如果這個實體是「第一次出現」在畫面上
+
                     if (!knownKillerSpringIds.contains(entity.id)) {
                         knownKillerSpringIds.add(entity.id)
 
-                        // 在它出現的瞬間，檢查它距離自己的 Boss 有多遠
+
                         if (myActiveBoss != null && myActiveBoss!!.distanceToSqr(entity) <= 25.0) {
-                            trackedKillerSpringIds.add(entity.id) // <= 5格，是我的彈簧！加入白名單
+                            trackedKillerSpringIds.add(entity.id)
                         }
                     }
                 }
             }
 
-            // 清理消失的彈簧實體 (不在畫面上的就從名單移除)
+
             knownKillerSpringIds.retainAll(currentSpringsInWorld)
             trackedKillerSpringIds.retainAll(currentSpringsInWorld)
 
@@ -380,13 +380,13 @@ object Vampire : Module(
                     if (entity is ArmorStand) {
                         val entityName = entity.name.string.noControlCodes.lowercase()
 
-                        // 確保這個盔甲座跟 Boss 是在同一根柱子上 (X, Z 座標幾乎相同)
+
                         val isMyBossColumn = abs(entity.x - currentBoss.x) < 0.5 &&
                                 abs(entity.z - currentBoss.z) < 0.5 && abs(entity.y - currentBoss.y) < 3
 
                         if (isMyBossColumn) {
 
-                            // 1. 抓取 Mania 時間
+
                             if (entityName.contains("mania") && entity.y >= currentBoss.y) {
                                 val match = Regex("mania\\s*([0-9.]+)s").find(entityName)
                                 val timeString = match?.groupValues?.get(1)
@@ -396,7 +396,7 @@ object Vampire : Module(
                                 }
                             }
 
-                            // 2. 抓取 Boss 血量
+
                             if (entityName.contains("❤") && entityName.contains("bloodfiend")) {
                                 val healthMatch = Regex("([0-9,]+)\\s*❤").find(entityName)
                                 val healthStr = healthMatch?.groupValues?.get(1)?.replace(",", "")
@@ -406,7 +406,7 @@ object Vampire : Module(
                                     if (hp != null) {
                                         currentBossHealth = hp
 
-                                        // 記錄最大血量
+
                                         if (maxBossHealth == null || hp > maxBossHealth!!) {
                                             maxBossHealth = hp
                                         }
@@ -419,7 +419,7 @@ object Vampire : Module(
                                 val countdown = match?.groupValues?.get(1)?.toFloatOrNull()
                                 if (countdown != null) {
                                     seeingIchorTextThisTick = true
-                                    // 倒數小於等於 0.5 秒，進入「準備抓取」狀態
+
                                     if (countdown <= 0.5f) {
                                         isWaitingForIchorSpawn = true
                                         ichorGraceTicks = 10
@@ -437,7 +437,7 @@ object Vampire : Module(
                 }
 
                 if (greenBlocksBuffer.isNotEmpty()) {
-                    // 第 2 步：尋找所有嫌疑人 (包含你的和路人的Boss)
+
                     val allBosses = mutableListOf<ArmorStand>()
                     mc.level!!.entitiesForRendering().forEach { entity ->
                         if (entity is ArmorStand) {
@@ -453,14 +453,14 @@ object Vampire : Module(
                     var winnerBestLayer: Int? = null
                     var winnerEvidenceBlocks = setOf<BlockPos>()
 
-                    // 第 3 步：比對與計分 (競標開始)
+
                     for (boss in allBosses) {
                         val bossPos = boss.blockPosition()
                         val bossX = bossPos.x
                         val bossY = bossPos.y
                         val bossZ = bossPos.z
 
-                        // 用來記錄「這隻 Boss」的每一層蒐集到了幾個方塊
+
                         val layerEvidenceMap = mutableMapOf<Int, MutableSet<BlockPos>>()
 
                         for (pos in greenBlocksBuffer) {
@@ -468,13 +468,13 @@ object Vampire : Module(
                             val dz = abs(pos.z - bossZ)
                             val dy = pos.y - bossY
 
-                            // 粗篩條件
+
                             if (dx <= 15 && dz <= 15 && dy in -5..-2) {
                                 val u = kotlin.math.max(dx, dz)
                                 val v = kotlin.math.min(dx, dz)
                                 val uvPair = Pair(u, v)
 
-                                // 將方塊歸類到對應的 Layer 中
+
                                 for ((layer, coords) in MANIA_LAYERS) {
                                     if (coords.contains(uvPair)) {
                                         layerEvidenceMap.computeIfAbsent(layer) { mutableSetOf() }.add(pos)
@@ -483,30 +483,30 @@ object Vampire : Module(
                             }
                         }
 
-                        // 結算這隻 Boss 的最高得分圈
+
                         for ((layer, blocks) in layerEvidenceMap) {
                             val currentScore = blocks.size
                             if (currentScore > highestScore) {
                                 highestScore = currentScore
                                 winnerBossId = boss.id
                                 winnerBestLayer = layer
-                                winnerEvidenceBlocks = blocks // 打包專屬的證據清單
+                                winnerEvidenceBlocks = blocks
                             }
                         }
                     }
 
-                    // 第 4 步：贏家全拿 (判定所有權)
+
                     if (winnerBossId != null && myActiveBoss != null && winnerBossId == myActiveBoss!!.id) {
-                        // 如果贏家是你自己的 Boss，才更新畫面
+
                         if (currentRenderedLayer != winnerBestLayer) {
                             maniaHighlightBlocks.clear()
                             currentRenderedLayer = winnerBestLayer
                         }
-                        // 只加入「吻合特徵的專屬證據方塊」，保證沒有路人的雜訊
+
                         maniaHighlightBlocks.addAll(winnerEvidenceBlocks)
                     }
 
-                    // 結算完畢，直接將整個待確認池清空銷毀
+
                     greenBlocksBuffer.clear()
                 }
 
@@ -526,10 +526,10 @@ object Vampire : Module(
                         }
                     }
 
-                    ichorGraceTicks-- // 每一幀扣除一點寬容值
+                    ichorGraceTicks--
 
                     if (ichorGraceTicks <= 0) {
-                        preExistingIchorIds.clear() // 寬容期結束，才清空舊血池快照
+                        preExistingIchorIds.clear()
                     }
                 }
 
@@ -553,12 +553,12 @@ object Vampire : Module(
             if (autoIce) {
                 var myTwinclawsStand: ArmorStand? = null
 
-                // 1. 先找出屬於「你」的那個 Boss 盔甲座
+
                 if (myActiveBoss != null) {
                     mc.level!!.entitiesForRendering().forEach { entity ->
                         if (entity is ArmorStand) {
                             val entityName = entity.name.string.noControlCodes.lowercase()
-                            // 檢查是否包含 twinclaws，且距離你的 Boss 盔甲座小於 3.0 格
+
                             if (entityName.contains("twinclaws") && entity.distanceTo(myActiveBoss!!) < 3.0f) {
                                 myTwinclawsStand = entity
                             }
@@ -574,7 +574,7 @@ object Vampire : Module(
                     if (timeRemaining <= 0.5f) {
                         if (!hasSwappedForCurrentTwinclaws) {
                             pendingIce = true
-                            hasSwappedForCurrentTwinclaws = true // 上鎖
+                            hasSwappedForCurrentTwinclaws = true
                         }
                     }
                 } else {
@@ -583,13 +583,13 @@ object Vampire : Module(
             }
 
             if (!isUsingItem) {
-                // 優先處理積欠的 Auto Ice
+
                 if (pendingIce) {
                     if (triggerAutoItem("holy ice")) {
-                        pendingIce = false // 成功觸發後，清除待辦標記
+                        pendingIce = false
                     }
                 }
-                // 2. 檢查是否需要吃 Melon (把血量與冷卻時間直接放進條件裡！)
+
                 else if (autoMelon && anyBossNearby && mc.player!!.health <= melonHealth.toFloat() && (System.currentTimeMillis() - lastMelonTime > MELON_COOLDOWN_MS)) {
                     if (triggerAutoItem("healing melon")) {
                         lastMelonTime = System.currentTimeMillis()
@@ -601,16 +601,16 @@ object Vampire : Module(
                         val steakSlot = PlayerUtils.findItemInHotbar("steak")
                         if (steakSlot != null) {
                             PlayerUtils.setHotbarSlot(steakSlot)
-                            hasSwappedToSteakForCurrentBoss = true // 成功切換後上鎖
+                            hasSwappedToSteakForCurrentBoss = true
                         }
                     }
                 }
                 else if (autoTuba && myActiveBoss != null && !hasUsedTubaForBossSpawn) {
                     if (triggerAutoItem("tuba")) {
-                        hasUsedTubaForBossSpawn = true // 成功觸發後上鎖，直到下一隻王出生
+                        hasUsedTubaForBossSpawn = true
                     }
                 }
-                // 3. 如果不需要丟冰，也不需要吃西瓜，就檢查 Tuba
+
                 else if (autoTuba && currentManiaTime != null && currentManiaTime!! <= 1.0f && !hasUsedTubaForCurrentMania) {
                     if (triggerAutoItem("tuba")) {
                         hasUsedTubaForCurrentMania = true
@@ -630,7 +630,7 @@ object Vampire : Module(
                 mc.options.keyJump.isDown = false
 
                 if (currentState == ImpelState.ACTIVE_ROTATING || currentState == ImpelState.ACTIVE_CLICKING) {
-                    // 若需要轉回視角，啟動歸位旋轉
+
                     PlayerUtils.smoothRotate(
                         yaw = null,
                         pitch = null,
@@ -654,8 +654,8 @@ object Vampire : Module(
                     mc.player!!.yRot = ClientRotationHandler.clientYaw
                     mc.player!!.yRotO = ClientRotationHandler.clientYaw
 
-                    // 在 Title 存在的期間內，只要視角轉到位了，就持續發送點擊
-                    if (!isUsingItem) { // [重要] 補回這行，切換物品時必須暫停左鍵連點
+
+                    if (!isUsingItem) {
                         if (clickCooldown <= 0) {
                             performClick()
                             clickCooldown = 1
@@ -665,14 +665,14 @@ object Vampire : Module(
                     }
                 }
                 ImpelState.ACTIVE_HOLDING -> {
-                    actionTick++ // 每一 Tick 增加計步器
+                    actionTick++
 
                     if (activeImpelType == "sneak") {
                         if (actionTick <= 2) {
-                            // 第 1~2 Tick：強制放開 Shift (確保玩家如果是蹲下的，會先站起來重置狀態)
+
                             mc.options.keyShift.isDown = false
                         } else if (actionTick <= 5) {
-                            // 第 3~10 Tick：強制按下 Shift (維持約 0.4 秒，確保伺服器絕對能收到蹲下封包)
+
                             mc.options.keyShift.isDown = true
                         } else {
                             mc.options.keyShift.isDown = false
@@ -682,12 +682,12 @@ object Vampire : Module(
                     }
                     else if (activeImpelType == "jump") {
                         if (!mc.player!!.onGround()) {
-                            // 如果玩家已經不在地上 (被擊飛或本來就在跳)，提早結束，不按空白鍵
+
                             mc.options.keyJump.isDown = false
                             currentState = ImpelState.IDLE
                             activeImpelType = ""
                         } else {
-                            // 玩家在地上，正常執行跳躍按壓
+
                             if (actionTick <= 3) {
                                 mc.options.keyJump.isDown = true
                             } else {
@@ -729,9 +729,9 @@ object Vampire : Module(
             val pt = context.gameRenderer().mainCamera().getCameraEntityPartialTicks(mc.deltaTracker)
 
             if (bossEsp && myActiveRealBoss != null) {
-                val realBoss = myActiveRealBoss!! // 直接拿找好的 NPC
+                val realBoss = myActiveRealBoss!!
 
-                // 取得平滑移動後的座標
+
                 val lerpedPos = realBoss.getPosition(pt)
                 val aabb = realBoss.boundingBox.move(
                     lerpedPos.x - realBoss.x,
@@ -739,7 +739,7 @@ object Vampire : Module(
                     lerpedPos.z - realBoss.z
                 )
 
-                // 判斷顏色
+
                 var boxColor = Color(255, 0, 0, 80f)
                 if (maxBossHealth != null && currentBossHealth != null) {
                     if (currentBossHealth!! <= (maxBossHealth!! * 0.2f)) {
@@ -747,7 +747,7 @@ object Vampire : Module(
                     }
                 }
 
-                // 畫出實心透視框
+
                 drawStyledBox(aabb = aabb, color = boxColor, style = 0, depth = false)
             }
 
@@ -756,11 +756,11 @@ object Vampire : Module(
 
                 mc.level!!.entitiesForRendering().forEach { entity ->
                     if (entity is ArmorStand && isBloodIchor(entity)) {
-                        // 只渲染在「鎖定清單」內的血池
-                        if (trackedIchorIds.contains(entity.id)) {
-                            currentValidIds.add(entity.id) // 證明它還活著
 
-                            // 1. ESP (高亮外框)
+                        if (trackedIchorIds.contains(entity.id)) {
+                            currentValidIds.add(entity.id)
+
+
                             drawStyledBox(
                                 aabb = entity.boundingBox,
                                 color = Color(220, 20, 60, 60f),
@@ -768,7 +768,7 @@ object Vampire : Module(
                                 depth = false
                             )
 
-                            // 2. Tracer (拉線到玩家視角)
+
                             if (ichorTracer) {
                                 val targetCenter = entity.position().add(0.0, entity.bbHeight / 2.0, 0.0)
                                 drawTracer(
@@ -782,7 +782,7 @@ object Vampire : Module(
                     }
                 }
 
-                // 自動清理消失的血池 (被破壞後會從清單移除)
+
                 trackedIchorIds.retainAll(currentValidIds)
             }
 
@@ -858,7 +858,7 @@ object Vampire : Module(
 
             val relativeAngle = angleToTarget - player.yRot
 
-            // 將角度轉換為弧度，並減去 90 度讓 0 度對齊螢幕「正上方」
+
             val rad = toRadians(relativeAngle.toDouble()) - Math.PI / 2
 
             val screenCenterX = mc.window.guiScaledWidth / 2f
@@ -876,18 +876,18 @@ object Vampire : Module(
             val rotationRad = toRadians(relativeAngle.toDouble()).toFloat()
             poseStack.rotate(rotationRad)
 
-            // 2. 套用你在設定裡拉好的縮放大小
+
             poseStack.scale(arrowScale, arrowScale)
 
             graphics.blit(
-                net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, // 1. 指定渲染管線 (普通 GUI 圖片)
-                ARROW_TEXTURE, // 2. 你的圖片資源
-                -16, -16,      // 3. X, Y (螢幕位置)
-                0f, 0f,        // 4. U, V (從圖片的哪裡開始切)
-                32, 32,        // 5. width, height (畫在螢幕上的大小)
-                512, 512,      // 6. srcWidth, srcHeight (從原圖擷取的範圍)
-                512, 512,      // 7. textureWidth, textureHeight (原圖的總解析度)
-                arrowColor.rgba          // 8. 完美染色！
+                net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED,
+                ARROW_TEXTURE,
+                -16, -16,
+                0f, 0f,
+                32, 32,
+                512, 512,
+                512, 512,
+                arrowColor.rgba
             )
 
             poseStack.popMatrix()
@@ -904,13 +904,13 @@ object Vampire : Module(
 
         lastImpelTitleTime = System.currentTimeMillis()
 
-        // 1. 註冊自己
+
         ClientRotationHandler.registerProvider(this)
-        // 2. 請求分離
+
         isDecoupled = true
-        // 3. 讓 ClientRotationHandler 的 Yaw 與本體同步
+
         ClientRotationHandler.setYaw(mc.player!!.yRot)
-        // 4. 使用安全的 smoothRotate 來轉動身體
+
         PlayerUtils.smoothRotate(
             yaw = null,
             pitch = null,
@@ -935,37 +935,37 @@ object Vampire : Module(
 
         val targetSlot = PlayerUtils.findItemInHotbar(itemName) ?: return false
 
-        // 宣告為區域變數，schedule 會自動把它記住
+
         val originalSlot = mc.player!!.inventory.selectedSlot
 
-        // 上鎖
+
         isUsingItem = true
 
-        // [第 0 Tick]: 瞬間切換物品
+
         PlayerUtils.setHotbarSlot(targetSlot)
 
         if (itemName.equals("holy ice", ignoreCase = true)) {
-            // Holy Ice 專屬邏輯：右鍵 2 次
+
             schedule(2, true) {
-                PlayerUtils.rightClick() // 第 1 次點擊
+                PlayerUtils.rightClick()
 
                 schedule(1, true) {
-                    PlayerUtils.rightClick() // 第 2 次點擊
+                    PlayerUtils.rightClick()
 
                     schedule(2, true) {
-                        // 切回原本的格子並解鎖
+
                         PlayerUtils.setHotbarSlot(originalSlot)
                         isUsingItem = false
                     }
                 }
             }
         } else {
-            // Healing Melon 或其他物品：維持原本的右鍵 1 次
+
             schedule(2, true) {
-                PlayerUtils.rightClick() // 第 1 次點擊
+                PlayerUtils.rightClick()
 
                 schedule(2, true) {
-                    // 切回原本的格子並解鎖
+
                     PlayerUtils.setHotbarSlot(originalSlot)
                     isUsingItem = false
                 }
@@ -976,11 +976,11 @@ object Vampire : Module(
     }
 
     private fun isBloodIchor(entity: ArmorStand): Boolean {
-        // 檢查實體頭部是否有裝備物品
+
         val headItem = entity.getItemBySlot(EquipmentSlot.HEAD)
 
         return !(headItem.isEmpty || !headItem.`is`(Items.PLAYER_HEAD)) && headItem.texture == BLOOD_ICHOR_TEXTURE
-        // 確保裝備的是玩家頭顱
+
     }
 
     private fun Entity.isKillerSpring(): Boolean {

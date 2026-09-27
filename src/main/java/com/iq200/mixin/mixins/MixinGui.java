@@ -12,8 +12,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(Hud.class)
 public abstract class MixinGui {
 
-    // 攔截 HUD 的狀態提取階段。
-    // 如果編譯時報錯找不到 extractRenderState，請將 method 名稱改為 "render"
+
+
     @Inject(method = "extractRenderState", at = @At("RETURN"))
     private void onRenderHud(GuiGraphicsExtractor graphics, DeltaTracker deltaTracker, CallbackInfo ci) {
         new HudRenderEvent(graphics, deltaTracker).postAndCatch();

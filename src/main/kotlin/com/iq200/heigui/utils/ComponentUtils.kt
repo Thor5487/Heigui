@@ -33,7 +33,7 @@ fun String.toComponent(): Component {
             .result()
             .orElse(null) ?: Component.literal(this)
     } catch (e: Exception) {
-        // 解析失敗代表這不是 JSON，直接當作普通文字處理
+
         Component.literal(this)
     }
 }

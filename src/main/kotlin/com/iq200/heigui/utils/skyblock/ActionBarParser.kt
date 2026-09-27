@@ -58,18 +58,18 @@ object ActionBarParser {
             maxSecrets = it.groupValues[2].toIntOrNull() ?: maxSecrets
         }
 
-        // 解析血量 (Health)
+
         healthRegex.find(text)?.let {
             currentHealth = it.groupValues[1].toIntOrNull() ?: currentHealth
             maxHealth = it.groupValues[2].toIntOrNull() ?: maxHealth
         }
 
-        // 解析防禦 (Defense)
+
         defenseRegex.find(text)?.let {
             defense = it.groupValues[1].toIntOrNull() ?: defense
         }
 
-        // 解析魔力 (Mana)
+
         manaRegex.find(text)?.let {
             currentMana = it.groupValues[1].toIntOrNull() ?: currentMana
             maxMana = it.groupValues[2].toIntOrNull() ?: maxMana

@@ -46,20 +46,20 @@ public abstract class MixinMinecraft {
     @Inject(method = "startAttack", at = @At("HEAD"), cancellable = true)
     private void onAttack(CallbackInfoReturnable<Boolean> cir) {
         if (player != null && !player.isHandsBusy()) {
-            // 發布 Attack 事件，如果被模組 cancel，就直接攔截原版攻擊
+
             if (new PlayerInputEvent.Attack(hitResult).postAndCatch()) {
-                cir.setReturnValue(true); // 根據原版邏輯，這裡回傳 true 來中止後續判定
+                cir.setReturnValue(true);
             }
         }
     }
 
-    // 攔截右鍵使用
+
     @Inject(method = "startUseItem", at = @At("HEAD"), cancellable = true)
     private void onUseItem(CallbackInfo ci) {
         if (player != null && !gameMode.isDestroying() && !player.isHandsBusy()) {
-            // 發布 Use 事件，帶入當前玩家的視角
+
             if (new PlayerInputEvent.Use(hitResult, player.getYRot(), player.getXRot()).postAndCatch()) {
-                ci.cancel(); // 如果被模組 cancel，就直接取消原版右鍵動作
+                ci.cancel();
             }
         }
     }

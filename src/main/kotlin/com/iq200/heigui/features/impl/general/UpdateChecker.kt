@@ -31,14 +31,14 @@ object UpdateChecker : Module(
     private const val GITHUB_REPO = "Thor5487/Heigui"
     private val profileRegex = Regex("Profile ID:\\s*(.{36})")
 
-    // 正式版是 "1.3.9"，測試版是 "1.3.9-beta.5+2c1a205" (由 build.gradle.kts 依 git tag 決定)
-    // ⚠️ GitHub Release 的 Tag 必須以數字版本開頭 (例如 "v1.3.9")，比對才能正確進行
+
+
     val CURRENT_VERSION = FabricLoader.getInstance()
         .getModContainer("heigui")
         .map { it.metadata.version.friendlyString }
         .orElse("1.0.0")
 
-    // 確保每開啟一次遊戲只會檢查一次，避免每次換地圖都跳通知
+
     private var hasChecked = false
 
     init {
@@ -46,7 +46,7 @@ object UpdateChecker : Module(
             if (!profileRegex.matches(value)) return@on
 
             if (!hasChecked) {
-                checkForUpdates() // 統一呼叫一個檢查函數
+                checkForUpdates()
                 hasChecked = true
             }
         }
@@ -56,7 +56,7 @@ object UpdateChecker : Module(
         thread(start = true) {
             try {
                 // ==========================================
-                // 第一階段：優先檢查 Release (正式版)
+
                 // ==========================================
                 val releaseUrl = URL("https://api.github.com/repos/$GITHUB_REPO/releases/latest")
                 val releaseConn = releaseUrl.openConnection() as HttpURLConnection
@@ -77,12 +77,12 @@ object UpdateChecker : Module(
 
                     if (isUpdateAvailable(CURRENT_VERSION, latestReleaseVersion)) {
                         mc.execute { sendUpdateMessage(latestReleaseVersion, releaseHtmlUrl, false) }
-                        hasReleaseUpdate = true // 標記已有正式版更新，後續不需再查 Action
+                        hasReleaseUpdate = true
                     }
                 }
 
                 // ==========================================
-                // 第二階段：如果沒有正式版更新，且玩家開啟了 Action 檢查，再去查 Action
+
                 // ==========================================
                 if (!hasReleaseUpdate && checkAction) {
                     val runUrl = URL("https://api.github.com/repos/$GITHUB_REPO/actions/runs?branch=main&status=success&per_page=1")
@@ -105,10 +105,10 @@ object UpdateChecker : Module(
                             val actionUrl = latestRun.get("html_url").asString
 
                             val localHash = BuildConfig.commit.take(7)
-                            // 注意這裡改回 BuildConfig.commitHash 以符合你之前的設定
+
                             if (localHash.isNotEmpty() && localHash != shortSha && localHash != "unknown") {
 
-                                // 呼叫 Artifacts API 抓詳細檔名的邏輯
+
                                 val artifactsUrl = URL("https://api.github.com/repos/$GITHUB_REPO/actions/runs/$runId/artifacts")
                                 val artConn = artifactsUrl.openConnection() as HttpURLConnection
                                 artConn.requestMethod = "GET"
@@ -148,7 +148,7 @@ object UpdateChecker : Module(
     }
 
 
-    // 只抓開頭的數字版本段，後面的 prerelease / build metadata 交給 isPrerelease 處理
+
     private val versionNumberRegex = Regex("""^\d+(?:\.\d+)*""")
 
     private class ParsedVersion(val numbers: List<Int>, val prerelease: List<String>) {
@@ -157,25 +157,25 @@ object UpdateChecker : Module(
     }
 
     private fun isUpdateAvailable(current: String, latest: String): Boolean {
-        // 解析不出來就不通知，避免奇怪的 Tag 名稱洗玩家畫面
+
         val currentVersion = parseVersion(current) ?: return false
         val latestVersion = parseVersion(latest) ?: return false
 
         return compareVersions(latestVersion, currentVersion) > 0
     }
 
-    /**
-     * "v1.3.9" -> numbers=[1, 3, 9], isPrerelease=false
-     * "1.3.9-beta.5+2c1a205" -> numbers=[1, 3, 9], isPrerelease=true
-     * 解析失敗回傳 null
-     */
+
+
+
+
+
     private fun parseVersion(version: String): ParsedVersion? {
         val cleaned = version.trim().removePrefix("v").removePrefix("V").substringBefore('+')
         val numeric = versionNumberRegex.find(cleaned)?.value ?: return null
         val numbers = numeric.split('.').map { it.toIntOrNull() ?: 0 }
 
-        // 數字段後面剩下的東西以 "-" 開頭就是 semver 的 prerelease 標記；
-        // 正式版剩下空字串，帶 build metadata 的 "+..." 不算 prerelease
+
+
         val suffix = cleaned.substring(numeric.length)
         val prerelease = if (suffix.startsWith("-")) {
             suffix.removePrefix("-").split('.').filter { it.isNotEmpty() }
@@ -186,7 +186,7 @@ object UpdateChecker : Module(
         return ParsedVersion(numbers, prerelease)
     }
 
-    /** 逐段比對，長度不同時缺的那段補 0 (1.4 == 1.4.0) */
+
     private fun compareVersions(left: ParsedVersion, right: ParsedVersion): Int {
         for (i in 0 until maxOf(left.numbers.size, right.numbers.size)) {
             val result = left.numbers.getOrElse(i) { 0 }.compareTo(right.numbers.getOrElse(i) { 0 })
@@ -216,7 +216,7 @@ object UpdateChecker : Module(
     }
 
     private fun sendUpdateMessage(latestVersion: String, url: String, isAction: Boolean) {
-        // 建立可點擊的 Component
+
         val linkText = if (isAction) "§b§n[Open Action Page]" else "§b§n[Click Here to Download]"
         val hoverText = if (isAction) "§eOpen GitHub Actions Page" else "§eOpen GitHub Release Page"
 
@@ -228,7 +228,7 @@ object UpdateChecker : Module(
 
         val updateType = if (isAction) "action" else "release"
 
-        // 組合完整訊息
+
         val message = Component.literal("§eA new $updateType is available! §7(§cv$CURRENT_VERSION §7-> §a$latestVersion§7) ")
             .append(clickableLink)
 

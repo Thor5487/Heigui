@@ -47,19 +47,19 @@ object DevMode : Module(
             } else null
 
             // ==========================================
-            // 💀 功能 1: Skull Texture (Item, Block, Marker)
+
             // ==========================================
             if (skullTexture) {
                 var heldTexture: String? = null
                 var markerTexture: String? = null
 
-                // A. 手上物品
+
                 if (holdingSkull.`is`(Items.PLAYER_HEAD)) {
                     heldTexture = holdingSkull.texture
                 }
 
-                // B. 地上地形方塊
-                var blockTexture: String? = null // 改成用 blockTexture 接收 Base64
+
+                var blockTexture: String? = null
 
                 if (hrSkullPos != null) {
                     val blockEntity = level.getBlockEntity(hrSkullPos)
@@ -67,14 +67,14 @@ object DevMode : Module(
                         val profileComponent = blockEntity.ownerProfile
                         if (profileComponent != null) {
                             val gameProfile = profileComponent.partialProfile()
-                            // 🌟 透過 properties 抓取 Base64 貼圖
+
                             val textureProperty = gameProfile.properties.get("textures").firstOrNull()
                             blockTexture = textureProperty?.value
                         }
                     }
                 }
 
-                // C. 空間搜索：抓取隱形 Marker 頭上的頭盔 Texture
+
                 val searchPos = when (result?.type) {
                     HitResult.Type.BLOCK -> {
                         val pos = (result as BlockHitResult).blockPos
@@ -89,14 +89,14 @@ object DevMode : Module(
 
                 for (stand in nearbyStands) {
                     val headItem = stand.getItemBySlot(EquipmentSlot.HEAD)
-                    // 只要頭上有戴玩家頭顱的盔甲座 (通常 Marker 會是隱形的，但為了保險起見我們抓所有戴頭顱的)
+
                     if (headItem.`is`(Items.PLAYER_HEAD)) {
                         markerTexture = headItem.texture
-                        break // 抓到第一個就跳出
+                        break
                     }
                 }
 
-                // --- 輸出結果 ---
+
                 var foundAny = false
 
                 if (!heldTexture.isNullOrEmpty()) {
@@ -123,11 +123,11 @@ object DevMode : Module(
             }
 
             // ==========================================
-            // 🧍 功能 2: NPC Texture
+
             // ==========================================
             if (npcTexture && hitEntity != null) {
                 var entityTexture: String? = null
-                val entityName = hitEntity.name.string.noControlCodes // 去除顏色代碼，取得乾淨的 NPC 名字
+                val entityName = hitEntity.name.string.noControlCodes
 
                 if (hitEntity is Player) {
                     val gameProfile = hitEntity.gameProfile

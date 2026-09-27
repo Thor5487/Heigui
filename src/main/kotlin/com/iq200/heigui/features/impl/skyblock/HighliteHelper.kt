@@ -32,9 +32,9 @@ object HighliteHelper : Module(
 ) {
 
     enum class BlockAction {
-        SHOOT,  // 還沒進化完：需要拿 Timegun 射
-        MINE,   // 已經是目標了：可以直接挖
-        IGNORE  // 不是目標礦物：直接無視
+        SHOOT,
+        MINE,
+        IGNORE
     }
 
     val highlitesPerCycle by NumberSetting(
@@ -60,7 +60,7 @@ object HighliteHelper : Module(
         val reqY = targetAmount * 32
         val reqT = targetAmount * 32
         val reqO = targetAmount * 16
-        // 邏輯跟上面一模一樣，用來計算當前的目標值
+
         val completedBatches = minOf(youngiteCount / reqY, timiteCount / reqT, obsoliteCount / reqO)
         val targetYoungite = (completedBatches + 1) * reqY
         val targetTimite = (completedBatches + 1) * reqT
@@ -90,7 +90,7 @@ object HighliteHelper : Module(
 
     init {
         // ==========================================
-        // 1. InputEvent：開關接管
+
         // ==========================================
         on<InputEvent> {
             if (LocationUtils.currentArea != Island.Rift) return@on
@@ -113,7 +113,7 @@ object HighliteHelper : Module(
         }
 
         // ==========================================
-        // 2. TickEvent：狀態機大腦 (所見即所得)
+
         // ==========================================
         on<TickEvent.Start> {
             if (LocationUtils.currentArea != Island.Rift) return@on
@@ -128,7 +128,7 @@ object HighliteHelper : Module(
                 val lookingAtPos = hit.blockPos
                 val currentBlockState = mc.level!!.getBlockState(lookingAtPos)
 
-                // 詢問大腦這顆方塊該怎麼處理
+
                 val action = getActionForBlock(lookingAtPos, currentBlockState)
 
                 when (action) {
@@ -146,26 +146,26 @@ object HighliteHelper : Module(
                             val maxTime = if (doubleTimeShooting) 1800.0 else 1800.0
                             val elapsed = now - shootStartTime
 
-                            // 1. 檢查第一階段是否達成（時間到了，或者伺服器已經提前回傳方塊變色）
+
                             if (!doubleTimeShooting && !isHoldingGreen && (elapsed >= 1800.0 || (lastBlockState != null && lastBlockState!!.block != currentBlockState.block))) {
-                                // 🌟 啟動 0.5 秒的「綠色視覺滯留提醒」
+
                                 isHoldingGreen = true
                                 greenHoldStartTime = now
 
-                                // 🌟 關鍵：橘色進度「立刻」在背景起跑，不需等 0.5 秒結束！
+
                                 doubleTimeShooting = true
                                 shootStartTime = now
                             }
 
-                            // 2. 如果正在綠色滯留期內，檢查 0.5 秒是否過期（只用來關閉綠色顯示）
+
                             if (isHoldingGreen && (now - greenHoldStartTime >= 500L)) {
                                 isHoldingGreen = false
                             }
 
-                            // 3. 第二階段（橘色充能）的完成判定與循環
+
                             if (doubleTimeShooting && !isHoldingGreen) {
                                 if (elapsed >= maxTime || (lastBlockState != null && lastBlockState!!.block != currentBlockState.block)) {
-                                    // 達成紫色或進入下一個循環，重置計時
+
                                     shootStartTime = now
                                 }
                             }
@@ -213,14 +213,14 @@ object HighliteHelper : Module(
             val boxColor: Color
 
             if (isHoldingGreen) {
-                // 🌟 滯留期：強制畫出「滿格的綠色」維持 0.5 秒
+
                 aabb = AABB(
                     target.x.toDouble(), target.y.toDouble(), target.z.toDouble(),
                     target.x + 1.0, target.y + 1.0, target.z + 1.0
                 )
-                boxColor = Color(50, 255, 100, 150) // 綠色
+                boxColor = Color(50, 255, 100, 150)
             } else {
-                // 一般計算進度
+
                 val maxTime = if (doubleTimeShooting) 1800.0 else 1800.0
                 val elapsed = now - shootStartTime
                 val progress = (elapsed / maxTime).coerceIn(0.0, 1.0)
@@ -235,11 +235,11 @@ object HighliteHelper : Module(
                 )
 
                 boxColor = if (doubleTimeShooting) {
-                    if (progress >= 1.0) Color(170, 0, 255, 150) // 紫色 (1.8s 滿)
-                    else Color(255, 100, 0, 150) // 橘紅色 (第二階段充能)
+                    if (progress >= 1.0) Color(170, 0, 255, 150)
+                    else Color(255, 100, 0, 150)
                 } else {
-                    if (progress >= 1.0) Color(50, 255, 100, 150) // 綠色
-                    else Color(255, 50, 50, 150) // 紅色 (第一階段充能)
+                    if (progress >= 1.0) Color(50, 255, 100, 150)
+                    else Color(255, 50, 50, 150)
                 }
             }
 
@@ -253,7 +253,7 @@ object HighliteHelper : Module(
     }
 
     // ==========================================
-    // 🧠 預留區：未來的判斷機制全寫在這裡
+
     // ==========================================
     private fun getActionForBlock(pos: BlockPos, state: BlockState): BlockAction {
         val currentLevel = when {
@@ -271,33 +271,33 @@ object HighliteHelper : Module(
 
         if (currentLevel == -1) return BlockAction.IGNORE
 
-        // 1. 取得背包目前數量
+
         val youngiteCount = getInventoryItemCount("youngite")
         val timiteCount = getInventoryItemCount("timite")
         val obsoliteCount = getInventoryItemCount("obsolite")
 
-        // 2. 🌟 核心算法：計算已經「完美湊齊」了幾組
-        // 例如：Y=130(2組), T=65(1組), O=10(0組) -> 最小值是 0，代表第 1 組還沒湊齊
-        // 例如：Y=130(2組), T=128(2組), O=64(2組) -> 最小值是 2，準備開始湊第 3 組
+
+
+
         val targetAmount = highlitesPerCycle
         val reqY = targetAmount * 32
         val reqT = targetAmount * 32
         val reqO = targetAmount * 16
 
-        // 2. 🌟 核心算法：計算已經「完美湊齊」了幾組
+
         val completedBatches = minOf(youngiteCount / reqY, timiteCount / reqT, obsoliteCount / reqO)
 
-        // 3. 計算當前循環的目標數量
+
         val targetYoungite = (completedBatches + 1) * reqY
         val targetTimite = (completedBatches + 1) * reqT
         val targetObsolite = (completedBatches + 1) * reqO
 
-        // 4. 判斷現在該挖哪一種
+
         val targetLevel = when {
             youngiteCount < targetYoungite -> 1
             timiteCount < targetTimite -> 2
             obsoliteCount < targetObsolite -> 3
-            else -> 1 // 理論上不會走到這裡，因為一旦三個都達標，completedBatches 就會自動 +1
+            else -> 1
         }
 
         return when {
@@ -334,7 +334,7 @@ object HighliteHelper : Module(
     private fun getInventoryItemCount(keyword: String): Int {
         val player = mc.player ?: return 0
         var count = 0
-        // 遍歷玩家的所有背包格子
+
         for (i in 0 until player.inventory.containerSize) {
             val itemStack = player.inventory.getItem(i)
             if (!itemStack.isEmpty) {

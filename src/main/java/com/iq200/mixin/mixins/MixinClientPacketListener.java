@@ -46,7 +46,7 @@ public abstract class MixinClientPacketListener {
     }
 
     // ==========================================
-    // TeleportOptimization (NoRotate) 注入點
+
     // ==========================================
     @Inject(
             method = "handleMovePlayer",
@@ -58,7 +58,7 @@ public abstract class MixinClientPacketListener {
             cancellable = true
     )
     private void onPreHandlePlayerMove(ClientboundPlayerPositionPacket packet, CallbackInfo ci) {
-        // 呼叫 Kotlin 模組裡 @JvmStatic 的 handleTp 方法
+
         TeleportOptimization.handleTp(packet, this.getConnection(), ci);
     }
 }

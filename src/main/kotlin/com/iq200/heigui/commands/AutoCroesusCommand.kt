@@ -26,7 +26,7 @@ fun LiteralNode.setupAutoCroesusCommand() {
         }
 
         // ==========================================
-        // 2. 啟動開箱指令: /hg ac go
+
         // ==========================================
         literal("go") {
             runs {
@@ -39,12 +39,12 @@ fun LiteralNode.setupAutoCroesusCommand() {
 
         literal("ignore") {
 
-            // 新增黑名單
+
             literal("add") {
                 runs { item: GreedyString ->
                     val keyword = item.toString().trim()
 
-                    // 為了防止重複新增大小寫不同的相同字詞，我們在新增前可以統一轉小寫比對
+
                     val exists = AutoCroesus.ignoreList.any { it.equals(keyword, ignoreCase = true) }
 
                     if (!exists) {
@@ -56,7 +56,7 @@ fun LiteralNode.setupAutoCroesusCommand() {
                 }
             }
 
-            // 移除黑名單
+
             literal("remove") {
                 runs { item: GreedyString ->
                     val keyword = item.toString().trim()
@@ -65,7 +65,7 @@ fun LiteralNode.setupAutoCroesusCommand() {
                         return@runs modMessage("§cPlease Enter Valid Item Name")
                     }
 
-                    // 尋找清單中是否有一樣的字詞 (忽略大小寫)
+
                     val targetToRemove = AutoCroesus.ignoreList.find { it.equals(keyword, ignoreCase = true) }
 
                     if (targetToRemove != null) {
@@ -77,7 +77,7 @@ fun LiteralNode.setupAutoCroesusCommand() {
                 }
             }
 
-            // 列出所有黑名單
+
             literal("list") {
                 runs {
                     if (AutoCroesus.ignoreList.isEmpty()) {
@@ -107,7 +107,7 @@ fun LiteralNode.setupAutoCroesusCommand() {
                         return@runs
                     }
 
-                    // 呼叫我們剛剛在 AutoCroesus 寫好的重置函式
+
                     AutoCroesus.resetFloorData(targetFloor)
                 }
             }
@@ -120,20 +120,20 @@ fun LiteralNode.setupAutoCroesusCommand() {
                 val targetFloor = floor.lowercase().trim()
                 val floorRegex = Regex("^[fm][1-7]$")
 
-                // 檢查格式是否正確
+
                 if (!floorRegex.matches(targetFloor)) {
                     modMessage("§c[AutoCroesus] Usage: /hg ac loot <floor> (e.g. m6, f7)")
                     return@runs
                 }
 
-                // 檢查該樓層是否有紀錄
+
                 val floorData = AutoCroesus.trackerConfig.data.floors[targetFloor]
                 if (floorData == null || floorData.runsOpened == 0) {
                     modMessage("§c[AutoCroesus] Error: No data found for floor '§e${targetFloor.uppercase()}§c'")
                     return@runs
                 }
 
-                // 正常執行顯示
+
                 AutoCroesus.displayHoverLootTracker(targetFloor)
             }
         }

@@ -61,25 +61,25 @@ object GDragonEggScanner : Module(
             return@HUD textDim("§6Gdrag: §7Scanning...", 0, 0, Colors.WHITE)
         }
 
-        // 2. 如果不在水晶洞 (Crystal Hollows)，就不顯示 HUD
+
         if (!inCrystalHollows) {
             return@HUD 0 to 0
         }
 
-        // 3. 在水晶洞裡面，如果還沒找到半顆蛋
+
         if (eggCount == 0) {
             if (eyeBox == null) return@HUD textDim("§6Gdrag: §7Scanning...", 0, 0, Colors.WHITE)
             else return@HUD textDim("§6Gdrag: §c0/§a3", 0, 0, Colors.WHITE)
         }
 
-        // 4. 根據找到的蛋數量，決定數字的顏色
+
         val countColor = when (eggCount) {
-            1 -> "§c" // 紅色
-            2 -> "§b" // 淺藍色 (相比深藍 §9 在深色背景下更容易閱讀)
-            else -> "§a" // 3 顆 (或以上) 顯示綠色
+            1 -> "§c"
+            2 -> "§b"
+            else -> "§a"
         }
 
-        // 輸出結果，例如： Gdrag: 2/3 (淺藍色數字)
+
         return@HUD textDim("§6Gdrag: $countColor$eggCount§7/§a3", 0, 0, Colors.WHITE)
     }
 
@@ -109,19 +109,19 @@ object GDragonEggScanner : Module(
 
                 val fillCol = Color(eggColor.red, eggColor.green, eggColor.blue, 80)
                 val outCol = Color(eggColor.red, eggColor.green, eggColor.blue, 255)
-                // 1. 畫出半透明的內部實心方塊 (金色，透明度 80)
+
                 drawStyledBox(
                     aabb = box,
                     color = fillCol,
-                    style = 0,    // 0 通常代表 Filled (實心)
-                    depth = false // 🌟 depth = false 代表關閉深度測試，這就是能「隔牆透視」的關鍵！
+                    style = 0,
+                    depth = false
                 )
 
-                // 2. 畫出明顯的外部邊框線 (實心金色，透明度 255)
+
                 drawStyledBox(
                     aabb = box,
                     color = outCol,
-                    style = 2,    // 2 通常代表 Outline (外框線)
+                    style = 2,
                     depth = false
                 )
 
@@ -129,16 +129,16 @@ object GDragonEggScanner : Module(
                 if (tracer) {
                     drawTracer(
                         centerVec,
-                        tracerColor, // 金色連線
+                        tracerColor,
                         false,
-                        2.0f // 線條寬度
+                        2.0f
                     )
                 }
             }
 
             if (structureFinder && eyeBox != null) {
                 val eBox = eyeBox!!
-                // 如果你的 AABB 擴充方法有 .center 可以直接用，沒有的話就手動算
+
                 val centerX = (eBox.minX + eBox.maxX) / 2
                 val centerY = (eBox.minY + eBox.maxY) / 2
                 val centerZ = (eBox.minZ + eBox.maxZ) / 2
@@ -149,9 +149,9 @@ object GDragonEggScanner : Module(
                     title = "§6Dragon's Lair",
                     position = centerVec.toBlockPos(),
                     color = structureColor,
-                    increase = true,     // 因為你是用固定的 textScale，所以這裡設為 false
-                    distance = false,     // 如果你原本不需要顯示 "(25m)" 這種距離，這裡設為 false
-                    scale = textScale.toFloat() // 帶入你自訂的字體大小
+                    increase = true,
+                    distance = false,
+                    scale = textScale.toFloat()
                 )
             }
         }
@@ -172,21 +172,21 @@ object GDragonEggScanner : Module(
         var newEyeBox: AABB? = null
 
         // ==========================================
-        // 搜尋：檢查地上的方塊 (SkullBlockEntity)
+
         // ==========================================
-        // 取得玩家目前的區塊座標
+
         val pChunkX = player.chunkPosition().x
         val pChunkZ = player.chunkPosition().z
         val renderDistance = mc.options.renderDistance().get()
 
-        // 掃描玩家渲染距離內的所有區塊 (Chunk)
+
         for (x in (pChunkX - renderDistance)..(pChunkX + renderDistance)) {
             for (z in (pChunkZ - renderDistance)..(pChunkZ + renderDistance)) {
-                // 確保區塊已加載，避免引發地圖讀取卡頓
+
                 if (level.hasChunk(x, z)) {
                     val chunk = level.getChunk(x, z)
 
-                    // 檢查區塊內所有的 BlockEntity
+
                     chunk.blockEntities.forEach { (pos, blockEntity) ->
                         if (blockEntity is SkullBlockEntity) {
                             val profileComponent = blockEntity.ownerProfile
@@ -198,9 +198,9 @@ object GDragonEggScanner : Module(
                                 blockTexture = textureProperty?.value
                             }
 
-                            // 發現是 Gdrag 蛋！
+
                             if (blockTexture == GDragBase64) {
-                                // 建立一個 1x1x1 的方塊大小的 Box 準備畫透視框
+
                                 val box = AABB(
                                     pos.x.toDouble(), pos.y.toDouble(), pos.z.toDouble(),
                                     pos.x.toDouble() + 1.0, pos.y.toDouble() + 1.0, pos.z.toDouble() + 1.0
@@ -221,13 +221,13 @@ object GDragonEggScanner : Module(
         }
 
         // ==========================================
-        // 結算與更新
+
         // ==========================================
         eggBoxes.clear()
         eggBoxes.addAll(newBoxes)
         eyeBox = newEyeBox
 
-        // 更新計數器給 HUD 用
+
         eggCount = eggBoxes.size
 
         if (structureFinder && eyeBox != null) {
@@ -236,7 +236,7 @@ object GDragonEggScanner : Module(
                 foundLair = true
             }
         } else {
-            // 🌟 當 eyeBox 離開視線變回 null 時，重置提醒開關
+
             foundLair = false
         }
 

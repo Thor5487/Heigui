@@ -10,13 +10,14 @@ group = property("maven_group") as String
 val isPrivateBuild = (project.findProperty("isPrivate") as? String)?.toBoolean() ?: false
 
 // ====================================================
-// 🏷️ Release / Beta 判定
+// Release and beta version metadata
 // ====================================================
-// 執行 git 指令並取回輸出。失敗 (git 不存在、非 git 目錄、指令本身回非 0) 一律回 null
+
+// Returns null when Git is unavailable or the command fails.
 fun gitOutput(vararg args: String): String? = try {
     val process = ProcessBuilder(listOf("git") + args)
         .directory(rootDir)
-        // 必須用 DISCARD 而不是 redirectErrorStream(true)，否則 git 的錯誤訊息會混進輸出
+        // Keep Git errors out of the value consumed by the build script.
         .redirectError(ProcessBuilder.Redirect.DISCARD)
         .start()
     val output = process.inputStream.bufferedReader().readText().trim()
@@ -28,28 +29,26 @@ fun gitOutput(vararg args: String): String? = try {
 val modVersionBase = property("mod_version") as String
 val mcVersion = property("minecraft_version") as String
 
-// HEAD 剛好在 v<mod_version> 這個 tag 上才算正式版，否則都是測試版。
-// 推 tag 時 CI 會 checkout 該 tag，HEAD 自然落在 tag 上，所以會自動判定成 release。
-// -Prelease=true 是給 git 不可用時 (或想手動打正式包) 的逃生門。
+// A build is a release only when HEAD is on the matching version tag.
+// The property is a fallback for environments where Git is unavailable.
 val isReleaseBuild = project.hasProperty("release") ||
         gitOutput("describe", "--exact-match", "--tags", "HEAD") == "v$modVersionBase"
 
 val commitHash = gitOutput("rev-parse", "--short", "HEAD") ?: "unknown"
-// 上一個 tag 之後累積了幾個 commit，當作 beta 編號
+
+// The number of commits since the last tag becomes the beta sequence number.
 val betaNumber = gitOutput("rev-list", "--count", "HEAD", "--not", "--tags")?.toIntOrNull() ?: 0
 
 val buildChannel = if (isReleaseBuild) "release" else "beta"
 
-// 正式版: 1.3.9
-// 測試版: 1.3.9-beta.3 (合法 semver 2.0.0，Fabric 能解析，且排序上小於 1.3.9)
-// commit hash 不放進版本號，改放在 build_type.properties 裡，檔名才不會太長
+// Release: 1.4.2; beta: 1.4.2-beta.3.
 val modVersion = if (isReleaseBuild) {
     modVersionBase
 } else {
     "$modVersionBase-beta.$betaNumber"
 }
 
-// 利用 Kotlin 的字串插值，把兩個版本號用 "-" 串接起來
+
 version = "$modVersion-$mcVersion"
 
 base {
@@ -59,7 +58,7 @@ base {
 }
 
 // ====================================================
-// 🛡️ 你的依賴庫區塊 (完全未改動，一字不漏！)
+// Dependencies
 // ====================================================
 repositories {
     mavenCentral()
@@ -76,7 +75,7 @@ dependencies {
     implementation("net.fabricmc.fabric-api:fabric-api:${property("fabric_api_version")}")
     runtimeOnly("me.djtheredstoner:DevAuth-fabric:${property("devauth_version")}")
 
-    // 🌟 關鍵：使用 include 將指令系統打包進你的 jar
+    // Bundle Commodore because it is required at runtime.
     property("commodore_version").let {
         implementation("com.github.stivais:Commodore:$it")
         include("com.github.stivais:Commodore:$it")
@@ -84,7 +83,7 @@ dependencies {
 
     compileOnly("com.terraformersmc:modmenu:${property("modmenu_version")}")
 
-    // 🌟 關鍵：使用 include 將 NanoVG UI 渲染引擎打包進你的 jar
+    // Bundle NanoVG and its platform natives for the ClickGUI renderer.
     property("minecraft_lwjgl_version").let { lwjglVersion ->
         implementation("org.lwjgl:lwjgl-nanovg:$lwjglVersion")
         include("org.lwjgl:lwjgl-nanovg:$lwjglVersion")
@@ -131,20 +130,18 @@ afterEvaluate {
 
 tasks {
     withType<AbstractArchiveTask>().configureEach {
-        // 用不含 channel 的基礎版號當資料夾名，否則每個 beta commit (hash 不同) 都會生一個新資料夾
+        // Keep every beta of a base version in the same output directory.
         destinationDirectory.set(layout.buildDirectory.dir("libs/$modVersionBase-$mcVersion"))
     }
 
     processResources {
-        // 這些都要宣告成 input，否則 commit 之後 Gradle 會判定 UP-TO-DATE，
-        // jar 裡就留著上一次的舊 hash 與舊 channel
+        // These inputs prevent stale generated metadata after a Git revision changes.
         inputs.property("isPrivateBuild", isPrivateBuild)
         inputs.property("modVersion", modVersion)
         inputs.property("buildChannel", buildChannel)
         inputs.property("commitHash", commitHash)
 
         filesMatching("fabric.mod.json") {
-            // 用組好的 modVersion 覆蓋掉 gradle.properties 裡的原始 mod_version
             expand(getProperties() + mapOf("mod_version" to modVersion))
         }
         filesMatching("build_type.properties") {
@@ -184,7 +181,7 @@ java {
 }
 
 // ====================================================
-// 🚀 一鍵雙 Build 整合任務 (顯示於 IDE 的 Tasks -> build 內)
+// Combined public and private build task
 // ====================================================
 tasks.register("buildAllVersions") {
     group = "build"
@@ -194,14 +191,12 @@ tasks.register("buildAllVersions") {
     val rootDirPath = rootDirFile.absolutePath
 
     doLast {
-        // 判斷系統環境來決定執行 gradlew 還是 gradlew.bat
         val isWindows = System.getProperty("os.name").lowercase().contains("windows")
         val gradlew = if (isWindows) "$rootDirPath\\gradlew.bat" else "$rootDirPath/gradlew"
         println("============================================")
         println("🔨 [1/2] Building PRIVATE Version...")
         println("============================================")
 
-        // 不執行 clean（保留快取），直接打包 Private 版
         ProcessBuilder(gradlew, "build", "-PisPrivate=true")
             .directory(rootDirFile)
             .inheritIO()
@@ -211,12 +206,11 @@ tasks.register("buildAllVersions") {
         println("🔨 [2/2] Building PUBLIC Version...")
         println("============================================")
 
-        // 使用純 Kotlin/JVM 的 ProcessBuilder 呼叫指令，完美避開 Gradle 語法報錯
         ProcessBuilder(gradlew, "build", "-PisPrivate=false")
-            .directory(rootDirFile) // 設定執行目錄為專案根目錄
-            .inheritIO() // 🌟 關鍵魔法：讓子程序的打包進度直接印在你的 IDE 控制台！
+            .directory(rootDirFile)
+            .inheritIO()
             .start()
-            .waitFor() // 等待打包完成再進行下一步
+            .waitFor()
 
 
         println("============================================")

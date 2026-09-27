@@ -28,7 +28,7 @@ object DungeonListener {
     private val deathRegex = Regex("☠ (\\w{1,16}) .* and became a ghost\\.")
 
 
-    // 用於解析計分板上的樓層資訊
+
     private val floorRegex = Regex("The Catacombs \\((\\w+)\\)$")
 
     private fun getBoss(): Boolean = with(mc.player) {
@@ -55,7 +55,7 @@ object DungeonListener {
             floor = null
         }
 
-        // 監聽計分板更新來獲取目前樓層 (例如獲取 "F7" 或 "M7")
+
         onReceive<ClientboundSetPlayerTeamPacket> {
             val text = parameters.getOrNull()?.let { it.playerPrefix.string.plus(it.playerSuffix.string).noControlCodes } ?: return@onReceive
 
@@ -70,7 +70,7 @@ object DungeonListener {
             updateDungeonStats(tabListEntries)
         }
 
-        on<ChatPacketEvent> { // 這裡替換成你框架中實際的 Chat 事件
+        on<ChatPacketEvent> {
             deathRegex.find(value)?.let { match ->
                 val deadPlayerName = match.groupValues[1]
                 val targetName = if (deadPlayerName == "You") mc.player?.name?.string else deadPlayerName

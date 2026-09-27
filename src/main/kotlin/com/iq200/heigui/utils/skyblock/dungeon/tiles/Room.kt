@@ -9,7 +9,7 @@ data class Room(
     var data: RoomData,
     var clayPos: BlockPos = BlockPos(0, 0, 0),
     val roomComponents: MutableSet<RoomComponent>,
-    // 🗑️ 已移除 waypoints 屬性
+
 )
 
 data class RoomComponent(val x: Int, val z: Int, val core: Int = 0) {

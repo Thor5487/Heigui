@@ -29,7 +29,7 @@ fun GuiGraphicsExtractor.text(text: Component, x: Int, y: Int, color: Color = Co
     text(mc.font, text.visualOrderText, x, y, color.rgba, shadow)
 }
 
-// 讓 textDim() 同樣支援 Component 物件（如果需要的話）
+
 fun GuiGraphicsExtractor.textDim(text: Component, x: Int, y: Int, color: Color = Colors.WHITE, shadow: Boolean = true): Pair<Int, Int> {
     text(text, x, y, color, shadow)
     return mc.font.width(text) to mc.font.lineHeight

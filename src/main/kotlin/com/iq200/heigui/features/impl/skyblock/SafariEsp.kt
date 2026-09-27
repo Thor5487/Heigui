@@ -36,7 +36,7 @@ object SafariEsp : Module(
                     lerpedPos.z + 0.5
                 )
 
-                // 3. 畫出外框
+
                 drawStyledBox(
                     aabb = aabb,
                     color = color,

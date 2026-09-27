@@ -137,7 +137,7 @@ object AutoClick : Module (
 
         config.update { data ->
             if (!data.items.containsKey(uuid)) {
-                data.items[uuid] = itemName // 將 UUID 與物品名稱存入 Map
+                data.items[uuid] = itemName
                 modMessage("§aSuccessfully added §e'$itemName §8(§7$uuid§8)§e' §ato the custom AC list!")
             } else {
                 modMessage("§c'$itemName §8(§7$uuid§8)§c' is already in the custom AC list.")
@@ -154,7 +154,7 @@ object AutoClick : Module (
 
         config.update { data ->
             if (data.items.containsKey(uuid)) {
-                data.items.remove(uuid) // 從 Map 中移除
+                data.items.remove(uuid)
                 modMessage("§aSuccessfully removed §e'$itemName §8(§7$uuid§8)§e' §afrom the custom AC list!")
             } else {
                 modMessage("§c'$itemName §8(§7$uuid§8)§c' was not found in the custom AC list.")

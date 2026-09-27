@@ -40,14 +40,14 @@ object PriceParser {
     )
 
     fun parseItemValue(item: String, includeEssence: Boolean = true): Double {
-        // 1. 附魔書
+
         previewEnchantedBookRegex.find(item)?.destructured?.let { (name, level) ->
             val ult = if (name in ultimateEnchants) "ULTIMATE_" else ""
             val apiId = "ENCHANTED_BOOK-$ult${name.uppercase().replace(" ", "_")}-${romanToInt(level)}"
             return PriceUtils.getItemPrice(apiId)
         }
 
-        // 2. 精華 (Essence)
+
         previewEssenceRegex.find(item)?.destructured?.let { (name, quantityStr) ->
             if (!includeEssence) return 0.0
             val apiId = "ESSENCE_${name.uppercase()}"
@@ -56,18 +56,16 @@ object PriceParser {
             return price * quantity
         }
 
-        // 3. 碎片 (Shard)
+
         shardRegex.find(item)?.groupValues?.get(1)?.let { shardName ->
             val apiId = "SHARD_${shardName.uppercase().replace(" ", "_").replace("'s", "")}"
             return PriceUtils.getItemPrice(apiId)
         }
 
-        // 4. 特例替換表
         itemReplacements[item]?.let { itemId ->
             return PriceUtils.getItemPrice(itemId)
         }
 
-        // 5. 預設 Fallback 規則
         val fallbackId = item.uppercase().replace("'", "").replace(" -", "").replace(" ", "_")
         return PriceUtils.getItemPrice(fallbackId)
     }

@@ -47,7 +47,7 @@ public abstract class MixinLocalPlayer extends AbstractClientPlayer {
 
     @Inject(method = "aiStep", at = @At("HEAD"))
     private void onAiStepHead(CallbackInfo ci) {
-        // 在每個 Tick 的最開始，讓 PlayerUtils 有機會優先更新身體的邏輯視角
+
         PlayerUtils.INSTANCE.onAiStep();
     }
 

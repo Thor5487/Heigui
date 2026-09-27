@@ -107,20 +107,20 @@ object SimonSays : Module(
         on<RenderEvent.Extract> {
             if (!triggerbot|| !triggerBotClock.hasTimePassed(triggerBotDelay) || mc.gui.screen() != null) return@on
 
-            // 如果還沒有解答，或者已經點完了，就跳出
+
             if (clickInOrder.isEmpty() || clickNeeded >= clickInOrder.size) return@on
 
-            // 取得玩家目前準心看著的方塊
+
             val hitResult = mc.hitResult as? BlockHitResult ?: return@on
             val pos = hitResult.blockPos
-            // 檢查：看著的方塊的「東邊一格」是不是等於解答需要的方塊？
+
             if (clickInOrder.getOrNull(clickNeeded) != pos.east()) return@on
 
             if (blockDuringLag && !serverResponded) return@on
 
-            // 核心點擊邏輯
+
             if (clickNeeded == 0) {
-                // 避免狂點第一個按鈕導致解謎壞掉
+
                 if (!firstClickClock.hasTimePassed()) return@on
                 firstClickClock.update()
                 val player = mc.player ?: return@on
@@ -130,7 +130,7 @@ object SimonSays : Module(
                 return@on
             }
 
-            // 點擊後續的按鈕
+
             triggerBotClock.update()
             val player = mc.player ?: return@on
             mc.gameMode?.useItemOn(player, InteractionHand.MAIN_HAND, hitResult)

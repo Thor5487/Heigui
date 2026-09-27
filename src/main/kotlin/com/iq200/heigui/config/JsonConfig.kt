@@ -6,12 +6,12 @@ import java.io.File
 import java.lang.reflect.Type
 
 
-/**
- * 通用的 JSON 設定檔管理器
- * @param fileName 檔案名稱 (例如 "stalker.json")
- * @param typeToken 資料型別 (用於 Gson 反序列化)
- * @param defaultData 預設資料 (當檔案不存在或為空時使用)
- */
+
+
+
+
+
+
 class JsonConfig<T>(
     private val fileName: String,
     private val typeToken: Type,
