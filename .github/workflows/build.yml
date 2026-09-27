@@ -37,8 +37,8 @@ jobs:
       - name: make gradle wrapper executable
         run: chmod +x ./gradlew
 
-      - name: build
-        run: ./gradlew build
+      - name: build public version
+        run: ./gradlew buildPublic
 
       # ==========================================
       # 1. 產生 Actions 後台的 Artifact (裸 .jar，不壓縮)

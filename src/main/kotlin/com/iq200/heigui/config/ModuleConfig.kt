@@ -9,19 +9,19 @@ import com.iq200.heigui.clickgui.settings.Saving
 import com.iq200.heigui.features.Module
 import java.io.File
 
-/**
- * # ModuleConfig
- *
- * 負責將 Heigui 的外掛模組狀態 (開啟/關閉) 以及設定值，存成 JSON 格式的設定檔。
- */
+
+
+
+
+
 class ModuleConfig internal constructor(file: File) {
 
-    /**
-     * 主設定檔的建構子。檔案會儲存在： config/heigui/{fileName}
-     */
+
+
+
     constructor(fileName: String) : this(File(Heigui.configDir, fileName))
 
-    // key 是小寫的模組名稱
+
     internal val modules: HashMap<String, Module> = hashMapOf()
 
     private val file: File = file.apply {
@@ -33,9 +33,9 @@ class ModuleConfig internal constructor(file: File) {
         }
     }
 
-    /**
-     * 從 JSON 檔案讀取設定，並套用到 [modules] 裡面的各個功能。
-     */
+
+
+
     fun load() {
         try {
             with(file.bufferedReader().use { it.readText() }) {
@@ -46,10 +46,10 @@ class ModuleConfig internal constructor(file: File) {
                     val moduleObj = modules?.asJsonObject ?: continue
                     val module = this@ModuleConfig.modules[moduleObj.get("name").asString.lowercase()] ?: continue
 
-                    // 讀取模組的開關狀態
+
                     if (moduleObj.get("enabled").asBoolean != module.enabled) module.toggle()
 
-                    // 讀取模組內的詳細設定值 (例如速度、範圍等)
+
                     val settingObj = moduleObj.get("settings")?.takeIf { it.isJsonObject }?.asJsonObject?.entrySet() ?: continue
                     for ((key, value) in settingObj) {
                         (module.settings[key] as? Saving)?.apply { read(value ?: continue, gson) }
@@ -61,29 +61,60 @@ class ModuleConfig internal constructor(file: File) {
         }
     }
 
-    /**
-     * 將目前 [modules] 裡面的所有狀態，存檔寫入 JSON。
-     */
+
+
+
     fun save() {
         try {
-            val jsonArray = JsonArray().apply {
-                for ((_, module) in modules) {
-                    add(JsonObject().apply {
-                        add("name", JsonPrimitive(module.name))
-                        add("enabled", JsonPrimitive(module.enabled))
-                        add("settings", JsonObject().apply {
-                            for ((name, setting) in module.settings) {
-                                // 只有實作了 Saving 介面的設定才會被存檔
-                                if (setting is Saving) add(name, setting.write(gson))
-                            }
-                        })
-                    })
-                }
+            val jsonArray = readExistingConfig()
+            val moduleIndices = mutableMapOf<String, Int>()
+
+            jsonArray.forEachIndexed { index, element ->
+                val moduleName = element
+                    .takeIf(JsonElement::isJsonObject)
+                    ?.asJsonObject
+                    ?.get("name")
+                    ?.takeIf(JsonElement::isJsonPrimitive)
+                    ?.asString
+                    ?.lowercase()
+
+                if (moduleName != null) moduleIndices.putIfAbsent(moduleName, index)
             }
+
+            for ((moduleName, module) in modules) {
+                val existingIndex = moduleIndices[moduleName]
+                val moduleObj = existingIndex
+                    ?.let { jsonArray[it].takeIf(JsonElement::isJsonObject)?.asJsonObject?.deepCopy() }
+                    ?: JsonObject()
+
+                val settingObj = moduleObj
+                    .get("settings")
+                    ?.takeIf(JsonElement::isJsonObject)
+                    ?.asJsonObject
+                    ?.deepCopy()
+                    ?: JsonObject()
+
+                for ((name, setting) in module.settings) {
+                    if (setting is Saving) settingObj.add(name, setting.write(gson))
+                }
+
+                moduleObj.add("name", JsonPrimitive(module.name))
+                moduleObj.add("enabled", JsonPrimitive(module.enabled))
+                moduleObj.add("settings", settingObj)
+
+                if (existingIndex == null) jsonArray.add(moduleObj)
+                else jsonArray.set(existingIndex, moduleObj)
+            }
+
             file.bufferedWriter().use { it.write(gson.toJson(jsonArray)) }
         } catch (e: Exception) {
             logger.error("Error saving module config.", e)
         }
+    }
+
+    private fun readExistingConfig(): JsonArray {
+        if (!file.exists() || file.length() == 0L) return JsonArray()
+        return JsonParser.parseReader(file.reader()).asJsonArray.deepCopy()
     }
 
     private companion object {
