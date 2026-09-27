@@ -17,12 +17,6 @@ object BuildConfig {
         loaded
     }
 
-    val isPrivate: Boolean by lazy {
-        props.getProperty("is_private", "false").toBoolean()
-    }
-
-
-
     val channel: String by lazy {
         props.getProperty("channel", "beta")
     }

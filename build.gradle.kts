@@ -1,4 +1,5 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.gradle.jvm.tasks.Jar
 
 plugins {
     id("net.fabricmc.fabric-loom")
@@ -7,7 +8,13 @@ plugins {
 }
 
 group = property("maven_group") as String
+val modId = property("mod_id") as String
 val isPrivateBuild = (project.findProperty("isPrivate") as? String)?.toBoolean() ?: false
+val sourceVariant = if (isPrivateBuild) "private" else "public"
+val preprocessSources = registerSourcePreprocessor(sourceVariant)
+val preprocessedKotlin = layout.buildDirectory.dir("preprocessed/$sourceVariant/kotlin")
+val preprocessedJava = layout.buildDirectory.dir("preprocessed/$sourceVariant/java")
+val preprocessedResources = layout.buildDirectory.dir("preprocessed/$sourceVariant/resources")
 
 // ====================================================
 // Release and beta version metadata
@@ -137,11 +144,18 @@ tasks {
     }
 
     processResources {
+        dependsOn(preprocessSources)
+
         // These inputs prevent stale generated metadata after a Git revision changes.
-        inputs.property("isPrivateBuild", isPrivateBuild)
         inputs.property("modVersion", modVersion)
         inputs.property("buildChannel", buildChannel)
         inputs.property("commitHash", commitHash)
+
+        exclude("fabric.mod.json5", "$modId.mixins.json5")
+
+        from(preprocessedResources) {
+            include("fabric.mod.json", "$modId.mixins.json")
+        }
 
         filesMatching("fabric.mod.json") {
             expand(getProperties() + mapOf("mod_version" to modVersion))
@@ -149,7 +163,6 @@ tasks {
         filesMatching("build_type.properties") {
             expand(
                 mapOf(
-                    "isPrivateBuild" to isPrivateBuild.toString(),
                     "buildChannel" to buildChannel,
                     "commitHash" to commitHash,
                     "modVersion" to modVersion
@@ -159,13 +172,20 @@ tasks {
     }
 
     compileKotlin {
+        dependsOn(preprocessSources)
+        setSource(preprocessedKotlin)
+
         compilerOptions {
             jvmTarget = JvmTarget.JVM_25
             freeCompilerArgs.add("-Xlambdas=class")
+            freeCompilerArgs.add("-Xjava-source-roots=${preprocessedJava.get().asFile.invariantSeparatorsPath}")
         }
     }
 
     compileJava {
+        dependsOn(preprocessSources, compileKotlin)
+        setSource(preprocessedJava)
+        classpath += files(compileKotlin.flatMap { it.destinationDirectory })
         sourceCompatibility = "25"
         targetCompatibility = "25"
         options.encoding = "UTF-8"
@@ -175,11 +195,24 @@ tasks {
 }
 
 java {
-    withSourcesJar()
-
     toolchain {
         languageVersion.set(JavaLanguageVersion.of(25))
     }
+}
+
+val sourcesJar = tasks.register<Jar>("sourcesJar") {
+    dependsOn(preprocessSources)
+    archiveClassifier.set("sources")
+    from(preprocessedKotlin)
+    from(preprocessedJava)
+    from("src/main/resources") {
+        exclude("fabric.mod.json5", "$modId.mixins.json5")
+    }
+    from(preprocessedResources)
+}
+
+tasks.named("assemble") {
+    dependsOn(sourcesJar)
 }
 
 // ====================================================

@@ -31,14 +31,11 @@ abstract class Setting<T>(
         return this
     }
 
-
-
     /**
      * Dependency for if it should be shown in the [click gui][Module].
      */
     protected var visibilityDependency: (() -> Boolean)? = null
 
-    protected var lockDependency: (() -> Boolean)? = null
     /**
      * Resets the setting to the default value
      */
@@ -47,21 +44,13 @@ abstract class Setting<T>(
     }
 
     val isVisible: Boolean
-        get() {
-            return lockDependency?.invoke() != false && (visibilityDependency?.invoke() ?: true) && !hidden
-
-        }
+        get() = (visibilityDependency?.invoke() ?: true) && !hidden
 
     override operator fun provideDelegate(thisRef: Module, property: KProperty<*>): ReadWriteProperty<Module, T> =
         thisRef.registerSetting(this)
 
-    override operator fun getValue(thisRef: Module, property: KProperty<*>): T {
+    override operator fun getValue(thisRef: Module, property: KProperty<*>): T = value
 
-        if (lockDependency?.invoke() == false) {
-            return default
-        }
-        return value
-    }
     override operator fun setValue(thisRef: Module, property: KProperty<*>, value: T) {
         this.value = value
     }
@@ -70,11 +59,6 @@ abstract class Setting<T>(
 
         fun <K : Setting<T>, T> K.withDependency(dependency: () -> Boolean): K {
             visibilityDependency = dependency
-            return this
-        }
-
-        fun <K : Setting<T>, T> K.withLock(dependency: () -> Boolean): K {
-            lockDependency = dependency
             return this
         }
     }
