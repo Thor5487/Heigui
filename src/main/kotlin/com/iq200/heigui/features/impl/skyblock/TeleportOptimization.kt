@@ -224,12 +224,14 @@ object TeleportOptimization : Module (
             val distance = getTpDistance(stack)
             if (distance == 0) return
 
-
-            val prediction = EtherUtils.predictTeleport(distance.toInt(), currentPos, yaw, pitch) ?: return
-
-
-            var target = prediction.subtract(0.0, 1.0, 0.0)
-            target = resolveZptpTarget(target) ?: return
+            // Check predicted voxels from farthest to nearest, matching the server's fallback behavior.
+            var target: Vec3? = null
+            for (prediction in EtherUtils.predictTeleportCandidates(distance, currentPos, yaw, pitch)) {
+                val resolved = resolveZptpTarget(prediction.subtract(0.0, 1.0, 0.0)) ?: continue
+                target = resolved
+                break
+            }
+            target ?: return
 
 
             if (target.toBlockPos() == currentPos.toBlockPos()) return
@@ -269,19 +271,44 @@ object TeleportOptimization : Module (
     private fun resolveZptpTarget(target: Vec3): Vec3? {
         if (isSafeZptpTarget(target)) return target
 
+        val level = mc.level ?: return null
+        val feet = target.toBlockPos()
+        val feetState = level.getBlockState(feet)
+        val feetShape = feetState.getCollisionShape(level, feet)
+
+        // Only correct an eye/feet Y mismatch. If the feet block is already empty,
+        // the failure came from another collision and must fall back to the previous voxel.
+        if (feetShape.isEmpty || feetState.block is CarpetBlock) return null
+
         val above: Vec3 = target.add(0.0, 1.0, 0.0)
         return if (isSafeZptpTarget(above)) above else null
     }
 
     private fun isSafeZptpTarget(target: Vec3): Boolean {
-        if (mc.level == null) return false
+        val level = mc.level ?: return false
 
-        val feet: BlockPos = target.toBlockPos()
-        if (!mc.level!!.hasChunk(feet.x shr 4, feet.z shr 4)) return false
+        val feet = target.toBlockPos()
+        if (!level.hasChunk(feet.x shr 4, feet.z shr 4)) return false
 
+        val below = feet.below()
         val head = feet.above()
-        return mc.level!!.getBlockState(feet).getCollisionShape(mc.level!!, feet).isEmpty
-                && mc.level!!.getBlockState(head).getCollisionShape(mc.level!!, head).isEmpty
+        val belowState = level.getBlockState(below)
+        val belowShape = belowState.getCollisionShape(level, below)
+        val feetState = level.getBlockState(feet)
+        val headState = level.getBlockState(head)
+
+        // Only reject blocks whose collision shape extends into the player's feet block space.
+        // Air, slabs, stairs, and normal blocks are valid; walls and fences extend above 1.0.
+        val belowClear = belowShape.isEmpty || belowShape.bounds().maxY <= 1.0
+
+        val feetClear =
+            feetState.block is CarpetBlock ||
+                    feetState.getCollisionShape(level, feet).isEmpty
+
+        val headClear =
+            headState.getCollisionShape(level, head).isEmpty
+
+        return belowClear && feetClear && headClear
     }
 
     private fun isRoomAllowedZPEW(): Boolean {

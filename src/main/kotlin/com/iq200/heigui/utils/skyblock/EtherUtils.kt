@@ -69,6 +69,7 @@ object EtherUtils {
             RedstoneWireBlock::class.java,
             MushroomBlock::class.java,
             FlowerBlock::class.java,
+            TorchBlock::class.java,
             StemBlock::class.java,
             CropBlock::class.java,
             TripWireBlock::class.java,
@@ -459,10 +460,34 @@ object EtherUtils {
     }
 
     fun predictTeleport(distance: Int, start: Vec3, yaw: Float, pitch: Float): Vec3? {
+        return predictTeleportCandidates(distance, start, yaw, pitch).firstOrNull()
+    }
+
+    fun predictTeleportCandidates(distance: Int, start: Vec3, yaw: Float, pitch: Float): List<Vec3> {
         val forward: Vec3 = vec3FromRotation(pitch, yaw).multiply(1.0 / STEPS)
         val player: Vec3 = start.add(0.0, getEyeHeight().toDouble(), 0.0)
         var cur: Vec3 = player
         var i = 0
+
+        fun candidatesFrom(rayPoint: Vec3): List<Vec3> {
+            val traversedVoxels = traceVoxelPath(player, rayPoint)
+            val primaryBlock = rayPoint.toBlockPos()
+            val primaryIndex = traversedVoxels.indexOfLast { it == primaryBlock }
+            val primary = Vec3(
+                primaryBlock.x + 0.5,
+                primaryBlock.y.toDouble(),
+                primaryBlock.z + 0.5
+            )
+            if (primaryIndex < 0) return listOf(primary)
+
+            return buildList {
+                add(primary)
+                for (index in primaryIndex - 1 downTo 0) {
+                    val block = traversedVoxels[index]
+                    add(Vec3(block.x + 0.5, block.y.toDouble(), block.z + 0.5))
+                }
+            }
+        }
 
         while (true) {
             if (i.toDouble() < distance.toDouble() * STEPS) {
@@ -471,9 +496,9 @@ object EtherUtils {
                 if (i.toDouble() % STEPS == 0.0 && !isSpecial(cur) && !isIgnored(cur)) {
                     cur = cur.add(forward.multiply(-STEPS))
                     return if (i != 0 && isIgnored(cur))
-                        Vec3(floor(cur.x()) + 0.5, floor(cur.y()), floor(cur.z()) + 0.5)
+                        candidatesFrom(cur)
                     else
-                        null
+                        emptyList()
                 }
 
                 //
@@ -499,7 +524,7 @@ object EtherUtils {
                         )
                     )
                 ) {
-                    return null
+                    return emptyList()
                 }
             }
 
@@ -512,11 +537,60 @@ object EtherUtils {
                     )
                 ))
             ) {
-                return Vec3(floor(pos.x()) + 0.5, floor(pos.y()), floor(pos.z()) + 0.5)
+                return candidatesFrom(pos)
             }
 
-            return null
+            return emptyList()
         }
+    }
+
+    private fun traceVoxelPath(start: Vec3, end: Vec3): List<BlockPos> {
+        var x = floor(start.x).toInt()
+        var y = floor(start.y).toInt()
+        var z = floor(start.z).toInt()
+        val endX = floor(end.x).toInt()
+        val endY = floor(end.y).toInt()
+        val endZ = floor(end.z).toInt()
+
+        val direction = end.subtract(start)
+        val stepX = sign(direction.x).toInt()
+        val stepY = sign(direction.y).toInt()
+        val stepZ = sign(direction.z).toInt()
+
+        val tDeltaX = if (direction.x == 0.0) Double.POSITIVE_INFINITY else abs(1.0 / direction.x)
+        val tDeltaY = if (direction.y == 0.0) Double.POSITIVE_INFINITY else abs(1.0 / direction.y)
+        val tDeltaZ = if (direction.z == 0.0) Double.POSITIVE_INFINITY else abs(1.0 / direction.z)
+
+        var tMaxX = if (stepX == 0) Double.POSITIVE_INFINITY
+        else ((if (stepX > 0) x + 1.0 else x.toDouble()) - start.x) / direction.x
+        var tMaxY = if (stepY == 0) Double.POSITIVE_INFINITY
+        else ((if (stepY > 0) y + 1.0 else y.toDouble()) - start.y) / direction.y
+        var tMaxZ = if (stepZ == 0) Double.POSITIVE_INFINITY
+        else ((if (stepZ > 0) z + 1.0 else z.toDouble()) - start.z) / direction.z
+
+        val path = mutableListOf<BlockPos>()
+        val tieEpsilon = 1.0E-10
+
+        while (x != endX || y != endY || z != endZ) {
+            val exitT = min(tMaxX, min(tMaxY, tMaxZ))
+            path.add(BlockPos(x, y, z))
+
+            if (abs(tMaxX - exitT) <= tieEpsilon) {
+                x += stepX
+                tMaxX += tDeltaX
+            }
+            if (abs(tMaxY - exitT) <= tieEpsilon) {
+                y += stepY
+                tMaxY += tDeltaY
+            }
+            if (abs(tMaxZ - exitT) <= tieEpsilon) {
+                z += stepZ
+                tMaxZ += tDeltaZ
+            }
+        }
+
+        path.add(BlockPos(endX, endY, endZ))
+        return path
     }
 
     // hypixel probably isnt using the other poses yet
@@ -574,7 +648,10 @@ object EtherUtils {
     }
 
     private fun isIgnored(pos: Vec3): Boolean {
-        val state = mc.level!!.getBlockState(pos.toBlockPos())
+        val blockPos = pos.toBlockPos()
+        if (hasProtrudingCollisionFromBelow(blockPos)) return false
+
+        val state = mc.level!!.getBlockState(blockPos)
         return isIgnored(state)
     }
 
@@ -585,8 +662,18 @@ object EtherUtils {
     }
 
     private fun isIgnored2(pos: Vec3): Boolean {
-        val state = mc.level!!.getBlockState(pos.toBlockPos())
+        val blockPos = pos.toBlockPos()
+        if (hasProtrudingCollisionFromBelow(blockPos)) return false
+
+        val state = mc.level!!.getBlockState(blockPos)
         return isIgnored(state) || state.block is SlabBlock
+    }
+
+    private fun hasProtrudingCollisionFromBelow(pos: BlockPos): Boolean {
+        val level = mc.level ?: return false
+        val below = pos.below()
+        val belowShape = level.getBlockState(below).getCollisionShape(level, below)
+        return !belowShape.isEmpty && belowShape.bounds().maxY > 1.0
     }
 
     fun isSpecial(pos: Vec3): Boolean {
@@ -596,9 +683,15 @@ object EtherUtils {
 
     // todo: verify if this is even correct
     fun inBB(pos: Vec3): Boolean {
+        val blockPos = pos.toBlockPos()
+
+        // Hypixel treats a collision shape extending from the block below as occupying
+        // this whole voxel for Instant Transmission ray prediction.
+        if (hasProtrudingCollisionFromBelow(blockPos)) return true
+
         // if (!isSpecial(x, y, z)) return true;
-        val block = mc.level!!.getBlockState(pos.toBlockPos())
-        val bb = block.getShape(mc.level!!, pos.toBlockPos()).bounds()
+        val block = mc.level!!.getBlockState(blockPos)
+        val bb = block.getShape(mc.level!!, blockPos).bounds()
         return bb.contains(pos)
     }
 }
