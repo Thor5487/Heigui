@@ -58,10 +58,12 @@ fun gitOutput(vararg args: String): String? = try {
 val modVersionBase = property("mod_version") as String
 val mcVersion = property("minecraft_version") as String
 
-// A build is a release only when HEAD is on the matching version tag.
-// The property is a fallback for environments where Git is unavailable.
+// A build is a release only when the expected version tag points at HEAD.
+// Query that tag explicitly because a beta counter tag may point at the same
+// commit and `git describe --exact-match` returns only one of them.
+val expectedReleaseTag = "v$modVersionBase"
 val isReleaseBuild = project.hasProperty("release") ||
-        gitOutput("describe", "--exact-match", "--tags", "HEAD") == "v$modVersionBase"
+        gitOutput("tag", "--points-at", "HEAD", "--list", expectedReleaseTag) == expectedReleaseTag
 
 val commitHash = gitOutput("rev-parse", "--short", "HEAD") ?: "unknown"
 
