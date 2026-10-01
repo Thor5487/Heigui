@@ -14,7 +14,7 @@ import com.iq200.heigui.utils.Colors
 import com.iq200.heigui.utils.ui.HoverHandler
 import com.iq200.heigui.utils.ui.animations.EaseInOutAnimation
 import com.iq200.heigui.utils.ui.isAreaHovered
-import com.iq200.heigui.utils.ui.rendering.NVGRenderer
+import com.iq200.heigui.utils.ui.rendering.GuiRenderer
 import com.mojang.blaze3d.platform.InputConstants
 import net.minecraft.client.input.MouseButtonEvent
 
@@ -48,7 +48,7 @@ class SelectorSetting(
         return options[index]
     }
 
-    private val elementWidths by lazy { options.map { NVGRenderer.textWidth(it, 16f, NVGRenderer.defaultFont) } }
+    private val elementWidths by lazy { options.map { GuiRenderer.textWidth(it, 16f) } }
     private val settingAnim = EaseInOutAnimation(200)
     private val hover = HoverHandler(150)
     private val defaultHeight = Panel.HEIGHT
@@ -65,26 +65,40 @@ class SelectorSetting(
         val currentWidth = elementWidths[index]
 
         hover.handle(x + width - 20f - currentWidth, y + defaultHeight / 2f - 10f, currentWidth + 12f, 22f, true)
-        NVGRenderer.rect(x + width - 20f - currentWidth, y + defaultHeight / 2f - 10f, currentWidth + 12f, 20f, color.rgba, 5f)
-        NVGRenderer.hollowRect(x + width - 20f - currentWidth, y + defaultHeight / 2f - 10f, currentWidth + 12f, 20f, 1.5f, ClickGUIModule.clickGUIColor.rgba, 5f)
+        GuiRenderer.rect(x + width - 20f - currentWidth, y + defaultHeight / 2f - 10f, currentWidth + 12f, 20f, color.rgba, 5f)
+        GuiRenderer.hollowRect(x + width - 20f - currentWidth, y + defaultHeight / 2f - 10f, currentWidth + 12f, 20f, 1.5f, ClickGUIModule.clickGUIColor.rgba, 5f)
 
-        NVGRenderer.text(name, x + 6f, y + defaultHeight / 2f - 8f, 16f, Colors.WHITE.rgba, NVGRenderer.defaultFont)
-        NVGRenderer.text(selected, x + width - 14f - currentWidth, y + defaultHeight / 2f - 8f, 16f, Colors.WHITE.rgba, NVGRenderer.defaultFont)
+        GuiRenderer.text(name, x + 6f, y + defaultHeight / 2f - 8f, 16f, Colors.WHITE.rgba)
+        GuiRenderer.verticallyCenteredText(
+            selected,
+            x + width - 14f - currentWidth,
+            y + defaultHeight / 2f - 10f,
+            20f,
+            16f,
+            Colors.WHITE.rgba
+        )
 
         if (!extended && !settingAnim.isAnimating()) return defaultHeight
 
         val displayHeight = getHeight()
-        if (settingAnim.isAnimating()) NVGRenderer.pushScissor(x, y, width, displayHeight)
+        if (settingAnim.isAnimating()) GuiRenderer.pushScissor(x, y, width, displayHeight)
 
-        NVGRenderer.rect(x + 6, y + 37f, width - 12f, options.size * 32f, gray38.rgba, 5f)
+        GuiRenderer.rect(x + 6, y + 37f, width - 12f, options.size * 32f, gray38.rgba, 5f)
 
         for (i in options.indices) {
             val optionY = y + 38 + 32 * i
-            if (i != options.size - 1) NVGRenderer.line(x + 18f, optionY + 32, x + width - 12f, optionY + 32, 1.5f, Colors.MINECRAFT_DARK_GRAY.rgba)
-            NVGRenderer.text(options[i], x + width / 2f - elementWidths[i] / 2, optionY + 8f, 16f, Colors.WHITE.rgba, NVGRenderer.defaultFont)
-            if (isSettingHovered(i)) NVGRenderer.hollowRect(x + 6, optionY, width - 12f, 32f, 1.5f, ClickGUIModule.clickGUIColor.rgba, 4f)
+            if (i != options.size - 1) GuiRenderer.line(x + 18f, optionY + 32, x + width - 12f, optionY + 32, 1.5f, Colors.MINECRAFT_DARK_GRAY.rgba)
+            GuiRenderer.verticallyCenteredText(
+                options[i],
+                x + width / 2f - elementWidths[i] / 2,
+                optionY,
+                32f,
+                16f,
+                Colors.WHITE.rgba
+            )
+            if (isSettingHovered(i)) GuiRenderer.hollowRect(x + 6, optionY, width - 12f, 32f, 1.5f, ClickGUIModule.clickGUIColor.rgba, 4f)
         }
-        if (settingAnim.isAnimating()) NVGRenderer.popScissor()
+        if (settingAnim.isAnimating()) GuiRenderer.popScissor()
 
         return displayHeight
     }

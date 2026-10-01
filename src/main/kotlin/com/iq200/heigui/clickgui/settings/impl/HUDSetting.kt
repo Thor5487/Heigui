@@ -16,7 +16,7 @@ import com.iq200.heigui.utils.Colors
 import com.iq200.heigui.utils.ui.HoverHandler
 import com.iq200.heigui.utils.ui.animations.LinearAnimation
 import com.iq200.heigui.utils.ui.isAreaHovered
-import com.iq200.heigui.utils.ui.rendering.NVGRenderer
+import com.iq200.heigui.utils.ui.rendering.GuiRenderer
 import com.mojang.blaze3d.platform.InputConstants
 import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.client.input.MouseButtonEvent
@@ -51,7 +51,7 @@ class HUDSetting(
     override fun render(x: Float, y: Float, mouseX: Float, mouseY: Float): Float {
         super.render(x, y, mouseX, mouseY)
         val height = getHeight()
-        NVGRenderer.text(name, x + 6f, y + height / 2f - 8f, 16f, Colors.WHITE.rgba, NVGRenderer.defaultFont)
+        GuiRenderer.text(name, x + 6f, y + height / 2f - 8f, 16f, Colors.WHITE.rgba)
 
         val iconX = x + width - 30f
         val iconY = y + height / 2f - 12f
@@ -60,15 +60,15 @@ class HUDSetting(
         val imageSize = 24f + (6f * hoverHandler.percent() / 100f)
         val offset = (imageSize - 24f) / 2f
 
-        NVGRenderer.image(ClickGUI.movementImage, iconX - offset, iconY - offset, imageSize, imageSize)
+        GuiRenderer.image(ClickGUI.movementImage, iconX - offset, iconY - offset, imageSize, imageSize)
 
         if (toggleable) {
             val hovered = isAreaHovered(lastX + width - 70f, lastY + getHeight() / 2f - 10f, 34f, 20f, true)
-            NVGRenderer.rect(x + width - 70f, y + height / 2f - 10f, 34f, 20f, if (hovered) gray38.brighter().rgba else gray38.rgba, 9f)
+            GuiRenderer.rect(x + width - 70f, y + height / 2f - 10f, 34f, 20f, if (hovered) gray38.brighter().rgba else gray38.rgba, 9f)
 
             if (value.enabled || toggleAnimation.isAnimating()) {
                 val color = ClickGUIModule.clickGUIColor
-                NVGRenderer.rect(
+                GuiRenderer.rect(
                     x + width - 70f,
                     y + height / 2f - 10f,
                     toggleAnimation.get(34f, 9f, value.enabled),
@@ -78,8 +78,8 @@ class HUDSetting(
                 )
             }
 
-            NVGRenderer.hollowRect(x + width - 70f, y + height / 2f - 10f, 34f, 20f, 2f, ClickGUIModule.clickGUIColor.rgba, 9f)
-            NVGRenderer.circle(x + width - toggleAnimation.get(30f, 14f, !value.enabled) - 30f, y + height / 2f, 6f, Colors.WHITE.rgba)
+            GuiRenderer.hollowRect(x + width - 70f, y + height / 2f - 10f, 34f, 20f, 2f, ClickGUIModule.clickGUIColor.rgba, 9f)
+            GuiRenderer.circle(x + width - toggleAnimation.get(30f, 14f, !value.enabled) - 30f, y + height / 2f, 6f, Colors.WHITE.rgba)
         }
         return height
     }

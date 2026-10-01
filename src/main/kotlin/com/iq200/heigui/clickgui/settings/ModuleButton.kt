@@ -13,7 +13,7 @@ import com.iq200.heigui.utils.ui.animations.ColorAnimation
 import com.iq200.heigui.utils.ui.animations.EaseInOutAnimation
 import com.iq200.heigui.utils.ui.mouseX
 import com.iq200.heigui.utils.ui.mouseY
-import com.iq200.heigui.utils.ui.rendering.NVGRenderer
+import com.iq200.heigui.utils.ui.rendering.GuiRenderer
 import com.mojang.blaze3d.platform.InputConstants
 import net.minecraft.client.input.CharacterEvent
 import net.minecraft.client.input.MouseButtonEvent
@@ -37,7 +37,7 @@ class ModuleButton(val module: Module, val panel: Panel) {
         get() =
             colorAnim.get(ClickGUIModule.clickGUIColor, gray26, module.enabled).brighter(1 + hover.percent() / 500f)
 
-    private val nameWidth = NVGRenderer.textWidth(module.name, 18f, NVGRenderer.defaultFont)
+    private val nameWidth = GuiRenderer.textWidth(module.name, 18f)
     private val hoverHandler = HoverHandler(750)
     private val extendAnim = EaseInOutAnimation(250)
     private val hover = HoverHandler(250)
@@ -51,19 +51,19 @@ class ModuleButton(val module: Module, val panel: Panel) {
             ClickGUI.setDescription(module.description, x + Panel.WIDTH + 10f, y, hoverHandler)
 
         if (!ClickGUIModule.roundedPanelBottom && lastModule) {
-            NVGRenderer.rect(x, y, Panel.WIDTH, Panel.HEIGHT - 10f, color.rgba)
-            NVGRenderer.drawHalfRoundedRect(x, y + Panel.HEIGHT - 10f, Panel.WIDTH, 10f, color.rgba, 5f, false)
+            GuiRenderer.rect(x, y, Panel.WIDTH, Panel.HEIGHT - 10f, color.rgba)
+            GuiRenderer.drawHalfRoundedRect(x, y + Panel.HEIGHT - 10f, Panel.WIDTH, 10f, color.rgba, 5f, false)
         } else {
-            NVGRenderer.rect(x, y, Panel.WIDTH, Panel.HEIGHT, color.rgba)
+            GuiRenderer.rect(x, y, Panel.WIDTH, Panel.HEIGHT, color.rgba)
         }
-        NVGRenderer.text(module.name, x + Panel.WIDTH / 2 - nameWidth / 2, y + Panel.HEIGHT / 2 - 9f, 18f, Colors.WHITE.rgba, NVGRenderer.defaultFont)
+        GuiRenderer.text(module.name, x + Panel.WIDTH / 2 - nameWidth / 2, y + Panel.HEIGHT / 2 - 11f, 18f, Colors.WHITE.rgba)
 
         if (representableSettings.isEmpty()) return Panel.HEIGHT
 
         val totalHeight = Panel.HEIGHT + floor(extendAnim.get(0f, getSettingHeight(), !extended))
         var drawY = Panel.HEIGHT
 
-        if (extendAnim.isAnimating()) NVGRenderer.pushScissor(x, y, Panel.WIDTH, totalHeight)
+        if (extendAnim.isAnimating()) GuiRenderer.pushScissor(x, y, Panel.WIDTH, totalHeight)
 
         if (extendAnim.isAnimating() || extended) {
             for (setting in representableSettings) {
@@ -71,7 +71,7 @@ class ModuleButton(val module: Module, val panel: Panel) {
             }
         }
 
-        if (extendAnim.isAnimating()) NVGRenderer.popScissor()
+        if (extendAnim.isAnimating()) GuiRenderer.popScissor()
         return totalHeight
     }
 

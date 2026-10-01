@@ -18,7 +18,7 @@ import com.iq200.heigui.utils.ui.animations.EaseInOutAnimation
 import com.iq200.heigui.utils.ui.animations.LinearAnimation
 import com.iq200.heigui.utils.ui.isAreaHovered
 import com.iq200.heigui.utils.ui.rendering.Gradient
-import com.iq200.heigui.utils.ui.rendering.NVGRenderer
+import com.iq200.heigui.utils.ui.rendering.GuiRenderer
 import net.minecraft.client.input.CharacterEvent
 import net.minecraft.client.input.KeyEvent
 import net.minecraft.client.input.MouseButtonEvent
@@ -52,7 +52,7 @@ class ColorSetting(
         set(value) {
             if (value == field) return
             field = value
-            hexWidth = NVGRenderer.textWidth(field, 16f, NVGRenderer.defaultFont)
+            hexWidth = GuiRenderer.textWidth(field, 16f)
         }
 
     private var hexWidth = -1f
@@ -77,44 +77,44 @@ class ColorSetting(
         super.render(x, y, mouseX, mouseY)
         if (hexWidth < 0) {
             hexString = value.hex(allowAlpha)
-            hexWidth = NVGRenderer.textWidth(hexString, 16f, NVGRenderer.defaultFont)
+            hexWidth = GuiRenderer.textWidth(hexString, 16f)
         }
 
-        NVGRenderer.text(name, x + 6f, y + defaultHeight / 2f - 8f, 16f, Colors.WHITE.rgba, NVGRenderer.defaultFont)
-        NVGRenderer.rect(x + width - 40f, y + defaultHeight / 2f - 10f, 34f, 20f, value.rgba, 5f)
-        NVGRenderer.hollowRect(x + width - 40f, y + defaultHeight / 2f - 10f, 34f, 20f, 2f, value.withAlpha(1f).darker().rgba, 5f)
+        GuiRenderer.text(name, x + 6f, y + defaultHeight / 2f - 8f, 16f, Colors.WHITE.rgba)
+        GuiRenderer.rect(x + width - 40f, y + defaultHeight / 2f - 10f, 34f, 20f, value.rgba, 5f)
+        GuiRenderer.hollowRect(x + width - 40f, y + defaultHeight / 2f - 10f, 34f, 20f, 2f, value.withAlpha(1f).darker().rgba, 5f)
 
         if (!extended && !expandAnim.isAnimating()) return defaultHeight
 
-        if (expandAnim.isAnimating()) NVGRenderer.pushScissor(x, y + defaultHeight, width, getHeight() - defaultHeight)
+        if (expandAnim.isAnimating()) GuiRenderer.pushScissor(x, y + defaultHeight, width, getHeight() - defaultHeight)
         // SATURATION AND BRIGHTNESS
-        NVGRenderer.gradientRect(x + 6f, y + defaultHeight + 4f, width - 12f, 169f, Colors.WHITE.rgba, value.hsbMax().rgba, Gradient.LeftToRight, 5f)
-        NVGRenderer.gradientRect(x + 6f, y + defaultHeight + 4f, width - 12f, 170f, Colors.TRANSPARENT.rgba, Colors.BLACK.rgba, Gradient.TopToBottom, 5f)
+        GuiRenderer.gradientRect(x + 6f, y + defaultHeight + 4f, width - 12f, 169f, Colors.WHITE.rgba, value.hsbMax().rgba, Gradient.LeftToRight, 5f)
+        GuiRenderer.gradientRect(x + 6f, y + defaultHeight + 4f, width - 12f, 170f, Colors.TRANSPARENT.rgba, Colors.BLACK.rgba, Gradient.TopToBottom, 5f)
 
         val animatedSat = mainSliderAnim.get(mainSliderPrevSat, value.saturation, false)
         val animatedBright = mainSliderAnim.get(mainSliderPrevBright, value.brightness, false)
         val sbPointer = Pair((x + 6f + animatedSat * 220), (y + 38f + (1 - animatedBright) * 170))
-        NVGRenderer.dropShadow(sbPointer.first - 8.5f, sbPointer.second - 8.5f, 17f, 17f, 2.5f, 2.5f, 9f)
-        NVGRenderer.circle(sbPointer.first, sbPointer.second, 8f, Colors.WHITE.rgba)
-        NVGRenderer.circle(sbPointer.first, sbPointer.second, 7f, value.withAlpha(1f).rgba)
+        GuiRenderer.dropShadow(sbPointer.first - 8.5f, sbPointer.second - 8.5f, 17f, 17f, 2.5f, 2.5f, 9f)
+        GuiRenderer.circle(sbPointer.first, sbPointer.second, 8f, Colors.WHITE.rgba)
+        GuiRenderer.circle(sbPointer.first, sbPointer.second, 7f, value.withAlpha(1f).rgba)
 
         // HUE
-        NVGRenderer.image(ClickGUI.hueImage, x + 6f, y + 212f, width - 12f, 15f, 5f)
-        NVGRenderer.hollowRect(x + 6f, y + 212f, width - 12f, 15f, 1f, gray38.rgba, 5f)
+        GuiRenderer.image(ClickGUI.hueImage, x + 6f, y + 212f, width - 12f, 15f, 5f)
+        GuiRenderer.hollowRect(x + 6f, y + 212f, width - 12f, 15f, 1f, gray38.rgba, 5f)
 
         val huePos = x + 6f + hueSliderAnim.get(hueSliderPrev, value.hue, false) * 219f to y + 219f
-        NVGRenderer.dropShadow(huePos.first - 8.5f, huePos.second - 8.5f, 17f, 17f, 2.5f, 2.5f, 9f)
-        NVGRenderer.circle(huePos.first, huePos.second, 8f, Colors.WHITE.rgba)
-        NVGRenderer.circle(huePos.first, huePos.second, 7f, value.hsbMax().withAlpha(1f).rgba)
+        GuiRenderer.dropShadow(huePos.first - 8.5f, huePos.second - 8.5f, 17f, 17f, 2.5f, 2.5f, 9f)
+        GuiRenderer.circle(huePos.first, huePos.second, 8f, Colors.WHITE.rgba)
+        GuiRenderer.circle(huePos.first, huePos.second, 7f, value.hsbMax().withAlpha(1f).rgba)
 
         // ALPHA
         if (allowAlpha) {
-            NVGRenderer.gradientRect(x + 6f, y + 232f, width - 12f, 15f, Colors.TRANSPARENT.rgba, value.withAlpha(1f).rgba, Gradient.LeftToRight, 5f)
+            GuiRenderer.gradientRect(x + 6f, y + 232f, width - 12f, 15f, Colors.TRANSPARENT.rgba, value.withAlpha(1f).rgba, Gradient.LeftToRight, 5f)
 
             val alphaPos = Pair((x + 6f + alphaSliderAnim.get(alphaSliderPrev, value.alphaFloat, false) * 217f), y + 240f)
-            NVGRenderer.dropShadow(alphaPos.first - 8.5f, alphaPos.second - 8.5f, 17f, 17f, 2.5f, 2.5f, 9f)
-            NVGRenderer.circle(alphaPos.first, alphaPos.second, 8f, Colors.WHITE.darker(.5f).rgba)
-            NVGRenderer.circle(alphaPos.first, alphaPos.second, 7f, Colors.WHITE.rgba)
+            GuiRenderer.dropShadow(alphaPos.first - 8.5f, alphaPos.second - 8.5f, 17f, 17f, 2.5f, 2.5f, 9f)
+            GuiRenderer.circle(alphaPos.first, alphaPos.second, 8f, Colors.WHITE.darker(.5f).rgba)
+            GuiRenderer.circle(alphaPos.first, alphaPos.second, 7f, Colors.WHITE.rgba)
         }
 
         handleColorDrag(mouseX, mouseY, x, y, width)
@@ -127,15 +127,15 @@ class ColorSetting(
         val rectX = x + sidePadding
         val actualHeight = defaultHeight + if (allowAlpha) 250f else 230f
 
-        NVGRenderer.rect(rectX, y + actualHeight - 28f, width / 2, 24f, gray38.rgba, 4f)
-        NVGRenderer.hollowRect(rectX, y + actualHeight - 28f, width / 2, 24f, 2f, ClickGUIModule.clickGUIColor.rgba, 4f)
+        GuiRenderer.rect(rectX, y + actualHeight - 28f, width / 2, 24f, gray38.rgba, 4f)
+        GuiRenderer.hollowRect(rectX, y + actualHeight - 28f, width / 2, 24f, 2f, ClickGUIModule.clickGUIColor.rgba, 4f)
 
         textInputHandler.x = rectX + (width / 4) - (hexWidth / 2)
         textInputHandler.y = y + actualHeight - 26f
         textInputHandler.width = width / 2
         textInputHandler.draw(mouseX, mouseY)
 
-        if (expandAnim.isAnimating()) NVGRenderer.popScissor()
+        if (expandAnim.isAnimating()) GuiRenderer.popScissor()
         return getHeight()
     }
 

@@ -4,7 +4,7 @@ import com.mojang.blaze3d.platform.InputConstants
 
 import com.iq200.heigui.Heigui.mc
 import com.iq200.heigui.utils.Colors
-import com.iq200.heigui.utils.ui.rendering.NVGRenderer
+import com.iq200.heigui.utils.ui.rendering.GuiRenderer
 import net.minecraft.client.input.CharacterEvent
 import net.minecraft.client.input.KeyEvent
 import net.minecraft.client.input.MouseButtonEvent
@@ -55,8 +55,8 @@ class TextInputHandler(
         if (previousMousePos != mouseX to mouseY) mouseDragged(mouseX)
         previousMousePos = mouseX to mouseY
 
-        NVGRenderer.pushScissor(x, y, width, height)
-        if (selectionWidth != 0f) NVGRenderer.rect(
+        GuiRenderer.pushScissor(x, y, width, height)
+        if (selectionWidth != 0f) GuiRenderer.rect(
             x + caretX + 4f,
             y,
             selectionWidth,
@@ -64,12 +64,12 @@ class TextInputHandler(
             Colors.MINECRAFT_BLUE.rgba,
             4f
         )
-        NVGRenderer.popScissor()
+        GuiRenderer.popScissor()
 
         if (listening) {
             val time = System.currentTimeMillis()
             if (time - caretBlinkTime < 500)
-                NVGRenderer.line(
+                GuiRenderer.line(
                     x + caretX + 4f - textOffset,
                     y,
                     x + caretX + 4f - textOffset,
@@ -80,11 +80,11 @@ class TextInputHandler(
             else if (time - caretBlinkTime > 1000)
                 caretBlinkTime = System.currentTimeMillis()
         }
-        NVGRenderer.pushScissor(x, y, width, height)
+        GuiRenderer.pushScissor(x, y, width, height)
 
-        NVGRenderer.text(text, x + 4f - textOffset, y + 2f, height - 2, Colors.WHITE.rgba, NVGRenderer.defaultFont)
+        GuiRenderer.text(text, x + 4f - textOffset, y + 2f, height - 2, Colors.WHITE.rgba)
 
-        NVGRenderer.popScissor()
+        GuiRenderer.popScissor()
     }
 
     fun mouseClicked(mouseX: Float, mouseY: Float, click: MouseButtonEvent): Boolean {
@@ -340,7 +340,7 @@ class TextInputHandler(
         return end
     }
 
-    private fun textWidth(text: String): Float = NVGRenderer.textWidth(text, height - 2, NVGRenderer.defaultFont)
+    private fun textWidth(text: String): Float = GuiRenderer.textWidth(text, height - 2)
 
     private fun resetState() {
         listening = false

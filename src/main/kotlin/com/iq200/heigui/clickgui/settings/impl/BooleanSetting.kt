@@ -11,7 +11,7 @@ import com.iq200.heigui.utils.Color.Companion.brighter
 import com.iq200.heigui.utils.Colors
 import com.iq200.heigui.utils.ui.animations.LinearAnimation
 import com.iq200.heigui.utils.ui.isAreaHovered
-import com.iq200.heigui.utils.ui.rendering.NVGRenderer
+import com.iq200.heigui.utils.ui.rendering.GuiRenderer
 import com.mojang.blaze3d.platform.InputConstants
 import net.minecraft.client.input.MouseButtonEvent
 
@@ -30,13 +30,13 @@ class BooleanSetting(
         super.render(x, y, mouseX, mouseY)
         val height = getHeight()
 
-        NVGRenderer.text(name, x + 6f, y + height / 2f - 8f, 16f, Colors.WHITE.rgba, NVGRenderer.defaultFont)
+        GuiRenderer.text(name, x + 6f, y + height / 2f - 8f, 16f, Colors.WHITE.rgba)
 
-        NVGRenderer.rect(x + width - 40f, y + height / 2f - 10f, 34f, 20f, if (isHovered) gray38.brighter().rgba else gray38.rgba, 9f)
+        GuiRenderer.rect(x + width - 40f, y + height / 2f - 10f, 34f, 20f, if (isHovered) gray38.brighter().rgba else gray38.rgba, 9f)
 
         if (enabled || toggleAnimation.isAnimating()) {
             val color = ClickGUIModule.clickGUIColor
-            NVGRenderer.rect(
+            GuiRenderer.rect(
                 x + width - 40f,
                 y + height / 2f - 10f,
                 toggleAnimation.get(34f, 9f, enabled),
@@ -46,7 +46,7 @@ class BooleanSetting(
             )
         }
 
-        NVGRenderer.hollowRect(
+        GuiRenderer.hollowRect(
             x + width - 40f,
             y + height / 2f - 10f,
             34f,
@@ -55,7 +55,7 @@ class BooleanSetting(
             ClickGUIModule.clickGUIColor.rgba,
             9f
         )
-        NVGRenderer.circle(x + width - toggleAnimation.get(30f, 14f, !enabled), y + height / 2f, 6f, Colors.WHITE.rgba)
+        GuiRenderer.circle(x + width - toggleAnimation.get(30f, 14f, !enabled), y + height / 2f, 6f, Colors.WHITE.rgba)
 
         return height
     }

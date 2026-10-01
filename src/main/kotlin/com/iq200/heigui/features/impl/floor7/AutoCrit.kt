@@ -20,7 +20,7 @@ import net.minecraft.world.inventory.ContainerInput
 
 object AutoCrit : Module (
     name = "Auto Crit",
-    description = "Automatically proceed crit tech, requires sulphur in your sacks, Sulphur Bow and Death Bow. Left click sulphur bow to run. Only works twice for each instance.",
+    description = "Auto Criting for Archer",
     category = Category.FLOOR7
 ) {
     private val swordSwap by BooleanSetting("Sword Swap", false, desc = "Swap to the sword for multipliers.")

@@ -4,7 +4,7 @@ import com.iq200.heigui.clickgui.ClickGUI.gray38
 import com.iq200.heigui.features.impl.render.ClickGUIModule
 import com.iq200.heigui.utils.Colors
 import com.iq200.heigui.utils.ui.TextInputHandler
-import com.iq200.heigui.utils.ui.rendering.NVGRenderer
+import com.iq200.heigui.utils.ui.rendering.GuiRenderer
 import net.minecraft.client.input.CharacterEvent
 import net.minecraft.client.input.KeyEvent
 import net.minecraft.client.input.MouseButtonEvent
@@ -15,11 +15,11 @@ object SearchBar {
         private set(value) {
             if (value == field || value.length > 16) return
             field = value
-            searchWidth = NVGRenderer.textWidth(value, 20f, NVGRenderer.defaultFont)
+            searchWidth = GuiRenderer.textWidth(value, 20f)
         }
 
-    private var placeHolderWidth = NVGRenderer.textWidth("Search here...", 20f, NVGRenderer.defaultFont)
-    private var searchWidth = NVGRenderer.textWidth(currentSearch, 20f, NVGRenderer.defaultFont)
+    private var placeHolderWidth = GuiRenderer.textWidth("Search here...", 20f)
+    private var searchWidth = GuiRenderer.textWidth(currentSearch, 20f)
 
     private val textInputHandler = TextInputHandler(
         textProvider = { currentSearch },
@@ -27,13 +27,13 @@ object SearchBar {
     )
 
     fun draw(x: Float, y: Float, mouseX: Float, mouseY: Float) {
-        NVGRenderer.dropShadow(x, y, 350f, 40f, 10f, 0.75f, 9f)
-        NVGRenderer.rect(x, y, 350f, 40f, gray38.rgba, 9f)
-        NVGRenderer.hollowRect(x, y, 350f, 40f, 3f, ClickGUIModule.clickGUIColor.rgba, 9f)
+        GuiRenderer.dropShadow(x, y, 350f, 40f, 10f, 0.75f, 9f)
+        GuiRenderer.rect(x, y, 350f, 40f, gray38.rgba, 9f)
+        GuiRenderer.hollowRect(x, y, 350f, 40f, 3f, ClickGUIModule.clickGUIColor.rgba, 9f)
 
         val textY = y + 10f
 
-        if (currentSearch.isEmpty()) NVGRenderer.text("Search here...", x + 175f - placeHolderWidth / 2, textY, 20f, Colors.WHITE.rgba, NVGRenderer.defaultFont)
+        if (currentSearch.isEmpty()) GuiRenderer.text("Search here...", x + 175f - placeHolderWidth / 2, textY, 20f, Colors.WHITE.rgba)
         textInputHandler.x = (x + 175f - searchWidth / 2 - if (currentSearch.isEmpty()) placeHolderWidth / 2 + 2f else 0f).coerceAtLeast(x)
         textInputHandler.y = textY - 1
         textInputHandler.width = 250f

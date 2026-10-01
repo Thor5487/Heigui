@@ -11,7 +11,7 @@ import com.iq200.heigui.clickgui.settings.Saving
 import com.iq200.heigui.features.impl.render.ClickGUIModule
 import com.iq200.heigui.utils.Colors
 import com.iq200.heigui.utils.ui.isAreaHovered
-import com.iq200.heigui.utils.ui.rendering.NVGRenderer
+import com.iq200.heigui.utils.ui.rendering.GuiRenderer
 import net.minecraft.client.input.KeyEvent
 import net.minecraft.client.input.MouseButtonEvent
 
@@ -32,12 +32,12 @@ class KeybindSetting(
         set(newKey) {
             if (newKey == value) return
             value = newKey
-            keyNameWidth = NVGRenderer.textWidth(value.displayName.string, 16f, NVGRenderer.defaultFont)
+            keyNameWidth = GuiRenderer.textWidth(value.displayName.string, 16f)
         }
 
     override fun render(x: Float, y: Float, mouseX: Float, mouseY: Float): Float {
         super.render(x, y, mouseX, mouseY)
-        if (keyNameWidth < 0) keyNameWidth = NVGRenderer.textWidth(value.displayName.string, 16f, NVGRenderer.defaultFont)
+        if (keyNameWidth < 0) keyNameWidth = GuiRenderer.textWidth(value.displayName.string, 16f)
         val height = getHeight()
 
         val rectX = x + width - 20 - keyNameWidth
@@ -45,11 +45,18 @@ class KeybindSetting(
         val rectWidth = keyNameWidth + 12f
         val rectHeight = 20f
 
-        NVGRenderer.rect(rectX, rectY, rectWidth, rectHeight, gray38.rgba, 5f)
-        NVGRenderer.hollowRect(rectX - 1, rectY - 1, rectWidth + 2f, rectHeight + 2f, 1.5f, ClickGUIModule.clickGUIColor.rgba, 4f)
+        GuiRenderer.rect(rectX, rectY, rectWidth, rectHeight, gray38.rgba, 5f)
+        GuiRenderer.hollowRect(rectX - 1, rectY - 1, rectWidth + 2f, rectHeight + 2f, 1.5f, ClickGUIModule.clickGUIColor.rgba, 4f)
 
-        NVGRenderer.text(name, x + 6f, y + height / 2f - 8f, 16f, Colors.WHITE.rgba, NVGRenderer.defaultFont)
-        NVGRenderer.text(value.displayName.string, rectX + (rectWidth - keyNameWidth) / 2, rectY + rectHeight / 2 - 8f, 16f, if (listening) Colors.MINECRAFT_YELLOW.rgba else Colors.WHITE.rgba, NVGRenderer.defaultFont)
+        GuiRenderer.text(name, x + 6f, y + height / 2f - 8f, 16f, Colors.WHITE.rgba)
+        GuiRenderer.verticallyCenteredText(
+            value.displayName.string,
+            rectX + (rectWidth - keyNameWidth) / 2,
+            rectY,
+            rectHeight,
+            16f,
+            if (listening) Colors.MINECRAFT_YELLOW.rgba else Colors.WHITE.rgba
+        )
 
         return height
     }
