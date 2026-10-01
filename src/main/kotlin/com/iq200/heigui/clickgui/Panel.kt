@@ -7,7 +7,8 @@ import com.iq200.heigui.features.ModuleManager
 import com.iq200.heigui.features.impl.render.ClickGUIModule
 import com.iq200.heigui.utils.Colors
 import com.iq200.heigui.utils.ui.isAreaHovered
-import com.iq200.heigui.utils.ui.rendering.NVGRenderer
+import com.iq200.heigui.utils.ui.rendering.GuiRenderer
+import com.mojang.blaze3d.platform.InputConstants
 import net.minecraft.client.input.CharacterEvent
 import net.minecraft.client.input.KeyEvent
 import net.minecraft.client.input.MouseButtonEvent
@@ -26,11 +27,11 @@ class Panel(private val category: Category) {
 
     val panelSetting = ClickGUIModule.panelSetting[category.name] ?: throw IllegalStateException("Panel setting for category $category is not initialized")
     val moduleButtons = ModuleManager.modulesByCategory[category]
-        ?.sortedByDescending { NVGRenderer.textWidth(it.name, 16f, NVGRenderer.defaultFont) }
+        ?.sortedByDescending { GuiRenderer.textWidth(it.name, 16f) }
         ?.map { ModuleButton(it, this@Panel) } ?: listOf()
     private val lastModuleButton by lazy { moduleButtons.lastOrNull() }
 
-    private val textWidth = NVGRenderer.textWidth(category.name, 22f, NVGRenderer.defaultFont)
+    private val textWidth = GuiRenderer.textWidth(category.name, 22f)
     private var previousHeight = 0f
     private var scrollOffset = 0f
     var dragging = false
@@ -44,7 +45,7 @@ class Panel(private val category: Category) {
             panelSetting.y = floor(deltaY + mouseY)
         }
 
-        NVGRenderer.dropShadow(
+        GuiRenderer.dropShadow(
             panelSetting.x,
             panelSetting.y,
             WIDTH,
@@ -54,17 +55,16 @@ class Panel(private val category: Category) {
             5f
         )
 
-        NVGRenderer.drawHalfRoundedRect(panelSetting.x, panelSetting.y, WIDTH, HEIGHT, gray26.rgba, 5f, true)
-        NVGRenderer.text(
+        GuiRenderer.drawHalfRoundedRect(panelSetting.x, panelSetting.y, WIDTH, HEIGHT, gray26.rgba, 5f, true)
+        GuiRenderer.text(
             category.name,
             panelSetting.x + WIDTH / 2f - textWidth / 2,
-            panelSetting.y + HEIGHT / 2f - 11,
+            panelSetting.y + HEIGHT / 2f - 13f,
             22f,
-            Colors.WHITE.rgba,
-            NVGRenderer.defaultFont
+            Colors.WHITE.rgba
         )
 
-        if (scrollOffset != 0f) NVGRenderer.pushScissor(
+        if (scrollOffset != 0f) GuiRenderer.pushScissor(
             panelSetting.x,
             panelSetting.y + HEIGHT,
             WIDTH,
@@ -81,7 +81,7 @@ class Panel(private val category: Category) {
         previousHeight = startY
 
         if (ClickGUIModule.roundedPanelBottom) {
-            NVGRenderer.drawHalfRoundedRect(
+            GuiRenderer.drawHalfRoundedRect(
                 panelSetting.x,
                 panelSetting.y + startY,
                 WIDTH,
@@ -91,7 +91,7 @@ class Panel(private val category: Category) {
                 false
             )
         }
-        if (scrollOffset != 0f) NVGRenderer.popScissor()
+        if (scrollOffset != 0f) GuiRenderer.popScissor()
     }
 
     fun handleScroll(amount: Int): Boolean {

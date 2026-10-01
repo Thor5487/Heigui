@@ -12,7 +12,7 @@ import com.iq200.heigui.utils.Colors
 import com.iq200.heigui.utils.ui.HoverHandler
 import com.iq200.heigui.utils.ui.animations.LinearAnimation
 import com.iq200.heigui.utils.ui.isAreaHovered
-import com.iq200.heigui.utils.ui.rendering.NVGRenderer
+import com.iq200.heigui.utils.ui.rendering.GuiRenderer
 import net.minecraft.client.input.CharacterEvent
 import net.minecraft.client.input.KeyEvent
 import net.minecraft.client.input.MouseButtonEvent
@@ -104,14 +104,13 @@ class NumberSetting<E>(
             sliderPercentage = newPercentage
         }
 
-        val font = NVGRenderer.defaultFont
         val fontSize = 16f
         textBoundsY = y + height / 2f - 17f
 
         val currentNumberText = if (isEditing) inputText else getNumberDisplay()
 
-        val textWidth = NVGRenderer.textWidth(currentNumberText, fontSize, font)
-        val unitWidth = if (unit.isNotEmpty()) NVGRenderer.textWidth(unit, fontSize, font) else 0f
+        val textWidth = GuiRenderer.textWidth(currentNumberText, fontSize)
+        val unitWidth = if (unit.isNotEmpty()) GuiRenderer.textWidth(unit, fontSize) else 0f
         val padding = if (unit.isNotEmpty()) 6f else 0f
 
         val rightBoundsX = x + width - 8f
@@ -119,7 +118,7 @@ class NumberSetting<E>(
         textBoundsRightX = if (unit.isNotEmpty()) unitX - padding else rightBoundsX
         textBoundsLeftX = textBoundsRightX - textWidth
 
-        NVGRenderer.text(name, x + 6f, textBoundsY, fontSize, Colors.WHITE.rgba, font)
+        GuiRenderer.text(name, x + 6f, textBoundsY, fontSize, Colors.WHITE.rgba)
 
         if (isEditing) {
             val darkBgColor = Color(30, 30, 30, 255).rgb
@@ -138,35 +137,35 @@ class NumberSetting<E>(
             val boxY = textBoundsY - paddingTop
             val boxHeight = fontSize + paddingTop + paddingBottom
 
-            NVGRenderer.rect(boxLeftX, boxY, actualBoxWidth, boxHeight, darkBgColor, 3f)
-            NVGRenderer.hollowRect(boxLeftX, boxY, actualBoxWidth, boxHeight, 1.5f, borderColor, 3f)
+            GuiRenderer.rect(boxLeftX, boxY, actualBoxWidth, boxHeight, darkBgColor, 3f)
+            GuiRenderer.hollowRect(boxLeftX, boxY, actualBoxWidth, boxHeight, 1.5f, borderColor, 3f)
 
-            NVGRenderer.text(currentNumberText, textBoundsLeftX, textBoundsY, fontSize, Colors.WHITE.rgba, font)
+            GuiRenderer.text(currentNumberText, textBoundsLeftX, textBoundsY, fontSize, Colors.WHITE.rgba)
 
             // ===== 核心：動態計算閃爍游標的精準位置 =====
             if ((System.currentTimeMillis() % 1000) > 500) {
                 // 算出「游標左邊的文字」有多寬，就能知道游標應該畫在哪個 X 座標上
                 val textBeforeCursor = currentNumberText.substring(0, cursorIndex.coerceIn(0, currentNumberText.length))
-                val cursorOffset = NVGRenderer.textWidth(textBeforeCursor, fontSize, font)
+                val cursorOffset = GuiRenderer.textWidth(textBeforeCursor, fontSize)
 
                 // 將游標精準畫在那個字元間隙
                 val cursorX = textBoundsLeftX + cursorOffset
-                NVGRenderer.rect(cursorX, textBoundsY - 1f, 1.2f, fontSize + 2f, Colors.WHITE.rgba, 0f)
+                GuiRenderer.rect(cursorX, textBoundsY - 1f, 1.2f, fontSize + 2f, Colors.WHITE.rgba, 0f)
             }
         } else {
-            NVGRenderer.text(currentNumberText, textBoundsLeftX, textBoundsY, fontSize, Colors.WHITE.rgba, font)
+            GuiRenderer.text(currentNumberText, textBoundsLeftX, textBoundsY, fontSize, Colors.WHITE.rgba)
         }
 
         if (unit.isNotEmpty()) {
-            NVGRenderer.text(unit, unitX, textBoundsY, fontSize, Colors.WHITE.rgba, font)
+            GuiRenderer.text(unit, unitX, textBoundsY, fontSize, Colors.WHITE.rgba)
         }
 
-        NVGRenderer.rect(x + 6f, y + 24f, width - 12f, 8f, gray38.rgba, 3f)
+        GuiRenderer.rect(x + 6f, y + 24f, width - 12f, 8f, gray38.rgba, 3f)
 
         if (x + sliderPercentage * (width - 12f) > x + 6)
-            NVGRenderer.rect(x + 6f, y + 24f, sliderAnim.get(prevLocation, sliderPercentage, false) * (width - 12f), 8f, ClickGUIModule.clickGUIColor.rgba, 3f)
+            GuiRenderer.rect(x + 6f, y + 24f, sliderAnim.get(prevLocation, sliderPercentage, false) * (width - 12f), 8f, ClickGUIModule.clickGUIColor.rgba, 3f)
 
-        NVGRenderer.circle(x + 6f + sliderAnim.get(prevLocation, sliderPercentage, false) * (width - 12f), y + 28f, handler.anim.get(7f, 9f, !isHovered), Colors.WHITE.rgba)
+        GuiRenderer.circle(x + 6f + sliderAnim.get(prevLocation, sliderPercentage, false) * (width - 12f), y + 28f, handler.anim.get(7f, 9f, !isHovered), Colors.WHITE.rgba)
 
         return height
     }
@@ -199,7 +198,7 @@ class NumberSetting<E>(
                     var minDiff = Float.MAX_VALUE
                     for (i in 0..inputText.length) {
                         val subText = inputText.substring(0, i)
-                        val subWidth = NVGRenderer.textWidth(subText, 16f, NVGRenderer.defaultFont)
+                        val subWidth = GuiRenderer.textWidth(subText, 16f)
                         val cx = textBoundsLeftX + subWidth
                         val diff = abs(mouseX - cx)
                         if (diff < minDiff) {

@@ -9,8 +9,8 @@ import com.iq200.heigui.utils.Color
 import com.iq200.heigui.utils.Colors
 import com.iq200.heigui.utils.ui.HoverHandler
 import com.iq200.heigui.utils.ui.animations.EaseOutAnimation
-import com.iq200.heigui.utils.ui.rendering.NVGPIPRenderer
-import com.iq200.heigui.utils.ui.rendering.NVGRenderer
+import com.iq200.heigui.utils.ui.rendering.GuiIcon
+import com.iq200.heigui.utils.ui.rendering.GuiRenderer
 import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.client.gui.screens.Screen
 import net.minecraft.client.input.CharacterEvent
@@ -36,15 +36,16 @@ object ClickGUI : Screen(Component.literal("Click GUI")) {
     val gray26 = Color(26, 26, 26)
 
     override fun extractRenderState(context: GuiGraphicsExtractor, mouseX: Int, mouseY: Int, deltaTicks: Float) {
-        NVGPIPRenderer.draw(context, 0, 0, context.guiWidth(), context.guiHeight()) {
-            val scaledMouseX = heiguiMouseX / ClickGUIModule.getStandardGuiScale()
-            val scaledMouseY = heiguiMouseY / ClickGUIModule.getStandardGuiScale()
+        GuiRenderer.render(context) {
+            val standardScale = ClickGUIModule.getStandardGuiScale()
+            val scaledMouseX = heiguiMouseX / standardScale
+            val scaledMouseY = heiguiMouseY / standardScale
 
-            NVGRenderer.scale(ClickGUIModule.getStandardGuiScale(), ClickGUIModule.getStandardGuiScale())
+            GuiRenderer.scale(ClickGUIModule.getRenderScale(), ClickGUIModule.getRenderScale())
 
             SearchBar.draw(
-                mc.window.screenWidth / (2f * ClickGUIModule.getStandardGuiScale()) - 175f,
-                (mc.window.screenHeight - 110f) / ClickGUIModule.getStandardGuiScale() - 20f,
+                mc.window.screenWidth / (2f * standardScale) - 175f,
+                (mc.window.screenHeight - 110f) / standardScale - 20f,
                 scaledMouseX,
                 scaledMouseY
             )
@@ -52,11 +53,11 @@ object ClickGUI : Screen(Component.literal("Click GUI")) {
             if (openAnim.isAnimating()) {
                 val scale = openAnim.get(0f, 1f)
 
-                val centerX = context.guiWidth().toFloat()
-                val centerY = context.guiHeight().toFloat()
-                NVGRenderer.translate(centerX, centerY)
-                NVGRenderer.scale(scale, scale)
-                NVGRenderer.translate(-centerX, -centerY)
+                val centerX = mc.window.screenWidth / (2f * standardScale)
+                val centerY = mc.window.screenHeight / (2f * standardScale)
+                GuiRenderer.translate(centerX, centerY)
+                GuiRenderer.scale(scale, scale)
+                GuiRenderer.translate(-centerX, -centerY)
             }
 
             val draggedPanel = panels.firstOrNull { it.dragging }
@@ -156,9 +157,9 @@ object ClickGUI : Screen(Component.literal("Click GUI")) {
 
         fun render() {
             if (text.isEmpty() || hoverHandler.percent() < 100) return
-            val area = NVGRenderer.wrappedTextBounds(text, 300f, 16f, NVGRenderer.defaultFont)
-            NVGRenderer.rect(x, y, area[2] - area[0] + 16f, area[3] - area[1] + 16f, gray38.rgba, 5f)
-            NVGRenderer.hollowRect(
+            val area = GuiRenderer.wrappedTextBounds(text, 300f, 16f)
+            GuiRenderer.rect(x, y, area[2] - area[0] + 16f, area[3] - area[1] + 16f, gray38.rgba, 5f)
+            GuiRenderer.hollowRect(
                 x,
                 y,
                 area[2] - area[0] + 16f,
@@ -167,11 +168,11 @@ object ClickGUI : Screen(Component.literal("Click GUI")) {
                 ClickGUIModule.clickGUIColor.rgba,
                 5f
             )
-            NVGRenderer.drawWrappedString(text, x + 8f, y + 8f, 300f, 16f, Colors.WHITE.rgba, NVGRenderer.defaultFont)
+            GuiRenderer.drawWrappedString(text, x + 8f, y + 8f, 300f, 16f, Colors.WHITE.rgba)
         }
     }
 
-    val movementImage = NVGRenderer.createImage("/assets/heigui/MovementIcon.svg")
-    val hueImage = NVGRenderer.createImage("/assets/heigui/HueGradient.png")
-    val chevronImage = NVGRenderer.createImage("/assets/heigui/chevron.svg")
+    val movementImage = GuiIcon.MOVEMENT
+    val hueImage = GuiIcon.HUE_GRADIENT
+    val chevronImage = GuiIcon.CHEVRON
 }

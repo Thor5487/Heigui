@@ -97,17 +97,6 @@ dependencies {
 
     compileOnly("com.terraformersmc:modmenu:${property("modmenu_version")}")
 
-    // Bundle NanoVG and its platform natives for the ClickGUI renderer.
-    property("minecraft_lwjgl_version").let { lwjglVersion ->
-        implementation("org.lwjgl:lwjgl-nanovg:$lwjglVersion")
-        include("org.lwjgl:lwjgl-nanovg:$lwjglVersion")
-
-        listOf("windows", "linux", "macos", "macos-arm64").forEach { os ->
-            implementation("org.lwjgl:lwjgl-nanovg:$lwjglVersion:natives-$os")
-            include("org.lwjgl:lwjgl-nanovg:$lwjglVersion:natives-$os")
-        }
-    }
-
     compileOnly("maven.modrinth:iris:${property("iris")}")
 
     // Optional terminal solver integrations. These are available at compile time only

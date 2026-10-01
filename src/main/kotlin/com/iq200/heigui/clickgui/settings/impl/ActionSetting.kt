@@ -5,7 +5,8 @@ import com.iq200.heigui.clickgui.settings.RenderableSetting
 import com.iq200.heigui.features.impl.render.ClickGUIModule
 import com.iq200.heigui.utils.Color.Companion.darker
 import com.iq200.heigui.utils.Colors
-import com.iq200.heigui.utils.ui.rendering.NVGRenderer
+import com.iq200.heigui.utils.ui.rendering.GuiRenderer
+import com.mojang.blaze3d.platform.InputConstants
 import net.minecraft.client.input.MouseButtonEvent
 
 class ActionSetting(
@@ -18,15 +19,22 @@ class ActionSetting(
 
     var action: () -> Unit by this::value
 
-    private val textWidth by lazy { NVGRenderer.textWidth(name, 16f, NVGRenderer.defaultFont) }
+    private val textWidth by lazy { GuiRenderer.textWidth(name, 16f) }
 
     override fun render(x: Float, y: Float, mouseX: Float, mouseY: Float): Float {
         super.render(x, y, mouseX, mouseY)
         val height = getHeight()
 
-        NVGRenderer.rect(x + 4f, y + height / 2f - 13f, width - 8f, 26f, gray38.rgba, 6f)
-        NVGRenderer.hollowRect(x + 4f, y + height / 2f - 13f, width - 8f, 26f, 2f, ClickGUIModule.clickGUIColor.rgba, 6f)
-        NVGRenderer.text(name, x + width / 2f - textWidth / 2, y + height / 2f - 8f, 16f, if (isHovered) Colors.WHITE.darker().rgba else Colors.WHITE.rgba, NVGRenderer.defaultFont)
+        GuiRenderer.rect(x + 4f, y + height / 2f - 13f, width - 8f, 26f, gray38.rgba, 6f)
+        GuiRenderer.hollowRect(x + 4f, y + height / 2f - 13f, width - 8f, 26f, 2f, ClickGUIModule.clickGUIColor.rgba, 6f)
+        GuiRenderer.verticallyCenteredText(
+            name,
+            x + width / 2f - textWidth / 2,
+            y + height / 2f - 13f,
+            26f,
+            16f,
+            if (isHovered) Colors.WHITE.darker().rgba else Colors.WHITE.rgba
+        )
         return height
     }
 

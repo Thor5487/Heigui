@@ -15,7 +15,7 @@ import com.iq200.heigui.utils.alert
 import com.iq200.heigui.utils.getChatBreak
 import com.iq200.heigui.utils.modMessage
 import com.iq200.heigui.utils.network.WebUtils.fetchJson
-import com.iq200.heigui.utils.ui.rendering.NVGRenderer
+import com.iq200.heigui.utils.ui.rendering.GuiRenderer
 import kotlinx.coroutines.launch
 import net.minecraft.network.chat.ClickEvent
 import net.minecraft.network.chat.Component
@@ -66,9 +66,16 @@ object ClickGUIModule : Module(
 
 
     fun getStandardGuiScale(): Float {
-        val verticalScale = (mc.window.screenHeight.toFloat() / 1080f) / NVGRenderer.devicePixelRatio()
-        val horizontalScale = (mc.window.screenWidth.toFloat() / 1920f) / NVGRenderer.devicePixelRatio()
+        val verticalScale = (mc.window.screenHeight.toFloat() / 1080f) / GuiRenderer.devicePixelRatio()
+        val horizontalScale = (mc.window.screenWidth.toFloat() / 1920f) / GuiRenderer.devicePixelRatio()
         return round(max(verticalScale, horizontalScale).coerceIn(1f, 3f) * 10f) / 10f
     }
+
+    /**
+     * ClickGUI positions are stored in window pixels, while GuiGraphicsExtractor
+     * draws in Minecraft GUI coordinates. Cancel Minecraft's GUI scale so the
+     * rendered geometry and the raw mouse coordinates use the same space.
+     */
+    fun getRenderScale(): Float = getStandardGuiScale() / mc.window.guiScale.toFloat()
 
 }
