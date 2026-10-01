@@ -43,8 +43,20 @@ val isReleaseBuild = project.hasProperty("release") ||
 
 val commitHash = gitOutput("rev-parse", "--short", "HEAD") ?: "unknown"
 
-// The number of commits since the last tag becomes the beta sequence number.
-val betaNumber = gitOutput("rev-list", "--count", "HEAD", "--not", "--tags")?.toIntOrNull() ?: 0
+// CI assigns one beta number per pushed build and records it in a tag. Local
+// builds reuse the latest fetched number for the current release baseline.
+val latestReleaseTag = gitOutput("tag", "--merged", "HEAD", "--list", "v*", "--sort=-version:refname")
+    ?.lineSequence()
+    ?.firstOrNull { it.matches(Regex("^v\\d+\\.\\d+\\.\\d+$")) }
+val betaBaseline = latestReleaseTag
+    ?.let { gitOutput("rev-list", "-n", "1", it) }
+    ?: gitOutput("rev-list", "--max-parents=0", "HEAD")?.lineSequence()?.lastOrNull()
+val fetchedBetaNumber = betaBaseline
+    ?.let { baseline -> gitOutput("tag", "--list", "beta-build/$baseline/*") }
+    ?.lineSequence()
+    ?.mapNotNull { it.substringAfterLast('/').toIntOrNull() }
+    ?.maxOrNull()
+val betaNumber = System.getenv("HEIGUI_BETA_NUMBER")?.toIntOrNull() ?: fetchedBetaNumber ?: 1
 
 val buildChannel = if (isReleaseBuild) "release" else "beta"
 val buildOutputDirectory = if (isReleaseBuild) "release" else "beta.$betaNumber"
