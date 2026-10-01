@@ -8,6 +8,15 @@ on:
   pull_request:
     branches: [ "**" ]
 
+# Beta numbers are allocated globally, so builds must not race while reading
+# and writing their counter tags.
+concurrency:
+  group: heigui-build-sequence
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -37,6 +46,31 @@ jobs:
       - name: make gradle wrapper executable
         run: chmod +x ./gradlew
 
+      - name: determine beta number
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/heads/')
+        run: |
+          LATEST_RELEASE_TAG=$(git tag --merged "$GITHUB_SHA" --list 'v*' --sort=-version:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -n 1 || true)
+          if [ -n "$LATEST_RELEASE_TAG" ]; then
+            BASELINE=$(git rev-list -n 1 "$LATEST_RELEASE_TAG")
+          else
+            BASELINE=$(git rev-list --max-parents=0 HEAD | tail -n 1)
+          fi
+
+          PREFIX="beta-build/$BASELINE/"
+          EXISTING_TAG=$(git tag --points-at "$GITHUB_SHA" --list "$PREFIX*" | head -n 1)
+          if [ -n "$EXISTING_TAG" ]; then
+            BETA_NUMBER=${EXISTING_TAG#"$PREFIX"}
+            BETA_TAG=$EXISTING_TAG
+          else
+            LAST_BETA=$(git tag --list "$PREFIX*" | sed "s#^$PREFIX##" | sort -n | tail -n 1)
+            BETA_NUMBER=$((${LAST_BETA:-0} + 1))
+            BETA_TAG="$PREFIX$BETA_NUMBER"
+          fi
+
+          echo "HEIGUI_BETA_NUMBER=$BETA_NUMBER" >> "$GITHUB_ENV"
+          echo "HEIGUI_BETA_TAG=$BETA_TAG" >> "$GITHUB_ENV"
+          echo "beta number: $BETA_NUMBER"
+
       - name: build public version
         run: ./gradlew buildPublic
 
@@ -60,16 +94,30 @@ jobs:
       # (例如 Heigui-Public-1.3.9-beta.3-26.1.2.jar)
       - name: upload jar (Artifact)
         uses: actions/upload-artifact@v7
+        if: github.event_name == 'push'
         with:
           path: ${{ steps.jars.outputs.main }}
           archive: false
 
       - name: upload sources jar (Artifact)
         uses: actions/upload-artifact@v7
-        if: steps.jars.outputs.sources != ''
+        if: github.event_name == 'push' && steps.jars.outputs.sources != ''
         with:
           path: ${{ steps.jars.outputs.sources }}
           archive: false
+
+      - name: record beta build
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/heads/')
+        run: |
+          if git rev-parse "$HEIGUI_BETA_TAG" >/dev/null 2>&1; then
+            echo "Beta tag $HEIGUI_BETA_TAG already exists"
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag "$HEIGUI_BETA_TAG" "$GITHUB_SHA"
+          git push origin "refs/tags/$HEIGUI_BETA_TAG"
 
       # ==========================================
       # 2. 建立正式 Release (獨立的 .jar 檔案)
