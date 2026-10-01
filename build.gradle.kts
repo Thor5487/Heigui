@@ -20,6 +20,28 @@ val preprocessedResources = layout.buildDirectory.dir("preprocessed/$sourceVaria
 // Release and beta version metadata
 // ====================================================
 
+// Keep local beta metadata current before a user-facing variant build. This
+// runs before version calculation, while CI already receives its number from
+// HEIGUI_BETA_NUMBER. A network failure must not prevent an offline build.
+val variantBuildTasks = setOf("buildPublic", "buildPrivate", "buildAllVersions")
+val shouldFetchBetaTags = !System.getenv("GITHUB_ACTIONS").equals("true", ignoreCase = true) &&
+        gradle.startParameter.taskNames.any { it.substringAfterLast(':') in variantBuildTasks }
+
+if (shouldFetchBetaTags) {
+    try {
+        val exitCode = ProcessBuilder("git", "fetch", "origin", "--tags")
+            .directory(rootDir)
+            .inheritIO()
+            .start()
+            .waitFor()
+        if (exitCode != 0) {
+            logger.warn("Unable to fetch beta tags; using locally cached version metadata.")
+        }
+    } catch (e: Exception) {
+        logger.warn("Unable to fetch beta tags; using locally cached version metadata.", e)
+    }
+}
+
 // Returns null when Git is unavailable or the command fails.
 fun gitOutput(vararg args: String): String? = try {
     val process = ProcessBuilder(listOf("git") + args)
@@ -44,7 +66,7 @@ val isReleaseBuild = project.hasProperty("release") ||
 val commitHash = gitOutput("rev-parse", "--short", "HEAD") ?: "unknown"
 
 // CI assigns one beta number per pushed build and records it in a tag. Local
-// builds reuse the latest fetched number for the current release baseline.
+// builds target the next unpublished beta after the latest fetched build.
 val latestReleaseTag = gitOutput("tag", "--merged", "HEAD", "--list", "v*", "--sort=-version:refname")
     ?.lineSequence()
     ?.firstOrNull { it.matches(Regex("^v\\d+\\.\\d+\\.\\d+$")) }
@@ -56,7 +78,8 @@ val fetchedBetaNumber = betaBaseline
     ?.lineSequence()
     ?.mapNotNull { it.substringAfterLast('/').toIntOrNull() }
     ?.maxOrNull()
-val betaNumber = System.getenv("HEIGUI_BETA_NUMBER")?.toIntOrNull() ?: fetchedBetaNumber ?: 1
+val nextLocalBetaNumber = fetchedBetaNumber?.plus(1) ?: 1
+val betaNumber = System.getenv("HEIGUI_BETA_NUMBER")?.toIntOrNull() ?: nextLocalBetaNumber
 
 val buildChannel = if (isReleaseBuild) "release" else "beta"
 val buildOutputDirectory = if (isReleaseBuild) "release" else "beta.$betaNumber"
