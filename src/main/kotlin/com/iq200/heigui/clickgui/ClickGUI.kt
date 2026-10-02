@@ -158,12 +158,16 @@ object ClickGUI : Screen(Component.literal("Click GUI")) {
         fun render() {
             if (text.isEmpty() || hoverHandler.percent() < 100) return
             val area = GuiRenderer.wrappedTextBounds(text, 300f, 16f)
-            GuiRenderer.rect(x, y, area[2] - area[0] + 16f, area[3] - area[1] + 16f, gray38.rgba, 5f)
+            val width = area[2] - area[0] + 16f
+            val height = area[3] - area[1] + 16f
+            val topInset = 3f
+
+            GuiRenderer.rect(x, y + topInset, width, height - topInset, gray38.rgba, 5f)
             GuiRenderer.hollowRect(
                 x,
-                y,
-                area[2] - area[0] + 16f,
-                area[3] - area[1] + 16f,
+                y + topInset,
+                width,
+                height - topInset,
                 1.5f,
                 ClickGUIModule.clickGUIColor.rgba,
                 5f
