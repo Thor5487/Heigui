@@ -50,6 +50,9 @@ object TeleportOptimization : Module (
     private val zpcmSent = mutableListOf<Vec3>()
     private var lastWIMP: Long = 0
 
+    internal val activeZpcmPosition: Vec3?
+        get() = if (enabled && noRotateEnabled && zpcmEnabled) renderPos else null
+
     private val ignoredBlocks = listOf(
         ChestBlock::class.java, EnderChestBlock::class.java, TrappedChestBlock::class.java,
         LeverBlock::class.java, ButtonBlock::class.java, HopperBlock::class.java,
@@ -202,7 +205,9 @@ object TeleportOptimization : Module (
         }
 
         val sneaking = player.isShiftKeyDown
-        val currentPos = renderPos ?: player.position()
+        // Start new predictions from the position at the beginning of the current tick,
+        // which more closely matches the position the server has processed.
+        val currentPos = renderPos ?: player.oldPosition()
         val eyePos = currentPos.add(0.0, EtherUtils.getEyeHeight().toDouble(), 0.0)
 
         if (sneaking && stack.isEtherwarpItem() && zpcmEnabled) {

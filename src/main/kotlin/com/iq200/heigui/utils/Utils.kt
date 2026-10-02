@@ -7,7 +7,7 @@ import com.iq200.heigui.Heigui.mc
 import com.iq200.heigui.clickgui.settings.Setting.Companion.withDependency
 import com.iq200.heigui.clickgui.settings.impl.ActionSetting
 import com.iq200.heigui.clickgui.settings.impl.NumberSetting
-import com.iq200.heigui.clickgui.settings.impl.StringSetting
+import com.iq200.heigui.clickgui.settings.impl.SelectorSetting
 import com.iq200.heigui.features.Module
 import net.minecraft.core.BlockPos
 import net.minecraft.network.chat.ClickEvent
@@ -186,11 +186,34 @@ fun formatNumber(numStr: String): String {
     }
 }
 
+private data class SoundOption(val displayName: String, val id: String)
+
+private val commonSoundOptions = listOf(
+    SoundOption("XP Pickup", "entity.experience_orb.pickup"),
+    SoundOption("Item Pickup", "entity.item.pickup"),
+    SoundOption("Arrow Hit", "entity.arrow.hit_player"),
+    SoundOption("Pling", "block.note_block.pling"),
+    SoundOption("Bell", "block.note_block.bell"),
+    SoundOption("Hat", "block.note_block.hat"),
+    SoundOption("Bit", "block.note_block.bit"),
+    SoundOption("Button", "ui.button.click"),
+    SoundOption("Lever", "block.lever.click"),
+    SoundOption("Piston", "block.piston.extend"),
+    SoundOption("Blaze Hurt", "entity.blaze.hurt"),
+)
+
 fun Module.createSoundSettings(name: String, default: String, dependencies: () -> Boolean): () -> Triple<String, Float, Float> {
-    val customSound = +StringSetting(name, default, desc = "Name of a custom sound to play.", length = 64).withDependency { dependencies() }
+    val defaultOption = commonSoundOptions.firstOrNull { it.id == default } ?: SoundOption("Default", default)
+    val soundOptions = listOf(defaultOption) + commonSoundOptions.filterNot { it.id == defaultOption.id }
+    val sound = +SelectorSetting(
+        name,
+        defaultOption.displayName,
+        soundOptions.map { it.displayName },
+        desc = "Sound to play."
+    ).withDependency { dependencies() }
     val pitch = +NumberSetting("$name Pitch", 1f, 0.1f, 2f, 0.01f, desc = "Pitch of the sound to play.").withDependency { dependencies() }
     val volume = +NumberSetting("$name Volume", 1f, 0.1f, 1f, 0.01f, desc = "Volume of the sound to play.").withDependency { dependencies() }
-    val soundSettings = { Triple(customSound.value, volume.value, pitch.value) }
+    val soundSettings = { Triple(soundOptions[sound.value].id, volume.value, pitch.value) }
     +ActionSetting("Play sound", desc = "Plays the selected sound.") { playSoundSettings(soundSettings()) }.withDependency { dependencies() }
     return soundSettings
 }
