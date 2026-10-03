@@ -13,7 +13,8 @@ import kotlin.math.min
 
 class TextInputHandler(
     private val textProvider: () -> String,
-    private val textSetter: (String) -> Unit
+    private val textSetter: (String) -> Unit,
+    private val centered: Boolean = false
 ) {
     private inline val text: String get() = textProvider()
 
@@ -40,6 +41,9 @@ class TextInputHandler(
     private var dragging = false
     private var clickCount = 1
 
+    val isListening: Boolean
+        get() = listening
+
     private val history = mutableListOf<String>()
     private var historyIndex = -1
     private var lastSavedText = ""
@@ -54,9 +58,11 @@ class TextInputHandler(
         if (previousMousePos != mouseX to mouseY) mouseDragged(mouseX)
         previousMousePos = mouseX to mouseY
 
-        GuiRenderer.pushScissor(x, y, width, height)
+        if (!listening || textWidth(text) <= contentWidth) alignTextOffset()
+
+        GuiRenderer.pushScissor(x + TEXT_PADDING, y, contentWidth, height)
         if (selectionWidth != 0f) GuiRenderer.rect(
-            x + caretX + 4f,
+            textOriginX + caretX,
             y,
             selectionWidth,
             height,
@@ -69,9 +75,9 @@ class TextInputHandler(
             val time = System.currentTimeMillis()
             if (time - caretBlinkTime < 500)
                 GuiRenderer.line(
-                    x + caretX + 4f - textOffset,
+                    textOriginX + caretX,
                     y,
-                    x + caretX + 4f - textOffset,
+                    textOriginX + caretX,
                     y + height,
                     2f,
                     Colors.WHITE.rgba
@@ -79,9 +85,16 @@ class TextInputHandler(
             else if (time - caretBlinkTime > 1000)
                 caretBlinkTime = System.currentTimeMillis()
         }
-        GuiRenderer.pushScissor(x, y, width, height)
+        GuiRenderer.pushScissor(x + TEXT_PADDING, y, contentWidth, height)
 
-        GuiRenderer.text(text, x + 4f - textOffset, y + 2f, height - 2, Colors.WHITE.rgba)
+        GuiRenderer.verticallyCenteredText(
+            text,
+            textOriginX,
+            y,
+            height,
+            FONT_SIZE,
+            Colors.WHITE.rgba
+        )
 
         GuiRenderer.popScissor()
     }
@@ -93,7 +106,7 @@ class TextInputHandler(
         }
         if (click.button() != 0) return false
 
-        listening = true
+        startListening()
         dragging = true
 
         val current = System.currentTimeMillis()
@@ -115,6 +128,20 @@ class TextInputHandler(
 
     fun mouseReleased() {
         dragging = false
+    }
+
+    fun stopListening() {
+        resetState()
+    }
+
+    fun startListening() {
+        if (activeHandler !== this) activeHandler?.resetState()
+        activeHandler = this
+        listening = true
+        caret = caret.coerceIn(0, text.length)
+        selection = selection.coerceIn(0, text.length)
+        updateCaretPosition()
+        mc.textInputManager().startTextInput(this)
     }
 
     private fun mouseDragged(mouseX: Float) {
@@ -180,8 +207,8 @@ class TextInputHandler(
                 true
             }
 
-            GLFW.GLFW_KEY_ESCAPE, GLFW.GLFW_KEY_ENTER -> {
-                listening = false
+            InputConstants.KEY_ESCAPE, InputConstants.KEY_RETURN -> {
+                resetState()
                 true
             }
 
@@ -266,7 +293,7 @@ class TextInputHandler(
     }
 
     private fun caretFromMouse(mouseX: Float) {
-        val mx = mouseX - (x + textOffset)
+        val mx = mouseX - textOriginX
 
         var currWidth = 0f
         var newCaret = 0
@@ -287,22 +314,18 @@ class TextInputHandler(
             if (selection <= caret) selectionWidth *= -1
         } else selectionWidth = 0f
 
-        if (caret != 0) {
-            val previousX = caretX
-            caretX = textWidth(text.substringSafe(0, caret))
+        caretX = textWidth(text.substringSafe(0, caret))
+        val totalWidth = textWidth(text)
 
-            if (previousX < caretX) {
-                if (caretX - textOffset >= width) textOffset = caretX - width
-            } else {
-                if (caretX - textOffset <= 0f) textOffset = textWidth(text.substringSafe(0, caret - 1))
-            }
-
-            if (textOffset > 0 && textWidth(text) - textOffset < width)
-                textOffset = (textWidth(text) - width).coerceAtLeast(0f)
-        } else {
-            caretX = 0f
-            textOffset = 0f
+        if (totalWidth <= contentWidth) {
+            alignTextOffset()
+            return
         }
+
+        if (caretX - textOffset > contentWidth) textOffset = caretX - contentWidth
+        if (caretX - textOffset < 0f) textOffset = caretX
+        if (totalWidth - textOffset < contentWidth)
+            textOffset = (totalWidth - contentWidth).coerceAtLeast(0f)
     }
 
     private fun clearSelection() {
@@ -339,11 +362,24 @@ class TextInputHandler(
         return end
     }
 
-    private fun textWidth(text: String): Float = GuiRenderer.textWidth(text, height - 2)
+    private fun textWidth(text: String): Float = GuiRenderer.textWidth(text, FONT_SIZE)
+
+    private val contentWidth: Float
+        get() = (width - TEXT_PADDING * 2f).coerceAtLeast(0f)
+
+    private val textOriginX: Float
+        get() = x + TEXT_PADDING - textOffset
+
+    private fun alignTextOffset() {
+        val overflow = textWidth(text) - contentWidth
+        textOffset = overflow.coerceAtLeast(0f)
+    }
 
     private fun resetState() {
+        mc.textInputManager().stopTextInput(this)
+        if (activeHandler === this) activeHandler = null
         listening = false
-        textOffset = 0f
+        alignTextOffset()
         clearSelection()
     }
 
@@ -395,4 +431,9 @@ class TextInputHandler(
 
     private fun String.dropAt(at: Int, amount: Int): String =
         removeRangeSafe(at, at + amount)
+    private companion object {
+        const val FONT_SIZE = 16f
+        const val TEXT_PADDING = 8f
+        var activeHandler: TextInputHandler? = null
+    }
 }
