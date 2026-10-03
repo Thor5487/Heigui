@@ -37,22 +37,28 @@ class StringSetting(
         super.render(x, y, mouseX, mouseY)
 
         val rectStartX = x + 6f
+        val rectY = y + getHeight() - 35f
 
         GuiRenderer.text(name, rectStartX, y + 5f, 16f, Colors.WHITE.rgba)
 
-        GuiRenderer.rect(rectStartX, y + getHeight() - 35f, width - 12f, 30f, gray38.rgba, 4f)
-        GuiRenderer.hollowRect(rectStartX, y + getHeight() - 35f, width - 12f, 30f, 2f, ClickGUIModule.clickGUIColor.rgba, 4f)
+        GuiRenderer.rect(rectStartX, rectY, width - 12f, 30f, gray38.rgba, 4f)
+        GuiRenderer.hollowRect(rectStartX, rectY, width - 12f, 30f, 2f, ClickGUIModule.clickGUIColor.rgba, 4f)
 
         textInputHandler.x = rectStartX
-        textInputHandler.y = y + getHeight() - 30f
-        textInputHandler.width = width - 16f
+        textInputHandler.y = rectY + 2f
+        textInputHandler.width = width - 12f
+        textInputHandler.height = 26f
         textInputHandler.draw(mouseX, mouseY)
 
         return getHeight()
     }
 
     override fun mouseClicked(mouseX: Float, mouseY: Float, click: MouseButtonEvent): Boolean {
-        return if (click.button() == InputConstants.MOUSE_BUTTON_LEFT) textInputHandler.mouseClicked(mouseX, mouseY, click)
+        return if (click.button() == InputConstants.MOUSE_BUTTON_LEFT) textInputHandler.mouseClicked(
+            mouseX,
+            mouseY,
+            click
+        )
         else false
     }
 

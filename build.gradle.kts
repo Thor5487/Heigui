@@ -151,22 +151,16 @@ loom {
         generateRunConfig.set(true)
         jvmArguments.addAll(
             "-Dmixin.debug.export=true",
-            "-Ddevauth.enabled=true",
-            "-Ddevauth.account=main",
+            "-Ddevauth.enabled=false",
             "-Dfabric.log.disableAnsi=false",
             "-XX:StackShadowPages=32",
+            "-XX:ActiveProcessorCount=1",
             "-XX:+AllowEnhancedClassRedefinition",
             "-XX:+IgnoreUnrecognizedVMOptions"
         )
     }
     runConfigs.named("server") {
         generateRunConfig.set(false)
-    }
-}
-
-afterEvaluate {
-    loom.runs.named("client") {
-        jvmArguments.add("-javaagent:${configurations.compileClasspath.get().find { it.name.contains("sponge-mixin") }}")
     }
 }
 

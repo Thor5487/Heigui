@@ -160,7 +160,7 @@ object ClickGUI : Screen(Component.literal("Click GUI")) {
             val area = GuiRenderer.wrappedTextBounds(text, 300f, 16f)
             val width = area[2] - area[0] + 16f
             val height = area[3] - area[1] + 16f
-            val topInset = 3f
+            val topInset = 4f
 
             GuiRenderer.rect(x, y + topInset, width, height - topInset, gray38.rgba, 5f)
             GuiRenderer.hollowRect(

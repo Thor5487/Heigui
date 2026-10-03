@@ -25,7 +25,8 @@ import kotlin.math.floor
  */
 class Panel(private val category: Category) {
 
-    val panelSetting = ClickGUIModule.panelSetting[category.name] ?: throw IllegalStateException("Panel setting for category $category is not initialized")
+    val panelSetting = ClickGUIModule.panelSetting[category.name]
+        ?: throw IllegalStateException("Panel setting for category $category is not initialized")
     val moduleButtons = ModuleManager.modulesByCategory[category]
         ?.sortedByDescending { GuiRenderer.textWidth(it.name, 16f) }
         ?.map { ModuleButton(it, this@Panel) } ?: listOf()
@@ -96,6 +97,9 @@ class Panel(private val category: Category) {
 
     fun handleScroll(amount: Int): Boolean {
         if (!isMouseOverExtended) return false
+        if (moduleButtons.reversed().any { button ->
+                button.module.name.contains(SearchBar.currentSearch, true) && button.mouseScrolled(amount)
+            }) return true
         scrollOffset = (scrollOffset + amount).coerceIn((-previousHeight + scrollOffset + 72f).coerceAtMost(0f), 0f)
         return true
     }

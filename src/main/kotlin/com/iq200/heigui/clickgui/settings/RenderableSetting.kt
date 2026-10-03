@@ -32,6 +32,7 @@ abstract class RenderableSetting<T>(
 
     open fun mouseClicked(mouseX: Float, mouseY: Float, click: MouseButtonEvent): Boolean = false
     open fun mouseReleased(click: MouseButtonEvent) {}
+    open fun mouseScrolled(amount: Int): Boolean = false
     open fun keyTyped(input: CharacterEvent): Boolean = false
     open fun keyPressed(input: KeyEvent): Boolean = false
     open fun getHeight(): Float = Panel.HEIGHT

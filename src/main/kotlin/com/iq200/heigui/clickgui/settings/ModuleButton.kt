@@ -56,7 +56,13 @@ class ModuleButton(val module: Module, val panel: Panel) {
         } else {
             GuiRenderer.rect(x, y, Panel.WIDTH, Panel.HEIGHT, color.rgba)
         }
-        GuiRenderer.text(module.name, x + Panel.WIDTH / 2 - nameWidth / 2, y + Panel.HEIGHT / 2 - 11f, 18f, Colors.WHITE.rgba)
+        GuiRenderer.text(
+            module.name,
+            x + Panel.WIDTH / 2 - nameWidth / 2,
+            y + Panel.HEIGHT / 2 - 11f,
+            18f,
+            Colors.WHITE.rgba
+        )
 
         if (representableSettings.isEmpty()) return Panel.HEIGHT
 
@@ -67,7 +73,12 @@ class ModuleButton(val module: Module, val panel: Panel) {
 
         if (extendAnim.isAnimating() || extended) {
             for (setting in representableSettings) {
-                if (setting.isVisible) drawY += setting.render(x, y + drawY, mouseX / ClickGUIModule.getStandardGuiScale(), mouseY / ClickGUIModule.getStandardGuiScale())
+                if (setting.isVisible) drawY += setting.render(
+                    x,
+                    y + drawY,
+                    mouseX / ClickGUIModule.getStandardGuiScale(),
+                    mouseY / ClickGUIModule.getStandardGuiScale()
+                )
             }
         }
 
@@ -100,6 +111,13 @@ class ModuleButton(val module: Module, val panel: Panel) {
         if (!extended) return
         for (setting in representableSettings) {
             if (setting.isVisible) setting.mouseReleased(click)
+        }
+    }
+
+    fun mouseScrolled(amount: Int): Boolean {
+        if (!extended) return false
+        return representableSettings.reversed().any { setting ->
+            setting.isVisible && setting.mouseScrolled(amount)
         }
     }
 
