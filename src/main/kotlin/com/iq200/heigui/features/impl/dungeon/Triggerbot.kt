@@ -61,7 +61,7 @@ object Triggerbot : Module (
 
         on<RenderEvent.Extract> {
             if (!DungeonUtils.inDungeons) return@on
-            if (mc.gui.screen() != null) return@on
+            if (mc.screen != null) return@on
 
             val currentRoom = ScanUtils.currentRoom
 

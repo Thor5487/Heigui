@@ -75,7 +75,7 @@ object Etherwarp : Module(
 
     init {
         on<RenderEvent.Extract> {
-            if (mc.gui.screen() != null) return@on
+            if (mc.screen != null) return@on
 
             val player = mc.player ?: return@on
             val stack = player.mainHandItem

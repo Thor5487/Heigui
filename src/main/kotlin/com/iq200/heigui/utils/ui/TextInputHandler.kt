@@ -141,7 +141,7 @@ class TextInputHandler(
         caret = caret.coerceIn(0, text.length)
         selection = selection.coerceIn(0, text.length)
         updateCaretPosition()
-        mc.textInputManager().startTextInput(this)
+        mc.textInputManager().startTextInput()
     }
 
     private fun mouseDragged(mouseX: Float) {
@@ -207,7 +207,7 @@ class TextInputHandler(
                 true
             }
 
-            InputConstants.KEY_ESCAPE, InputConstants.KEY_RETURN -> {
+            GLFW.GLFW_KEY_ESCAPE, GLFW.GLFW_KEY_ENTER -> {
                 resetState()
                 true
             }
@@ -376,7 +376,7 @@ class TextInputHandler(
     }
 
     private fun resetState() {
-        mc.textInputManager().stopTextInput(this)
+        mc.textInputManager().stopTextInput()
         if (activeHandler === this) activeHandler = null
         listening = false
         alignTextOffset()
