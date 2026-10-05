@@ -74,7 +74,6 @@ object RenderBatchManager {
 
             poseStack.renderQueuedTexts(renderConsumer.texts, bufferSource, camera)
             renderConsumer.clear()
-            RoundRectPIPRenderer.clear()
         }
     }
 }

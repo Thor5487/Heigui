@@ -3,7 +3,6 @@ package com.iq200.heigui.utils.render
 import com.mojang.blaze3d.pipeline.BlendFunction
 import com.mojang.blaze3d.pipeline.ColorTargetState
 import com.mojang.blaze3d.pipeline.RenderPipeline
-import com.mojang.blaze3d.shaders.UniformType
 import com.mojang.blaze3d.vertex.DefaultVertexFormat
 import com.mojang.blaze3d.vertex.VertexFormat
 import net.minecraft.client.renderer.RenderPipelines
@@ -32,13 +31,15 @@ object CustomRenderPipelines {
             .build()
     )
 
-    val PIPELINE_ROUND_RECT: RenderPipeline = RenderPipelines.register(
+    val PIPELINE_ROUND_RECT: RenderPipeline = roundRect("round_rect")
+    val PIPELINE_ROUND_RECT_SHADOW: RenderPipeline = roundRect("round_rect_shadow")
+
+    private fun roundRect(name: String): RenderPipeline = RenderPipelines.register(
         RenderPipeline.builder(RenderPipelines.GUI_SNIPPET)
-            .withLocation(Identifier.fromNamespaceAndPath("heigui", "pipeline/round_rect"))
-            .withFragmentShader(Identifier.fromNamespaceAndPath("heigui", "core/round_rect"))
+            .withLocation(Identifier.fromNamespaceAndPath("heigui", "pipeline/$name"))
+            .withFragmentShader(Identifier.fromNamespaceAndPath("heigui", "core/$name"))
             .withVertexShader(Identifier.fromNamespaceAndPath("heigui", "core/round_rect"))
-            .withVertexFormat(DefaultVertexFormat.POSITION_COLOR, VertexFormat.Mode.QUADS)
-            .withUniform("u", UniformType.UNIFORM_BUFFER)
+            .withVertexFormat(RoundedRectRenderer.FORMAT, VertexFormat.Mode.QUADS)
             .withColorTargetState(ColorTargetState(BlendFunction.TRANSLUCENT))
             .build()
     )

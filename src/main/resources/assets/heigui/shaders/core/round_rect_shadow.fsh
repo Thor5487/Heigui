@@ -6,7 +6,7 @@
 out vec4 fragColor;
 
 void main() {
-    float coverage = shapeCoverage();
+    float coverage = shadowCoverage();
     if (coverage <= 0.0) discard;
 
     vec4 color = vertexColor * ColorModulator;
