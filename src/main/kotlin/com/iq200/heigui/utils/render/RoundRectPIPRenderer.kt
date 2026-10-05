@@ -22,7 +22,8 @@ import org.joml.Vector4f
 import java.util.Objects
 import java.util.OptionalDouble
 import java.util.OptionalInt
-import kotlin.math.roundToInt
+import kotlin.math.ceil
+import kotlin.math.floor
 import kotlin.use
 
 class RoundRectPIPRenderer(bufferSource: MultiBufferSource.BufferSource)
@@ -158,16 +159,27 @@ class RoundRectPIPRenderer(bufferSource: MultiBufferSource.BufferSource)
             topLeftRadius: Float, topRightRadius: Float, bottomRightRadius: Float, bottomLeftRadius: Float,
             outlineColor: Int, outlineWidth: Float
         ) {
+            if (x1 <= x0 || y1 <= y0) return
+
             val scissor = context.scissorStack.peek()
             val pose = Matrix3x2f(context.pose())
 
-            val p0 = pose.transformPosition(Vector2f(x0.toFloat(), y0.toFloat()))
-            val p1 = pose.transformPosition(Vector2f(x1.toFloat(), y1.toFloat()))
-
-            val screenLeft  = minOf(p0.x, p1.x).roundToInt()
-            val screenTop   = minOf(p0.y, p1.y).roundToInt()
-            val screenW     = maxOf(p0.x, p1.x).roundToInt() - screenLeft
-            val screenH     = maxOf(p0.y, p1.y).roundToInt() - screenTop
+            // A rotated rectangle cannot be bounded from only two opposite
+            // corners. Also use outward rounding so sub-pixel lines never
+            // collapse into a 0x0 PIP texture.
+            val corners = arrayOf(
+                pose.transformPosition(Vector2f(x0.toFloat(), y0.toFloat())),
+                pose.transformPosition(Vector2f(x1.toFloat(), y0.toFloat())),
+                pose.transformPosition(Vector2f(x1.toFloat(), y1.toFloat())),
+                pose.transformPosition(Vector2f(x0.toFloat(), y1.toFloat())),
+            )
+            val screenLeft = floor(corners.minOf { it.x }).toInt()
+            val screenTop = floor(corners.minOf { it.y }).toInt()
+            val screenRight = ceil(corners.maxOf { it.x }).toInt()
+            val screenBottom = ceil(corners.maxOf { it.y }).toInt()
+            val screenW = screenRight - screenLeft
+            val screenH = screenBottom - screenTop
+            if (screenW <= 0 || screenH <= 0) return
 
             val poseScale   = pose.transformDirection(Vector2f(1f, 0f)).length()
 
