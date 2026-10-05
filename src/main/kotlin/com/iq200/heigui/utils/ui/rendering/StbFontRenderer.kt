@@ -5,7 +5,7 @@ import com.iq200.heigui.Heigui.mc
 import com.mojang.blaze3d.platform.NativeImage
 import com.mojang.blaze3d.systems.RenderSystem
 import com.mojang.blaze3d.vertex.VertexConsumer
-import com.mojang.renderpearl.api.textures.FilterMode
+import com.mojang.blaze3d.textures.FilterMode
 import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.client.gui.navigation.ScreenRectangle
 import net.minecraft.client.gui.render.TextureSetup
@@ -242,14 +242,9 @@ object StbFontRenderer {
             STBTruetype.stbtt_PackEnd(packContext)
 
             val image = NativeImage(ATLAS_SIZE, ATLAS_SIZE, false)
-            val pixels = image.pixelBytes
             for (index in 0 until ATLAS_SIZE * ATLAS_SIZE) {
-                val alpha = bitmap.get(index)
-                val offset = index * 4
-                pixels.put(offset, 0xFF.toByte())
-                pixels.put(offset + 1, 0xFF.toByte())
-                pixels.put(offset + 2, 0xFF.toByte())
-                pixels.put(offset + 3, alpha)
+                val alpha = bitmap.get(index).toInt() and 0xFF
+                image.setPixelABGR(index % ATLAS_SIZE, index / ATLAS_SIZE, alpha shl 24 or 0x00FFFFFF)
             }
 
             val texture = LinearDynamicTexture({ "Heigui STB font atlas" }, image)

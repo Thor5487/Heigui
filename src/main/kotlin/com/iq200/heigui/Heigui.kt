@@ -10,6 +10,7 @@ import com.iq200.heigui.utils.ServerUtils
 import com.iq200.heigui.utils.handlers.TickTasks
 import com.iq200.heigui.utils.render.ItemStateRenderer
 import com.iq200.heigui.utils.render.RenderBatchManager
+import com.iq200.heigui.utils.render.RoundRectPIPRenderer
 import com.iq200.heigui.utils.skyblock.ActionBarParser
 import com.iq200.heigui.utils.skyblock.LocationUtils
 import com.iq200.heigui.utils.skyblock.PartyUtils
@@ -72,6 +73,9 @@ object Heigui : ClientModInitializer {
 
         PictureInPictureRendererRegistry.register { context ->
             ItemStateRenderer(context.bufferSource())
+        }
+        PictureInPictureRendererRegistry.register { context ->
+            RoundRectPIPRenderer(context.bufferSource())
         }
 
 
