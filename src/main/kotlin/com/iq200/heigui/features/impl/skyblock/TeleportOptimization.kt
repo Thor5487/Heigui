@@ -203,9 +203,9 @@ object TeleportOptimization : Module (
         }
 
         val sneaking = player.isShiftKeyDown
-        // Start new predictions from the position at the beginning of the current tick,
-        // which more closely matches the position the server has processed.
-        val currentPos = renderPos ?: player.oldPosition()
+        // Continue chained predictions from the pending ZPCM destination; otherwise use
+        // the player's current client position as the teleport origin.
+        val currentPos = renderPos ?: player.position()
         val eyePos = currentPos.add(0.0, EtherUtils.getEyeHeight().toDouble(), 0.0)
 
         if (sneaking && stack.isEtherwarpItem() && zpcmEnabled) {
