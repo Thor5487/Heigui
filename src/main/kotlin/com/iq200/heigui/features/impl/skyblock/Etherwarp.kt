@@ -81,7 +81,7 @@ object Etherwarp : Module(
             val stack = player.mainHandItem
             if (!player.isShiftKeyDown || !stack.isAoteOrAotvWithEtherwarp()) return@on
 
-            val position = TeleportOptimization.activeZpcmPosition ?: player.oldPosition()
+            val position = TeleportOptimization.activeZpcmPosition ?: player.position()
             val eyePosition = position.add(0.0, EtherUtils.getEyeHeight().toDouble(), 0.0)
             val (target, canEtherwarp) = EtherUtils.getEtherPosFromOrigin(
                 eyePosition,
