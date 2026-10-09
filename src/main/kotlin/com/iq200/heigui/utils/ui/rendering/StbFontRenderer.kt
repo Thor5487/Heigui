@@ -35,7 +35,9 @@ import kotlin.math.max
 object StbFontRenderer {
 
     private const val FIRST_CODEPOINT = 32
-    private const val LAST_CODEPOINT = 126
+    // Include the Latin-1 supplement so units such as "°/t" stay on the
+    // ClickGUI font instead of falling back to Minecraft's bitmap font.
+    private const val LAST_CODEPOINT = 255
     private const val GLYPH_COUNT = LAST_CODEPOINT - FIRST_CODEPOINT + 1
     private const val ATLAS_SIZE = 2048
     private const val OVERSAMPLE = 4
