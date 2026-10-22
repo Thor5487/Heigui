@@ -1,8 +1,10 @@
+import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.gradle.jvm.tasks.Jar
 
 plugins {
     id("net.fabricmc.fabric-loom")
+    id("com.gradleup.shadow") version "9.6.1"
     kotlin("jvm")
     `maven-publish`
 }
@@ -113,6 +115,8 @@ repositories {
     maven("https://api.modrinth.com/maven")
 }
 
+val shade = configurations.create("shade")
+
 dependencies {
     minecraft("com.mojang:minecraft:${property("minecraft_version")}")
     implementation("net.fabricmc:fabric-loader:${property("loader_version")}")
@@ -122,14 +126,16 @@ dependencies {
 
     // Bundle Commodore because it is required at runtime.
     property("commodore_version").let {
-        implementation("com.github.stivais:Commodore:$it")
-        include("com.github.stivais:Commodore:$it")
+        val commodore = "com.github.stivais:Commodore:$it"
+        implementation(commodore)
+        add(shade.name, commodore)
     }
 
     // Discover and register modules without maintaining a manual registry.
     property("classgraph_version").let {
-        implementation("io.github.classgraph:classgraph:$it")
-        include("io.github.classgraph:classgraph:$it")
+        val classGraph = "io.github.classgraph:classgraph:$it"
+        implementation(classGraph)
+        add(shade.name, classGraph)
     }
 
     compileOnly("com.terraformersmc:modmenu:${property("modmenu_version")}")
@@ -241,6 +247,18 @@ val sourcesJar = tasks.register<Jar>("sourcesJar") {
 
 tasks.named("assemble") {
     dependsOn(sourcesJar)
+}
+
+val shadowJarTask = tasks.named<ShadowJar>("shadowJar") {
+    configurations = listOf(shade)
+    archiveClassifier.set("")
+
+    relocate("io.github.classgraph", "com.iq200.heigui.shaded.classgraph")
+    relocate("nonapi.io.github.classgraph", "com.iq200.heigui.shaded.classgraph.internal")
+}
+
+tasks.named<Jar>("jar") {
+    enabled = false
 }
 
 // ====================================================
