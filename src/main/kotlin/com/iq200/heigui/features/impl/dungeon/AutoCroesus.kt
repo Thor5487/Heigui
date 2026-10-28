@@ -84,15 +84,17 @@ object AutoCroesus : Module(
     private var currentRunCroesusMenuTitle = ""
 
     val ignoreConfig = JsonConfig(
-        fileName = "ac-ignore.json",
+        fileName = "ac_ignore.json",
         typeToken = object : TypeToken<IgnoreData>() {}.type,
-        defaultData = { IgnoreData() }
+        defaultData = { IgnoreData() },
+        legacyFileNames = listOf("ac-ignore.json")
     )
 
     val trackerConfig = JsonConfig(
-        fileName = "ac-loot-tracker.json",
+        fileName = "ac_loot_tracker.json",
         typeToken = object : TypeToken<TrackerConfigData>() {}.type,
-        defaultData = { TrackerConfigData() }
+        defaultData = { TrackerConfigData() },
+        legacyFileNames = listOf("ac-loot-tracker.json")
     )
 
     val ignoreList: MutableSet<String>

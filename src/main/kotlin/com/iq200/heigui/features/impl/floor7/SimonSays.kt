@@ -50,7 +50,9 @@ object SimonSays : Module(
     private var firstPhase = true
     private var clickCntOnStartBtn = 0
     private var serverResponded = true
-
+    private var startButtonClicksInWindow = 0
+    private var startButtonWindowStartedAt = 0L
+    private var startButtonCooldownUntil = 0L
     private fun resetSolution() {
         clickInOrder.clear()
         clickNeeded = 0
@@ -63,6 +65,7 @@ object SimonSays : Module(
             firstPhase = true
             clickCntOnStartBtn = 0
             serverResponded = true
+            resetStartButtonThrottle()
         }
 
         on<BlockUpdateEvent> {
@@ -92,7 +95,7 @@ object SimonSays : Module(
                         val indexOfButton = clickInOrder.indexOf(pos.east())
                         clickNeeded = indexOfButton + 1
                         if (announceProgress && clickInOrder.isNotEmpty()) {
-                            if (pos.east() == clickInOrder[clickInOrder.size - 1]) sendCommand("pc SS ${clickInOrder.size}/5")
+                            if (pos.east() == clickInOrder[clickInOrder.size - 1]) sendCommand("pc SS ${clickInOrder.size}/4")
                         }
                         if (clickNeeded >= clickInOrder.size) {
                             resetSolution()
@@ -137,44 +140,14 @@ object SimonSays : Module(
             player.swing(InteractionHand.MAIN_HAND)
         }
 
+        on<PlayerInputEvent.Attack> {
+            val hitResult = result as? BlockHitResult ?: return@on
+            handleButtonClick(this, hitResult, countStartClickForBreak = false)
+        }
+
         on<PlayerInputEvent.Use> {
-            if (result !is BlockHitResult) return@on
-
-            if (!DungeonUtils.isFloor(7)) return@on
-
-            val pos = result.blockPos
-
-            if (pos == startButton) {
-                clickCntOnStartBtn++
-
-                if (clickCntOnStartBtn > 3) {
-                    sendCommand("pc SS BROKE SS BROKE SS BROKE SS BROKE SS BROKE SS BROKE SS BROKE SS BROKE SS BROKE SS BROKE SS BROKE SS BROKE SS BROKE SS BROKE SS BROKE")
-                }
-
-                return@on
-            }
-
-            val player = mc.player ?: return@on
-
-            if (!blockWrongClick || player.isShiftKeyDown) return@on
-
-            if (pos.y in 120..123 && pos.z in 92..95 && pos.x == 110) {
-                if (blockDuringLag && !serverResponded) {
-                    cancel()
-                    playSoundSettings(blockSound())
-                    modMessage("§cBlock During Lag")
-                    return@on
-                }
-
-               val expectedPos = clickInOrder.getOrNull(clickNeeded)
-
-                if (expectedPos == null || pos.east() != expectedPos) {
-                    cancel()
-                    playSoundSettings(blockSound())
-                } else {
-                    serverResponded = false
-                }
-            }
+            val hitResult = result as? BlockHitResult ?: return@on
+            handleButtonClick(this, hitResult, countStartClickForBreak = true)
         }
 
         on<RenderEvent.Extract> {
@@ -196,6 +169,7 @@ object SimonSays : Module(
         on<ChatPacketEvent> {
             if (value != "[BOSS] Goldor: Who dares trespass into my domain?") return@on
             clickCntOnStartBtn = 0
+            resetStartButtonThrottle()
             if (!autoStart) return@on
 
             val hitResult = mc.hitResult ?: return@on
@@ -216,5 +190,81 @@ object SimonSays : Module(
         }
 
     }
+
+    private fun handleButtonClick(
+        event: PlayerInputEvent,
+        hitResult: BlockHitResult,
+        countStartClickForBreak: Boolean
+    ) {
+        if (!DungeonUtils.isFloor(7)) return
+
+        val pos = hitResult.blockPos
+
+        if (pos == startButton) {
+            if (blockWrongClick && !allowStartButtonClick()) {
+                event.cancel()
+                playSoundSettings(blockSound())
+                return
+            }
+
+            if (countStartClickForBreak) {
+                clickCntOnStartBtn++
+
+                if (clickCntOnStartBtn > 3) {
+                    sendCommand("pc SS BROKE SS BROKE SS BROKE SS BROKE SS BROKE SS BROKE SS BROKE SS BROKE SS BROKE SS BROKE SS BROKE SS BROKE SS BROKE SS BROKE SS BROKE")
+                }
+            }
+
+            return
+        }
+
+        val player = mc.player ?: return
+        if (!blockWrongClick || player.isShiftKeyDown) return
+        if (pos.y !in 120..123 || pos.z !in 92..95 || pos.x != 110) return
+
+        if (blockDuringLag && !serverResponded) {
+            event.cancel()
+            playSoundSettings(blockSound())
+            modMessage("§cBlock During Lag")
+            return
+        }
+
+        val expectedPos = clickInOrder.getOrNull(clickNeeded)
+
+        if (expectedPos == null || pos.east() != expectedPos) {
+            event.cancel()
+            playSoundSettings(blockSound())
+        } else {
+            serverResponded = false
+        }
+    }
+
+    private fun allowStartButtonClick(now: Long = System.currentTimeMillis()): Boolean {
+        if (now < startButtonCooldownUntil) return false
+
+        if (startButtonWindowStartedAt == 0L || now - startButtonWindowStartedAt >= START_BUTTON_WINDOW_MS) {
+            startButtonWindowStartedAt = now
+            startButtonClicksInWindow = 0
+        }
+
+        startButtonClicksInWindow++
+        if (startButtonClicksInWindow >= MAX_START_BUTTON_CLICKS) {
+            startButtonCooldownUntil = now + START_BUTTON_COOLDOWN_MS
+            startButtonClicksInWindow = 0
+            startButtonWindowStartedAt = 0L
+        }
+
+        return true
+    }
+
+    private fun resetStartButtonThrottle() {
+        startButtonClicksInWindow = 0
+        startButtonWindowStartedAt = 0L
+        startButtonCooldownUntil = 0L
+    }
+
+    private const val MAX_START_BUTTON_CLICKS = 3
+    private const val START_BUTTON_WINDOW_MS = 1_000L
+    private const val START_BUTTON_COOLDOWN_MS = 1_000L
 
 }

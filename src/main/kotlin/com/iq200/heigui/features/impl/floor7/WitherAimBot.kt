@@ -10,6 +10,7 @@ import com.iq200.heigui.events.RenderEvent
 import com.iq200.heigui.events.core.on
 import com.iq200.heigui.features.Category
 import com.iq200.heigui.features.Module
+import com.iq200.heigui.features.impl.dungeon.AutoClick
 import com.iq200.heigui.utils.Colors
 import com.iq200.heigui.utils.skyblock.SplitsManager
 import net.minecraft.world.entity.Entity
@@ -121,7 +122,7 @@ object WitherAimBot : Module(
             currentTarget = bestTarget
 
             if (bestTarget != null) {
-                if (!mc.options.keyAttack.isDown) return@on
+                if (!mc.options.keyAttack.isDown && !AutoClick.isLeftClickHeld) return@on
 
                 val mainHandItem = player.mainHandItem
                 val itemName = mainHandItem.hoverName.string

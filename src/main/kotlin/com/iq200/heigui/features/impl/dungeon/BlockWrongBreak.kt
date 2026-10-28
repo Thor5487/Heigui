@@ -49,9 +49,10 @@ object BlockWrongBreak : Module(
     )
 
     private val config = JsonConfig(
-        fileName = "block-wrong-break.json",
+        fileName = "block_wrong_break.json",
         typeToken = object : TypeToken<BlockWrongBreakData>() {}.type,
-        defaultData = { BlockWrongBreakData() }
+        defaultData = { BlockWrongBreakData() },
+        legacyFileNames = listOf("block-wrong-break.json")
     )
 
     private var editMode = false

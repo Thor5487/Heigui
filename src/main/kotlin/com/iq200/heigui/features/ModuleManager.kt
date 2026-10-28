@@ -8,6 +8,7 @@ import com.iq200.heigui.clickgui.HudManager
 import com.iq200.heigui.clickgui.settings.impl.HUDSetting
 import com.iq200.heigui.clickgui.settings.impl.KeybindSetting
 import com.iq200.heigui.config.ModuleConfig
+import com.iq200.heigui.config.resolveConfigFile
 import com.iq200.heigui.events.InputEvent
 import com.iq200.heigui.events.core.on
 import io.github.classgraph.ClassGraph
@@ -18,7 +19,6 @@ import net.minecraft.client.DeltaTracker
 import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.resources.Identifier
 import net.minecraft.resources.Identifier.fromNamespaceAndPath
-import java.io.File
 
 /**
  * # Module Manager
@@ -46,7 +46,9 @@ object ModuleManager {
 
     init {
         registerModules(
-            config = ModuleConfig(file = File(Heigui.configDir, "heigui-config.json")),
+            config = ModuleConfig(
+                file = resolveConfigFile("heigui_config.json", listOf("heigui-config.json"))
+            ),
             modules = discoverModules().toTypedArray()
         )
 
