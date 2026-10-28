@@ -46,6 +46,9 @@ object AutoClick : Module (
     private val leftClickState = ClickState()
     private val rightClickState = ClickState()
 
+    val isLeftClickHeld: Boolean
+        get() = enabled && leftClickState.isHolding
+
     private val config = JsonConfig(
         fileName = "customac.json",
         typeToken = object : TypeToken<CustomACData>() {}.type,
