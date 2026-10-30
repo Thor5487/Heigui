@@ -10,6 +10,7 @@ import com.iq200.heigui.utils.noControlCodes
 import com.iq200.heigui.utils.skyblock.dungeon.DungeonUtils
 import com.iq200.heigui.utils.skyblock.dungeon.DungeonUtils.isSecret
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientEntityEvents
 import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents
 import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents
@@ -33,6 +34,7 @@ object EventDispatcher {
 
         ClientTickEvents.START_LEVEL_TICK.register { world -> TickEvent.Start(world).postAndCatch() }
         ClientTickEvents.END_LEVEL_TICK.register { world -> TickEvent.End(world).postAndCatch() }
+        ClientEntityEvents.ENTITY_LOAD.register { entity, world -> EntityLoadEvent(entity, world).postAndCatch() }
 
         LevelRenderEvents.AFTER_TRANSLUCENT_TERRAIN.register { context ->
             RenderEvent.Extract(context).postAndCatch()
