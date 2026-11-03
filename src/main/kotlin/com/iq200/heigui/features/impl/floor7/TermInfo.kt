@@ -8,10 +8,13 @@ import com.iq200.heigui.events.core.on
 import com.iq200.heigui.features.Category
 import com.iq200.heigui.features.Module
 import com.iq200.heigui.utils.Colors
+import com.iq200.heigui.utils.playSoundAtPlayer
 import com.iq200.heigui.utils.render.getStringWidth
 import com.iq200.heigui.utils.render.text
+import com.iq200.heigui.utils.render.textDim
 import com.iq200.heigui.utils.skyblock.dungeon.DungeonClass
 import com.iq200.heigui.utils.skyblock.dungeon.DungeonUtils
+import net.minecraft.sounds.SoundEvents
 
 data class TermRule(
     var dungeonClass: DungeonClass = DungeonClass.EMPTY,
@@ -28,6 +31,27 @@ object TermInfo : Module(
     description = "Shows the current Goldor section's terminal, lever, device, and gate progress.",
     category = Category.FLOOR7
 ) {
+    private var deviceNotificationText = ""
+    private var deviceNotificationUntil = 0L
+
+    private val deviceNotifyHud by HUD(
+        "Device Notify",
+        "Shows a movable notification when a normal or pre device is completed.",
+        toggleable = true,
+        x = 10,
+        y = 50,
+        scale = 2f
+    ) { example ->
+        val displayText = if (example) {
+            "§aPre4 Completed"
+        } else {
+            if (System.currentTimeMillis() >= deviceNotificationUntil) return@HUD 0 to 0
+            deviceNotificationText
+        }
+
+        textDim(displayText, 0, 0, Colors.WHITE)
+    }
+
     private val rulesConfig = JsonConfig(
         fileName = "term_rules.json",
         typeToken = object : TypeToken<TermRulesData>() {}.type,
@@ -103,14 +127,22 @@ object TermInfo : Module(
         // the gate/completion messages arrive out of order or one is missed.
         if (lastCompleted != 0 && completed < lastCompleted) advanceSection()
         if (completed == lastCompleted) {
-            if (type == "device") applyPreDeviceRule(match.groupValues[1])
+            if (type == "device") {
+                val preSection = applyPreDeviceRule(match.groupValues[1])
+                if (preSection != null) {
+                    showDeviceNotification("Pre$preSection Completed")
+                }
+            }
             return
         }
 
         when (type) {
             "terminal" -> terminals++
             "lever" -> levers++
-            "device" -> setDeviceComplete(section)
+            "device" -> {
+                setDeviceComplete(section)
+                showDeviceNotification("Device Completed")
+            }
         }
 
         lastCompleted = completed
@@ -128,6 +160,8 @@ object TermInfo : Module(
     private fun resetRun() {
         section = 1
         devices.fill(false)
+        deviceNotificationText = ""
+        deviceNotificationUntil = 0L
         resetSection()
     }
 
@@ -139,21 +173,29 @@ object TermInfo : Module(
         lastCompleted = 0
     }
 
-    private fun applyPreDeviceRule(playerName: String) {
+    private fun applyPreDeviceRule(playerName: String): Int? {
         val dungeonClass = DungeonUtils.dungeonTeammates
             .firstOrNull { it.name.equals(playerName, ignoreCase = true) }
             ?.clazz
             ?.takeUnless { it == DungeonClass.EMPTY }
-            ?: return
+            ?: return null
 
         val rule = rulesConfig.data.rules.firstOrNull {
             it.dungeonClass == dungeonClass &&
                 it.triggerSection == section &&
                 it.deviceSection in 1..MAX_SECTIONS &&
                 !isDeviceComplete(it.deviceSection)
-        } ?: return
+        } ?: return null
 
         setDeviceComplete(rule.deviceSection)
+        return rule.deviceSection
+    }
+
+    private fun showDeviceNotification(message: String) {
+        if (!deviceNotifyHud.enabled) return
+        deviceNotificationText = "§a$message"
+        deviceNotificationUntil = System.currentTimeMillis() + DEVICE_NOTIFICATION_DURATION_MS
+        playSoundAtPlayer(SoundEvents.NOTE_BLOCK_PLING.value())
     }
 
     private fun isDeviceComplete(targetSection: Int): Boolean =
@@ -182,6 +224,7 @@ object TermInfo : Module(
     private const val SECOND_SECTION = 2
     private const val MAX_SECTIONS = 4
     private const val LEVERS_PER_SECTION = 2
+    private const val DEVICE_NOTIFICATION_DURATION_MS = 1250L
     private const val GOLDOR_START_MESSAGE = "[BOSS] Goldor: Who dares trespass into my domain?"
     private const val GATE_DESTROYED_MESSAGE = "The gate has been destroyed!"
     private const val CORE_OPENING_MESSAGE = "The Core entrance is opening!"

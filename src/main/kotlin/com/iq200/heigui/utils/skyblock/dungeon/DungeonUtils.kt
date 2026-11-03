@@ -21,8 +21,8 @@ import kotlin.math.floor
 
 object DungeonUtils {
 
-    private const val WITHER_ESSENCE_ID = "e0f3e929-869e-3dca-9504-54c666ee6f23"
-    private const val REDSTONE_KEY = "fed95410-aba1-39df-9b95-1d4f361eb66e"
+    const val WITHER_ESSENCE_ID = "2865274b-3097-394e-8149-ec629c72d850"
+    const val REDSTONE_KEY = "fed95410-aba1-39df-9b95-1d4f361eb66e"
 
 
 
@@ -145,13 +145,15 @@ object DungeonUtils {
     fun isSecret(state: BlockState, pos: BlockPos): Boolean {
         return when {
             state.block.equalsOneOf(Blocks.CHEST, Blocks.TRAPPED_CHEST, Blocks.LEVER) -> true
-            state.block is SkullBlock ->
-                (mc.level?.getBlockEntity(pos) as? SkullBlockEntity)?.ownerProfile?.partialProfile()?.id
-                    ?.toString()?.equalsOneOf(WITHER_ESSENCE_ID, REDSTONE_KEY) ?: false
+            state.block is SkullBlock -> isSecretSkull(pos)
 
             else -> false
         }
     }
+
+    fun isSecretSkull(pos: BlockPos): Boolean =
+        (mc.level?.getBlockEntity(pos) as? SkullBlockEntity)?.ownerProfile?.partialProfile()?.id
+            ?.toString()?.equalsOneOf(WITHER_ESSENCE_ID, REDSTONE_KEY) ?: false
 
     inline val getBonusScore: Int
         get() {

@@ -305,11 +305,11 @@ object Vampire : Module(
                     val entityName = entity.name.string.noControlCodes.lowercase()
 
 
-                    if (entityName.contains("spawned by")) {
+                    if (isSlayerBossOwnerTag(entityName)) {
                         anyBossNearby = true
 
 
-                        if (entityName.contains(playerName)) {
+                        if (isSlayerBossOwnedBy(entityName, playerName)) {
                             myActiveBoss = entity
 
                             if (currentBossId != entity.id) {
@@ -441,7 +441,7 @@ object Vampire : Module(
                     mc.level!!.entitiesForRendering().forEach { entity ->
                         if (entity is ArmorStand) {
                             val entityName = entity.name.string.noControlCodes.lowercase()
-                            if (entityName.contains("spawned by")) {
+                            if (isSlayerBossOwnerTag(entityName)) {
                                 allBosses.add(entity)
                             }
                         }
@@ -974,6 +974,20 @@ object Vampire : Module(
         return true
     }
 
+    private fun isSlayerBossOwnerTag(entityName: String): Boolean {
+        val cleanName = entityName.trim()
+        return cleanName.endsWith(SLAYER_BOSS_SUFFIX) || cleanName.contains(LEGACY_SPAWNED_BY_TEXT)
+    }
+
+    private fun isSlayerBossOwnedBy(entityName: String, playerName: String): Boolean {
+        val cleanName = entityName.trim()
+        if (cleanName.endsWith(SLAYER_BOSS_SUFFIX)) {
+            return cleanName.removeSuffix(SLAYER_BOSS_SUFFIX).trim().equals(playerName, ignoreCase = true)
+        }
+
+        return cleanName.contains(LEGACY_SPAWNED_BY_TEXT) && cleanName.contains(playerName, ignoreCase = true)
+    }
+
     private fun isBloodIchor(entity: ArmorStand): Boolean {
 
         val headItem = entity.getItemBySlot(EquipmentSlot.HEAD)
@@ -1020,4 +1034,7 @@ object Vampire : Module(
         currentManiaTime = null
         myActiveRealBoss = null
     }
+
+    private const val SLAYER_BOSS_SUFFIX = "'s slayer boss"
+    private const val LEGACY_SPAWNED_BY_TEXT = "spawned by"
 }

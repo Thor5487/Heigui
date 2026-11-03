@@ -12,6 +12,7 @@ import com.iq200.heigui.features.Category
 import com.iq200.heigui.features.Module
 import com.iq200.heigui.features.impl.dungeon.AutoClick
 import com.iq200.heigui.utils.Colors
+import com.iq200.heigui.utils.ServerUtils
 import com.iq200.heigui.utils.skyblock.SplitsManager
 import com.iq200.mixin.accessors.KeyMappingAccessor
 import com.mojang.blaze3d.platform.InputConstants
@@ -39,6 +40,16 @@ object WitherAimBot : Module(
     private val storm by BooleanSetting("Storm", true, "Aimbot for Storm(only after 34s storm tick time)").withDependency { !allWithers }
     private val goldor by BooleanSetting("Goldor", true, "Aimbot for Goldor").withDependency { !allWithers }
     private val necron by BooleanSetting("Necron", true, "Aimbot for Necron").withDependency { !allWithers }
+    private val pingPrediction by BooleanSetting("Ping Prediction", true, "Aim ahead of moving withers based on latency")
+    private val pingAdjustment by NumberSetting(
+        "Ping Adjustment",
+        0,
+        -500,
+        500,
+        10,
+        "Adds or subtracts latency from wither position prediction.",
+        "ms"
+    ).withDependency { pingPrediction }
 
     private var currentTarget: Entity? = null
     private var isHoldingCorrectWeapon = false
@@ -104,8 +115,7 @@ object WitherAimBot : Module(
             level.entitiesForRendering().forEach { entity ->
                 if (entity is WitherBoss && entity.isAlive && entity.invulnerableTicks < 800) {
 
-                    val lerpedPos = entity.getPosition(partialTick)
-                    val targetPos = Vec3(lerpedPos.x, lerpedPos.y + 1.25, lerpedPos.z)
+                    val targetPos = getPredictedAimPosition(entity, partialTick)
 
                     val screenPos = Render2DUtils.worldToScreen(targetPos)
 
@@ -137,8 +147,7 @@ object WitherAimBot : Module(
                 val playerLerpedPos = player.getPosition(partialTick)
                 val playerEyePos = Vec3(playerLerpedPos.x, playerLerpedPos.y + player.eyeHeight, playerLerpedPos.z)
 
-                val targetLerpedPos = bestTarget.getPosition(partialTick)
-                val targetAimPos = Vec3(targetLerpedPos.x, targetLerpedPos.y + 1.25, targetLerpedPos.z)
+                val targetAimPos = getPredictedAimPosition(bestTarget, partialTick)
 
                 val dx = targetAimPos.x - playerEyePos.x
                 val dy = targetAimPos.y - playerEyePos.y
@@ -156,6 +165,25 @@ object WitherAimBot : Module(
         }
     }
 
+    private fun getPredictedAimPosition(entity: Entity, partialTick: Float): Vec3 {
+        return getRenderPosition(entity, partialTick, pingPrediction)
+            .add(0.0, WITHER_AIM_HEIGHT, 0.0)
+    }
+
+    private fun getRenderPosition(entity: Entity, partialTick: Float, applyPingCorrection: Boolean): Vec3 {
+        val lerpedPosition = entity.getPosition(partialTick)
+        if (!applyPingCorrection) return lerpedPosition
+
+        val movementPerTick = Vec3(
+            entity.x - entity.xo,
+            entity.y - entity.yo,
+            entity.z - entity.zo
+        )
+        val adjustedPing = (ServerUtils.currentPing + pingAdjustment).coerceAtLeast(0)
+        val ticksAhead = adjustedPing / MILLIS_PER_TICK
+        return lerpedPosition.add(movementPerTick.scale(ticksAhead))
+    }
+
     private fun isPhysicallyDown(keyMapping: KeyMapping): Boolean {
         val key = (keyMapping as KeyMappingAccessor).key
         if (key == InputConstants.UNKNOWN) return false
@@ -171,5 +199,8 @@ object WitherAimBot : Module(
             else -> InputConstants.isKeyDown(key.value)
         }
     }
+
+    private const val WITHER_AIM_HEIGHT = 1.25
+    private const val MILLIS_PER_TICK = 50.0
 
 }

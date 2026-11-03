@@ -25,6 +25,8 @@ import net.minecraft.network.protocol.game.ServerboundUseItemOnPacket
 import net.minecraft.sounds.SoundEvents
 import net.minecraft.world.InteractionHand
 import net.minecraft.world.entity.item.ItemEntity
+import net.minecraft.world.level.block.SkullBlock
+import net.minecraft.world.phys.Vec3
 
 object EventDispatcher {
 
@@ -91,10 +93,17 @@ object EventDispatcher {
 
         onSend<ServerboundUseItemOnPacket> {
             if (!DungeonUtils.inDungeons || hand == InteractionHand.OFF_HAND) return@onSend
-            SecretPickupEvent.Interact(
-                hitResult.blockPos,
-                mc.level?.getBlockState(hitResult.blockPos)?.takeIf { isSecret(it, hitResult.blockPos) } ?: return@onSend
-            ).postAndCatch()
+            val blockPos = hitResult.blockPos
+            val blockState = mc.level?.getBlockState(blockPos) ?: return@onSend
+
+            if (blockState.block is SkullBlock) {
+                val distance = mc.player?.eyePosition?.distanceToSqr(Vec3(blockPos)) ?: return@onSend
+                if (distance > 21.0) return@onSend
+            }
+
+            if (isSecret(blockState, blockPos)) {
+                SecretPickupEvent.Interact(blockPos, blockState).postAndCatch()
+            }
         }
     }
     private val dungeonItemDrops = listOf(

@@ -2,23 +2,18 @@ package com.iq200.heigui.features.impl.dungeon
 
 import com.iq200.heigui.clickgui.settings.impl.BooleanSetting
 import com.iq200.heigui.clickgui.settings.impl.NumberSetting
-import com.iq200.heigui.events.PlayerInputEvent
 import com.iq200.heigui.events.RenderEvent
 import com.iq200.heigui.events.WorldEvent
 import com.iq200.heigui.events.core.on
 import com.iq200.heigui.features.Category
 import com.iq200.heigui.features.Module
-import com.iq200.heigui.utils.modMessage
 import com.iq200.heigui.utils.skyblock.dungeon.DungeonUtils
 import com.iq200.heigui.utils.skyblock.dungeon.ScanUtils
 import net.minecraft.core.BlockPos
 import net.minecraft.world.InteractionHand
-import net.minecraft.world.level.block.AbstractSkullBlock
 import net.minecraft.world.level.block.Blocks
-import net.minecraft.world.level.block.entity.SkullBlockEntity
 import net.minecraft.world.phys.BlockHitResult
 import net.minecraft.world.phys.HitResult
-import java.util.UUID
 
 class BlockRegion(x1: Int, y1: Int, z1: Int, x2: Int, y2: Int, z2: Int) {
     val minX = minOf(x1, x2)
@@ -44,7 +39,7 @@ object Triggerbot : Module (
 ) {
     private val lever by BooleanSetting("Lever", false, "lever triggerbot")
     private val chest by BooleanSetting("Chest", false, "chest triggerbot")
-    private val essence by BooleanSetting("Essence", false, "essence triggerbot")
+    private val skull by BooleanSetting("Skull", false, "skull triggerbot")
     private val cd by NumberSetting("CD for Click", 200, 50, 1000, 10, "CD between clicking same block")
 
     private val clickedBlocks = mutableMapOf<BlockPos, Long>()
@@ -63,10 +58,6 @@ object Triggerbot : Module (
             if (!DungeonUtils.inDungeons) return@on
             if (mc.gui.screen() != null) return@on
 
-            val currentRoom = ScanUtils.currentRoom
-
-            if (currentRoom != null && (currentRoom.data.name == "Three Weirdos" || currentRoom.data.name == "Water Board")) return@on
-
             val now = System.currentTimeMillis()
             clickedBlocks.entries.removeIf{now - it.value > cd.toLong()}
 
@@ -80,8 +71,6 @@ object Triggerbot : Module (
 
         }
     }
-
-    private val SECRET_SKULL_UUID = UUID.fromString("2865274b-3097-394e-8149-ec629c72d850")
 
     fun handleTriggerBot(hitResult: BlockHitResult) {
         val pos = hitResult.blockPos
@@ -99,27 +88,35 @@ object Triggerbot : Module (
 
         if (chest && (block == Blocks.CHEST || block == Blocks.TRAPPED_CHEST)) shouldClick = true
         else if (lever && block == Blocks.LEVER) shouldClick = true
-        else if (essence && block is AbstractSkullBlock) {
-            val blockEntity = level.getBlockEntity(pos)
-
-            if (blockEntity is SkullBlockEntity) {
-                val profileComponent = blockEntity.ownerProfile
-                if (profileComponent != null) {
-                    val gameProfile = profileComponent.partialProfile()
-                    val id = gameProfile.id
-
-                    if (id != null && SECRET_SKULL_UUID == id) {
-                        shouldClick = true
-                    }
-                }
-            }
-        }
+        else if (skull && DungeonUtils.isSecretSkull(pos)) shouldClick = true
 
         if (!shouldClick) return
+        if (isDisabledRoom(pos)) return
 
         doClick(hitResult)
 
         clickedBlocks[pos] = now
+    }
+
+    /**
+     * Room scanning normally updates at the end of a level tick. Rendering can run several times between ticks,
+     * so immediately after a leap [ScanUtils.currentRoom] may still point at the room we leapt from. Resolve the
+     * room containing the targeted block before clicking to avoid pulling puzzle levers during that gap.
+     */
+    private fun isDisabledRoom(pos: BlockPos): Boolean {
+        if (DungeonUtils.inBoss) return false
+
+        val roomCenter = ScanUtils.getRoomCenter(pos.x, pos.z)
+        val room = ScanUtils.currentRoom
+            ?.takeIf { current -> current.roomComponents.any { it.vec2 == roomCenter } }
+            ?: ScanUtils.passedRooms.firstOrNull { passed ->
+                passed.roomComponents.any { it.vec2 == roomCenter }
+            }
+            ?: ScanUtils.scanRoom(roomCenter)
+
+        // Waiting one tick is safer than clicking a puzzle lever while the destination room is still loading.
+        val roomName = room?.data?.name ?: return true
+        return roomName == "Three Weirdos" || roomName == "Water Board"
     }
 
     fun clearBlocks() {

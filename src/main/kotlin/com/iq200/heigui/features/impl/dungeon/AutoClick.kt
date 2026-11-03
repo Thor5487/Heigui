@@ -28,8 +28,8 @@ enum class AutoClickButton {
 }
 
 object AutoClick : Module (
-    name = "AutoClick",
-    description = "autoclick",
+    name = "Auto Click",
+    description = "auto click",
     category = Category.DUNGEON
 ) {
     private val customAC by BooleanSetting("Custom Item", false, desc = "Custom Item for Auto Click, /hg cac to view complete commands")
