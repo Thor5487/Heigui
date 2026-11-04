@@ -77,14 +77,12 @@ object TeleportOptimization : Module (
 
             if (!isTpItem(stack)) return@on
 
-            if (!hasEnoughMana(stack)) return@on
-
             if (result is BlockHitResult) {
                 val hitBlock = mc.level?.getBlockState(result.blockPos)?.block
                 if (hitBlock != null && isIgnored(hitBlock)) return@on
             }
 
-            if (zpcmEnabled) {
+            if (zpcmEnabled && hasEnoughMana(stack)) {
                 checkZpcm(stack, yRot, xRot)
             }
         }
@@ -94,14 +92,14 @@ object TeleportOptimization : Module (
 
             if (packet is ServerboundUseItemPacket) {
                 val stack = mc.player?.getItemInHand(packet.hand) ?: return@on
-                if (isTpItem(stack) && hasEnoughMana(stack)) {
+                if (isTpItem(stack)) {
                     noRotateSent.add(System.currentTimeMillis())
                 }
             } else if (packet is ServerboundUseItemOnPacket) {
                 val stack = mc.player?.getItemInHand(packet.hand) ?: return@on
                 val level = mc.level ?: return@on
                 val block = level.getBlockState(packet.hitResult.blockPos).block
-                if (!isIgnored(block) && isTpItem(stack) && hasEnoughMana(stack)) {
+                if (!isIgnored(block) && isTpItem(stack)) {
                     noRotateSent.add(System.currentTimeMillis())
                 }
             }

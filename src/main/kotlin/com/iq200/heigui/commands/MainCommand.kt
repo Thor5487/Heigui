@@ -12,8 +12,10 @@ val mainCommand = Commodore("heigui", "hg") {
         schedule(0) { mc.setScreenAndShow(ClickGUI) }
     }
 
+    setupAutoSwapCommand()
     setupAutoCroesusCommand()
     setupCustomAC()
     setupBlockWrongBreakCommand()
+    setupEtherwarpTriggerbotCommand()
     setupTermRulesCommand()
 }
