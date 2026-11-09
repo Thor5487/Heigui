@@ -4,7 +4,6 @@ import com.iq200.heigui.commands.mainCommand
 import com.iq200.heigui.events.EventDispatcher
 import com.iq200.heigui.events.core.EventBus
 import com.iq200.heigui.features.ModuleManager
-import com.iq200.heigui.utils.DeathTickUtil
 import com.iq200.heigui.utils.IrisCompatability
 import com.iq200.heigui.utils.ServerUtils
 import com.iq200.heigui.utils.handlers.TickTasks
@@ -89,7 +88,7 @@ object Heigui : ClientModInitializer {
             DungeonListener, PartyUtils,
             ScanUtils, DungeonUtils, SplitsManager,
             IrisCompatability,
-            ModuleManager, DeathTickUtil, ActionBarParser
+            ModuleManager, ActionBarParser
         ).forEach { EventBus.subscribe(it) }
 
         logger.info("[Heigui] All Features Loaded！")

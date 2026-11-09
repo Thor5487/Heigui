@@ -7,7 +7,6 @@ import com.iq200.heigui.events.WorldEvent
 import com.iq200.heigui.events.core.on
 import com.iq200.heigui.utils.JsonResourceLoader
 import com.iq200.heigui.utils.Vec2i
-import com.iq200.heigui.utils.devMessage
 import com.iq200.heigui.utils.equalsOneOf
 import com.iq200.heigui.utils.skyblock.Island
 import com.iq200.heigui.utils.skyblock.LocationUtils
@@ -56,16 +55,12 @@ object ScanUtils {
                 return@on
             } // We want to use cached rooms instead of scanning it again if we have already passed through it and if we are already in it, we don't want to trigger the event
 
-            scanRoom(roomCenter)?.let { room -> if (room.rotation != Rotations.NONE) RoomEnterEvent(room).postAndCatch() } ?: run {
-                if ((!DungeonUtils.inClear) && !LocationUtils.isCurrentArea(Island.SinglePlayer)) return@on
-                devMessage("Unable to determine room at $roomCenter core: ${getCore(roomCenter)}")
-            }
+            scanRoom(roomCenter)?.let { room -> if (room.rotation != Rotations.NONE) RoomEnterEvent(room).postAndCatch() }
         }
 
         on<RoomEnterEvent> {
             currentRoom = room
             if (passedRooms.none { it.data.name == currentRoom?.data?.name }) passedRooms.add(currentRoom ?: return@on)
-            devMessage("${room?.data?.name} - ${room?.rotation} || clay: ${room?.clayPos}")
         }
 
         on<WorldEvent.Load> {
