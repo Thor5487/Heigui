@@ -38,7 +38,7 @@ object EventDispatcher {
         ClientTickEvents.END_LEVEL_TICK.register { world -> TickEvent.End(world).postAndCatch() }
         ClientEntityEvents.ENTITY_LOAD.register { entity, world -> EntityLoadEvent(entity, world).postAndCatch() }
 
-        LevelRenderEvents.AFTER_TRANSLUCENT_TERRAIN.register { context ->
+        LevelRenderEvents.COLLECT_SUBMITS.register { context ->
             RenderEvent.Extract(context).postAndCatch()
         }
 

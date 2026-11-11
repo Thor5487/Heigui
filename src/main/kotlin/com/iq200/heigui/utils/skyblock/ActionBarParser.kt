@@ -24,11 +24,14 @@ object ActionBarParser {
         private set
     var maxMana: Int = 0
         private set
+    var stacks: Int = 0
+        private set
 
     private val secretRegex = Regex("""(\d+)/(\d+) Secrets""")
     private val healthRegex = Regex("""([\d,]+)/([\d,]+)\uE010""")
     private val defenseRegex = Regex("""([\d,]+)\uE008""")
     private val manaRegex = Regex("""([\d,]+)/([\d,]+)\uE003""")
+    private val stacksRegex = Regex("""([\d,]+)\u2051""")
 
     init {
         on<WorldEvent.Load> {
@@ -47,12 +50,12 @@ object ActionBarParser {
 
             if (rawText != null) {
                 val cleanText = rawText.replace(Regex("§[0-9a-fk-or]"), "")
-                parseSecrets(cleanText)
+                parse(cleanText)
             }
         }
     }
 
-    private fun parseSecrets(text: String) {
+    private fun parse(text: String) {
         secretRegex.find(text)?.let {
             currentSecrets = it.groupValues[1].toIntOrNull() ?: currentSecrets
             maxSecrets = it.groupValues[2].toIntOrNull() ?: maxSecrets
@@ -74,6 +77,11 @@ object ActionBarParser {
             currentMana = it.groupValues[1].toStatIntOrNull() ?: currentMana
             maxMana = it.groupValues[2].toStatIntOrNull() ?: maxMana
         }
+
+
+        stacksRegex.find(text)?.let {
+            stacks = it.groupValues[1].toStatIntOrNull() ?: stacks
+        }
     }
 
     private fun String.toStatIntOrNull(): Int? = replace(",", "").toIntOrNull()
@@ -86,5 +94,6 @@ object ActionBarParser {
         defense = 0
         currentMana = 0
         maxMana = 0
+        stacks = 0
     }
 }

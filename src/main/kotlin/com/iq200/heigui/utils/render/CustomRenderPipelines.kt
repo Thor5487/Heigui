@@ -27,6 +27,8 @@ object CustomRenderPipelines {
 
     val QUADS_OPAQUE: RenderPipeline = RenderPipelines.register(
         RenderPipeline.builder(RenderPipelines.DEBUG_FILLED_SNIPPET)
+            .withDepthStencilState(DepthStencilState.DEFAULT)
+            .withColorTargetState(ColorTargetState.DEFAULT)
             .withCull(false)
             .withLocation("heigui/quads_opaque")
             .build()
