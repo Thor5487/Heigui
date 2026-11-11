@@ -11,7 +11,6 @@ import com.iq200.heigui.config.ModuleConfig
 import com.iq200.heigui.config.resolveConfigFile
 import com.iq200.heigui.events.InputEvent
 import com.iq200.heigui.events.core.on
-import io.github.classgraph.ClassGraph
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry
 import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements
 import net.fabricmc.loader.api.FabricLoader
@@ -49,7 +48,7 @@ object ModuleManager {
             config = ModuleConfig(
                 file = resolveConfigFile("heigui_config.json", listOf("heigui-config.json"))
             ),
-            modules = discoverModules().toTypedArray()
+            modules = GeneratedModuleRegistry.modules.toTypedArray()
         )
 
         // hashmap, but would need to keep track when setting values change
@@ -63,23 +62,6 @@ object ModuleManager {
 
         HudElementRegistry.attachElementBefore(VanillaHudElements.SLEEP, HUD_LAYER, ModuleManager::render)
     }
-
-    private fun discoverModules(): List<Module> = ClassGraph()
-        .enableClassInfo()
-        .acceptPackages(MODULE_PACKAGE)
-        .overrideClassLoaders(Thread.currentThread().contextClassLoader)
-        .scan()
-        .use { scanResult ->
-            scanResult.getSubclasses(Module::class.java.name)
-                .filterNot { it.isAbstract }
-                .sortedBy { it.name }
-                .map { classInfo ->
-                    val moduleClass = classInfo.loadClass()
-                    val instance = moduleClass.getDeclaredField("INSTANCE").get(null)
-                    instance as? Module
-                        ?: error("${classInfo.name} is a Module subclass but not a Kotlin object.")
-                }
-        }
 
     /**
      * Registers modules to the [ModuleManager] and initializes them.
@@ -142,7 +124,5 @@ object ModuleManager {
         }
         guiGraphics.pose().popMatrix()
     }
-
-    private const val MODULE_PACKAGE = "com.iq200.heigui.features.impl"
 }
 
