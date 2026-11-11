@@ -1,11 +1,11 @@
 package com.iq200.heigui.features.impl.skyblock
 
-import com.iq200.heigui.clickgui.settings.Setting.Companion.withDependency
 import com.iq200.heigui.clickgui.settings.impl.BooleanSetting
 import com.iq200.heigui.clickgui.settings.impl.NumberSetting
 import com.iq200.heigui.events.PacketEvent
 import com.iq200.heigui.events.PlayerInputEvent
 import com.iq200.heigui.events.TickEvent
+import com.iq200.heigui.events.WorldEvent
 import com.iq200.heigui.events.core.on
 import com.iq200.heigui.features.Category
 import com.iq200.heigui.features.Module
@@ -16,50 +16,35 @@ import com.iq200.heigui.utils.skyblock.ActionBarParser
 import com.iq200.heigui.utils.skyblock.EtherUtils
 import com.iq200.heigui.utils.skyblock.dungeon.DungeonUtils
 import com.iq200.heigui.utils.skyblock.dungeon.ScanUtils
-import com.iq200.heigui.utils.skyblock.dungeon.tiles.Room
 import com.iq200.heigui.utils.skyblock.dungeon.tiles.RoomType
-import com.iq200.mixin.accessors.LocalPlayerAccessor
-import net.minecraft.core.BlockPos
-import net.minecraft.network.Connection
-import net.minecraft.network.protocol.game.*
-import net.minecraft.util.Mth
+import net.minecraft.network.protocol.game.ClientboundPlayerPositionPacket
 import net.minecraft.world.entity.PositionMoveRotation
 import net.minecraft.world.item.ItemStack
 import net.minecraft.world.level.block.*
 import net.minecraft.world.phys.BlockHitResult
 import net.minecraft.world.phys.Vec3
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfo
-import kotlin.math.abs
 
 
-//From RSM
-object TeleportOptimization : Module (
-    name = "Teleport Optimization",
-    description = "NoRotate & Zeroping Camera",
+
+object ZeropingCamera : Module (
+    name = "Zeroping Camera",
+    description = "Visually removes teleport latency for selected teleport abilities.",
     category = Category.SKYBLOCK
 ), CameraPositionProvider {
 
-    private val noRotateEnabled by BooleanSetting("NoRotate", false, "No Rotation after TP (Hype/AOTV/Etherwarp)")
-    private val bossEntryRotateFix by BooleanSetting(
-        "Boss Entry Rotate Fix",
-        false,
-        "Force the correct camera rotation when entering the F7/M7 boss fight."
-    )
-    private val zpcmEnabled by BooleanSetting("Zeroping Camera", false, "Visually 0 Ping on TP (Hype/AOTV/Etherwarp) Note: Require NoRotate Enabled").withDependency { noRotateEnabled }
-    private val instantTransmissionZpcm by BooleanSetting("ZPCM IT", true, "zpcm for AOTE/AOTV instant transmission").withDependency { zpcmEnabled && noRotateEnabled }
-    private val hypeZpcm by BooleanSetting("ZPCM Hype", false, "zpcm for hype").withDependency { zpcmEnabled && noRotateEnabled}
-    private val manaCheckEnabled by BooleanSetting("Mana Check", true, "Only predict teleports when you have enough mana").withDependency { zpcmEnabled }
-    private val timeOutMs by NumberSetting("Timeout", 500, 100, 1000, 50, unit = "ms", desc = "timeout for zeroping camera").withDependency { noRotateEnabled }
-
-    private val noRotatePackets = mutableListOf<ClientboundPlayerPositionPacket>()
-    private val noRotateSent = mutableListOf<PendingNoRotate>()
+    private val etherwarpEnabled by BooleanSetting("Etherwarp", true, "Predict Etherwarp teleports")
+    private val instantTransmissionEnabled by BooleanSetting("Instant Transmission", true, "Predict AOTE/AOTV Instant Transmission teleports")
+    private val witherImpactEnabled by BooleanSetting("Wither Impact", false, "Predict Wither Impact teleports")
+    private val manaCheckEnabled by BooleanSetting("Mana Check", true, "Only predict teleports when you have enough mana")
+    private val timeOutMs by NumberSetting("Timeout", 500, 100, 1000, 50, unit = "ms", desc = "Time before an unconfirmed camera prediction is cleared")
 
     private var renderPos: Vec3? = null
     private val zpcmSent = mutableListOf<Vec3>()
+    private var lastZpcmPredictionAt = 0L
     private var lastWIMP: Long = 0
 
     internal val activeZpcmPosition: Vec3?
-        get() = if (enabled && noRotateEnabled && zpcmEnabled) renderPos else null
+        get() = if (enabled) renderPos else null
 
     private val ignoredBlocks = listOf(
         ChestBlock::class.java, EnderChestBlock::class.java, TrappedChestBlock::class.java,
@@ -70,17 +55,11 @@ object TeleportOptimization : Module (
 
     init {
         on<TickEvent.Start> {
-            val now = System.currentTimeMillis()
-            noRotateSent.removeIf { now - it.sentAt >= timeOutMs }
-
-
-            if (noRotateSent.isEmpty() && renderPos != null) {
-                renderPos = null
-            }
+            if (renderPos != null && System.currentTimeMillis() - lastZpcmPredictionAt >= timeOutMs) clearZpcm()
         }
 
         on<PlayerInputEvent.Use> {
-            if (!noRotateEnabled || !isRoomAllowed() || (DungeonUtils.isFloor(7) && DungeonUtils.inBoss)) return@on
+            if (!isRoomAllowed() || (DungeonUtils.isFloor(7) && DungeonUtils.inBoss)) return@on
             val stack = mc.player?.mainHandItem ?: return@on
 
             if (!isTpItem(stack)) return@on
@@ -90,116 +69,31 @@ object TeleportOptimization : Module (
                 if (hitBlock != null && isIgnored(hitBlock)) return@on
             }
 
-            queueNoRotate()
-
-            if (zpcmEnabled && (!manaCheckEnabled || hasEnoughMana(stack))) {
+            if (!manaCheckEnabled || hasEnoughMana(stack)) {
                 checkZpcm(stack, yRot, xRot)
             }
         }
 
+        // Passive observation only: vanilla still applies and acknowledges the teleport packet.
         on<PacketEvent.Receive> {
-            if (!noRotateEnabled || packet !is ClientboundPlayerPositionPacket) return@on
+            if (renderPos == null || packet !is ClientboundPlayerPositionPacket) return@on
             val player = mc.player ?: return@on
-
-            val startPos = PositionMoveRotation.of(player)
-            val newPos = PositionMoveRotation.calculateAbsolute(startPos, packet.change(), packet.relatives())
-
-            if (zpcmEnabled) {
-                handleZpcm(newPos)
-            }
-
-
-            if (noRotateSent.isNotEmpty()) {
-                val pending = noRotateSent.removeAt(0)
-                val isFloor7BossEntryTeleport =
-                    pending.sentInFloor7 && isFloor7BossPosition(newPos.position())
-
-                if (!isFloor7BossEntryTeleport) {
-                    noRotatePackets.add(packet)
-                }
-            }
-
-        }
-    }
-
-    @JvmStatic
-    fun handleTp(packet: ClientboundPlayerPositionPacket, connection: Connection, ci: CallbackInfo) {
-        val player = mc.player ?: return
-        val startPos = PositionMoveRotation.of(player)
-        val newPos = PositionMoveRotation.calculateAbsolute(startPos, packet.change, packet.relatives)
-
-        if (
-            enabled && bossEntryRotateFix && DungeonUtils.isFloor(7) &&
-            !isFloor7BossPosition(startPos.position()) &&
-            isFloor7BossPosition(newPos.position()) &&
-            !isBossEntryRotation(newPos.yRot(), newPos.xRot())
-        ) {
-            noRotatePackets.remove(packet)
-            handleBossEntryRotation(packet, connection, ci, player, newPos)
-            return
-        }
-
-        if (!noRotatePackets.remove(packet)) return
-
-        player.setPos(newPos.position())
-        player.deltaMovement = newPos.deltaMovement()
-
-        val oldPlayerPos = PositionMoveRotation(player.oldPosition(), Vec3.ZERO, player.yRotO, player.xRotO)
-        val newOldPlayerPos = PositionMoveRotation.calculateAbsolute(oldPlayerPos, packet.change, packet.relatives)
-
-        player.setOldPosAndRot(newOldPlayerPos.position(), player.yRotO, player.xRotO)
-
-        // Since 26.3 this acknowledgement includes movement; sending another PosRot packet duplicates it.
-        connection.send(ServerboundAcceptTeleportationPacket(packet.id, newPos.position().x, newPos.position().y, newPos.position().z, newPos.yRot(), newPos.xRot()))
-        mc.level?.blockStatePredictionHandler?.onTeleport()
-        mc.gameMode?.stopDestroyBlock()
-
-        val accessor = player as LocalPlayerAccessor
-        accessor.setYRotLast(newPos.yRot())
-        accessor.setXRotLast(newPos.xRot())
-
-        ci.cancel()
-    }
-
-    private fun handleBossEntryRotation(
-        packet: ClientboundPlayerPositionPacket,
-        connection: Connection,
-        ci: CallbackInfo,
-        player: net.minecraft.client.player.LocalPlayer,
-        newPos: PositionMoveRotation
-    ) {
-        player.setPos(newPos.position())
-        player.deltaMovement = newPos.deltaMovement()
-        player.yRot = BOSS_ENTRY_YAW
-        player.xRot = BOSS_ENTRY_PITCH
-
-        val oldPlayerPos = PositionMoveRotation(player.oldPosition(), Vec3.ZERO, player.yRotO, player.xRotO)
-        val newOldPlayerPos = PositionMoveRotation.calculateAbsolute(oldPlayerPos, packet.change, packet.relatives)
-        player.setOldPosAndRot(newOldPlayerPos.position(), BOSS_ENTRY_YAW, BOSS_ENTRY_PITCH)
-
-        connection.send(
-            ServerboundAcceptTeleportationPacket(
-                packet.id,
-                newPos.position().x,
-                newPos.position().y,
-                newPos.position().z,
-                newPos.yRot(),
-                newPos.xRot()
+            val newPos = PositionMoveRotation.calculateAbsolute(
+                PositionMoveRotation.of(player),
+                packet.change(),
+                packet.relatives()
             )
-        )
-        mc.level?.blockStatePredictionHandler?.onTeleport()
-        mc.gameMode?.stopDestroyBlock()
+            handleZpcm(newPos)
+        }
 
-        val accessor = player as LocalPlayerAccessor
-        accessor.setYRotLast(newPos.yRot())
-        accessor.setXRotLast(newPos.xRot())
-
-        ci.cancel()
+        on<WorldEvent.Load> {
+            clearZpcm()
+        }
     }
 
     private fun handleZpcm(newPos : PositionMoveRotation) {
         if (zpcmSent.isEmpty()) {
-            renderPos = null
+            clearZpcm()
             return
         }
 
@@ -207,9 +101,21 @@ object TeleportOptimization : Module (
         val correct =
             old.x() == newPos.position().x() && old.y() == newPos.position().y() && old.z() == newPos.position().z()
         if (!correct || zpcmSent.isEmpty()) {
-            zpcmSent.clear()
-            renderPos = null
+            clearZpcm()
         }
+    }
+
+    private fun setZpcmPosition(position: Vec3) {
+        renderPos = position
+        lastZpcmPredictionAt = System.currentTimeMillis()
+        zpcmSent.add(position)
+        CameraHandler.registerProvider(this)
+    }
+
+    private fun clearZpcm() {
+        renderPos = null
+        zpcmSent.clear()
+        lastZpcmPredictionAt = 0L
     }
 
 
@@ -217,22 +123,6 @@ object TeleportOptimization : Module (
     private fun isIgnored(block: Block): Boolean {
         return ignoredBlocks.any { it.isInstance(block) }
     }
-
-    private fun queueNoRotate() {
-        noRotateSent.add(
-            PendingNoRotate(
-                sentAt = System.currentTimeMillis(),
-                sentInFloor7 = DungeonUtils.isFloor(7)
-            )
-        )
-    }
-
-    private fun isFloor7BossPosition(position: Vec3): Boolean =
-        position.x > -7.0 && position.z > -7.0
-
-    private fun isBossEntryRotation(yaw: Float, pitch: Float): Boolean =
-        abs(Mth.wrapDegrees(yaw - BOSS_ENTRY_YAW)) < ROTATION_EPSILON &&
-            abs(pitch - BOSS_ENTRY_PITCH) < ROTATION_EPSILON
 
     private fun isTpItem(stack: ItemStack): Boolean {
         val id = stack.itemId
@@ -265,19 +155,17 @@ object TeleportOptimization : Module (
         val currentPos = renderPos ?: player.position()
         val eyePos = currentPos.add(0.0, EtherUtils.getEyeHeight().toDouble(), 0.0)
 
-        if (sneaking && stack.isEtherwarpItem() && zpcmEnabled) {
+        if (sneaking && stack.isEtherwarpItem()) {
+            if (!etherwarpEnabled) return
             val ether = EtherUtils.getEtherPosFromOrigin(eyePos, yaw, pitch, 57 + stack.getTunerDistance())
             val targetBlock = ether.first ?: return
             if (!ether.second) return
 
-            renderPos = Vec3(targetBlock.x + 0.5, targetBlock.y + 1.05, targetBlock.z + 0.5)
-
-            CameraHandler.registerProvider(this)
-            zpcmSent.add(renderPos!!)
-        } else if (!sneaking && zpcmEnabled) {
+            setZpcmPosition(Vec3(targetBlock.x + 0.5, targetBlock.y + 1.05, targetBlock.z + 0.5))
+        } else if (!sneaking) {
             val wimp = isWitherImpactItem(stack)
-            if (wimp && !hypeZpcm) return
-            if (!wimp && !instantTransmissionZpcm) return
+            if (wimp && !witherImpactEnabled) return
+            if (!wimp && !instantTransmissionEnabled) return
             val now = System.currentTimeMillis()
             if (wimp && (now - lastWIMP < 125L)) return
 
@@ -296,9 +184,7 @@ object TeleportOptimization : Module (
 
             if (target.toBlockPos() == currentPos.toBlockPos()) return
 
-            renderPos = target
-            CameraHandler.registerProvider(this)
-            zpcmSent.add(renderPos!!)
+            setZpcmPosition(target)
 
             if (wimp) lastWIMP = now
         }
@@ -385,10 +271,6 @@ object TeleportOptimization : Module (
         ) && room.data.type !== RoomType.TRAP
     }
 
-    private fun isRoomAllowing(room: Room?): Boolean {
-        return room == null || !room.data.name.containsOneOf("Teleport Maze", "Boulder")
-    }
-
     private fun hasEnoughMana(stack: ItemStack): Boolean {
         val currentMana = ActionBarParser.currentMana
         val id = stack.itemId
@@ -406,22 +288,14 @@ object TeleportOptimization : Module (
         }
     }
 
-    private data class PendingNoRotate(
-        val sentAt: Long,
-        val sentInFloor7: Boolean
-    )
-
-    private const val BOSS_ENTRY_YAW = 360.0f
-    private const val BOSS_ENTRY_PITCH = 0.0f
-    private const val ROTATION_EPSILON = 0.001f
-
-    // ==========================================
-
-    // ==========================================
+    override fun onDisable() {
+        clearZpcm()
+        super.onDisable()
+    }
 
     override fun shouldOverridePosition(): Boolean {
 
-        return enabled && zpcmEnabled && renderPos != null
+        return enabled && renderPos != null
     }
 
     override fun getCameraPosition(): Vec3? {
@@ -435,28 +309,6 @@ object TeleportOptimization : Module (
 
     override fun shouldOverrideHitRot(): Boolean {
         return false
-    }
-
-    private fun shouldBlockZeroPingInteract() : Boolean {
-        if (mc.player == null || mc.level == null) return false
-
-        val held: ItemStack = mc.player!!.mainHandItem
-        if (!isCaseFromTpRange(held)) return false
-
-        val hitResult = mc.hitResult
-
-        if (hitResult is BlockHitResult) {
-            return !mc.level!!.getBlockState(hitResult.blockPos).isAir
-        }
-
-        return false
-    }
-
-    private fun isCaseFromTpRange(item: ItemStack?): Boolean {
-        return when (item?.itemId) {
-            "ASPECT_OF_THE_END", "ASPECT_OF_THE_VOID", "ASPECT_OF_THE_LEECH_1", "ASPECT_OF_THE_LEECH_2", "ASPECT_OF_THE_LEECH_3", "NECRON_BLADE", "SCYLLA", "HYPERION", "VALKYRIE", "ASTRAEA" -> true
-            else -> false
-        }
     }
 
     override fun shouldBlockKeyboardMovement(): Boolean {

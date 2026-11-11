@@ -7,6 +7,7 @@ import com.iq200.heigui.clickgui.settings.impl.NumberSetting
 import com.iq200.heigui.clickgui.settings.impl.SelectorSetting
 import com.iq200.heigui.events.BlockUpdateEvent
 import com.iq200.heigui.events.ChatPacketEvent
+import com.iq200.heigui.events.EntityDataUpdateEvent
 import com.iq200.heigui.events.InputEvent
 import com.iq200.heigui.events.PlayerInputEvent
 import com.iq200.heigui.events.RenderEvent
@@ -17,7 +18,12 @@ import com.iq200.heigui.features.Category
 import com.iq200.heigui.features.Module
 import com.iq200.heigui.utils.Color.Companion.withAlpha
 import com.iq200.heigui.utils.Colors
+//#if PRIVATE
+import com.iq200.heigui.utils.RotationUtils
+//#endif
+import com.iq200.heigui.utils.alert
 import com.iq200.heigui.utils.itemId
+import com.iq200.heigui.utils.modMessage
 import com.iq200.heigui.utils.render.drawFilledBox
 import com.iq200.heigui.utils.render.drawStyledBox
 import com.iq200.heigui.utils.skyblock.ActionBarParser
@@ -52,6 +58,18 @@ object I4Solver : Module(
         true,
         "Prefire the next assumed target before the server confirms the current target is complete."
     )
+    private val i4CompleteNotification by BooleanSetting(
+        "I4 Complete Notification",
+        true,
+        "Shows a chat message and title when the I4 device is confirmed complete."
+    )
+    //#if PRIVATE
+    private val preventOvershoot by BooleanSetting(
+        "Prevent Overshoot",
+        true,
+        "Locks Terror aim to the horizontal center until the view leaves the I4 grid vertically."
+    )
+    //#endif
     private val doneColor by ColorSetting(
         "Complete Color",
         Colors.MINECRAFT_RED.withAlpha(0.5f),
@@ -76,11 +94,11 @@ object I4Solver : Module(
     private val predictionTimeoutTicks by NumberSetting(
         "Prediction Timeout",
         10,
-        5,
-        40,
+        1,
+        10,
         1,
         unit = "ticks",
-        desc = "Server ticks to wait for a speculative hit before returning to the real unsolved target."
+        desc = "Server ticks to wait for a use-item prediction to be confirmed by the current Emerald disappearing."
     ).withDependency { prediction }
     private val shotIntervalTicks by NumberSetting(
         "Shot Interval",
@@ -106,6 +124,10 @@ object I4Solver : Module(
     private var aimPoint: Vec3? = null
     private var previousGeneralAimX: Double? = null
     private var lastTerrorAimState: Boolean? = null
+    private var isI4Complete = false
+    //#if PRIVATE
+    private var terrorCenterYawLocked = false
+    //#endif
 
     @Volatile private var isHoldingRightClick = false
     @Volatile private var shotCycleActive = false
@@ -168,19 +190,22 @@ object I4Solver : Module(
         }
 
         on<BlockUpdateEvent> {
-            if (DungeonUtils.getF7Phase() != M7Phases.P3 || pos !in deviceBlocks) return@on
+            if (DungeonUtils.getF7Phase() != M7Phases.P3 || isI4Complete || pos !in deviceBlocks) return@on
 
             if (old.block == Blocks.EMERALD_BLOCK && updated.block == Blocks.DYED_TERRACOTTA.blue()) {
+                val predictionAlreadyAdvanced = solverTarget != null && solverTarget != pos
                 doneBlocks.add(pos.immutable())
                 speculativeDoneBlocks.remove(pos)
                 speculativeAgeTicks.remove(pos)
                 if (target == pos) target = null
 
-                if (solverTarget == pos) {
+                if (predictionAlreadyAdvanced) {
+                    updateAimSolution()
+                } else if (prediction) {
+                    advancePredictionAfterDisappearance()
+                } else {
                     solverTarget = null
                     clearAimSolution()
-                } else {
-                    updateAimSolution()
                 }
                 return@on
             }
@@ -188,6 +213,16 @@ object I4Solver : Module(
             if (updated.block == Blocks.EMERALD_BLOCK) {
                 target = pos.immutable()
                 val predictionMatched = solverTarget == pos || pos in speculativeDoneBlocks
+                val predictionCanHitTarget = solverTarget?.let { predicted ->
+                    predicted.y == pos.y && (
+                        isTerrorAimActive() || abs(predicted.x - pos.x) == DEVICE_COLUMN_SPACING
+                    )
+                } == true
+
+                // Terror covers the full row; the general three-arrow aim covers adjacent positions.
+                // Keep it stable instead of snapping to the newly confirmed target.
+                if (!predictionMatched && predictionCanHitTarget) return@on
+
                 if (!predictionMatched) {
                     speculativeDoneBlocks.clear()
                     speculativeAgeTicks.clear()
@@ -220,6 +255,21 @@ object I4Solver : Module(
         on<ChatPacketEvent> {
             if (value == GOLDOR_START_MESSAGE) reset()
         }
+
+        on<EntityDataUpdateEvent> {
+            if (DungeonUtils.getF7Phase() != M7Phases.P3 || !isPlayerInI4Room() || isI4Complete) return@on
+            if (entity.name.string == ACTIVE_ENTITY_NAME) onI4Complete()
+        }
+    }
+
+    private fun onI4Complete() {
+        isI4Complete = true
+        resetI4State()
+        stopShotTimer()
+        if (!i4CompleteNotification) return
+
+        modMessage("§aI4 device complete")
+        alert("§aI4 Complete")
     }
 
     /** Future prediction/prefire behavior should be triggered from this single hook. */
@@ -253,8 +303,61 @@ object I4Solver : Module(
         return shotIntervalTicks
     }
 
+    //#if PRIVATE
+    /** Called after vanilla has applied sensitivity and mouse inversion, immediately before LocalPlayer.turn. */
+    @JvmStatic
+    fun adjustMouseTurnForOvershoot(yawInput: Double, pitchInput: Double): DoubleArray {
+        val player = mc.player
+        val point = aimPoint
+        if (
+            !enabled || !preventOvershoot || mc.gui.screen() != null || player == null || point == null ||
+            DungeonUtils.getF7Phase() != M7Phases.P3 || !isOnDevice() || !isTerrorAimActive()
+        ) {
+            resetOvershootGuard()
+            return doubleArrayOf(yawInput, pitchInput)
+        }
+
+        if (!isLookingAtI4Grid()) {
+            resetOvershootGuard()
+            return doubleArrayOf(yawInput, pitchInput)
+        }
+
+        // Once centered, horizontal movement stays locked in both directions.
+        // Pitch remains untouched so the player can leave the grid vertically to unlock it.
+        if (terrorCenterYawLocked) return doubleArrayOf(0.0, pitchInput)
+
+        val center = Vec3(TERROR_CENTER_X, player.eyePosition.y, DEVICE_FRONT_Z)
+        val targetYaw = RotationUtils.getRotation(player.eyePosition, center).yaw
+        val yawError = RotationUtils.wrapAngleTo180(targetYaw - player.yRot).toDouble()
+        val appliedRotation = yawInput * PLAYER_TURN_SCALE
+        if (abs(yawError) <= TERROR_CENTER_YAW_EPSILON) {
+            terrorCenterYawLocked = true
+            return doubleArrayOf(0.0, pitchInput)
+        }
+
+        val movingTowardTarget = yawError * appliedRotation > 0.0
+        if (!movingTowardTarget || abs(appliedRotation) < abs(yawError)) {
+            return doubleArrayOf(yawInput, pitchInput)
+        }
+
+        terrorCenterYawLocked = true
+        return doubleArrayOf(yawError / PLAYER_TURN_SCALE, pitchInput)
+    }
+
+    private fun isLookingAtI4Grid(): Boolean {
+        val player = mc.player ?: return false
+        val start = player.eyePosition
+        val end = start.add(player.lookAngle.scale(PREFIRE_RAY_LENGTH))
+        return I4_GRID_BOUNDS.clip(start, end).isPresent
+    }
+
+    private fun resetOvershootGuard() {
+        terrorCenterYawLocked = false
+    }
+    //#endif
+
     private fun isShotControlEligible(): Boolean {
-        if (!isHoldingTerminator()) return false
+        if (isI4Complete || !isHoldingTerminator()) return false
 
         return isHoldingRightClick &&
             DungeonUtils.getF7Phase() == M7Phases.P3 &&
@@ -276,6 +379,9 @@ object I4Solver : Module(
         val player = mc.player ?: return false
         return abs(player.y - 127.0) < 0.5 && player.x in 62.0..65.0 && player.z in 34.0..37.0
     }
+
+    private fun isPlayerInI4Room(): Boolean =
+        mc.player?.let { I4_ROOM_BOUNDING_BOX.contains(it.position()) } == true
 
     private fun updateAimSolution() {
         val current = solverTarget ?: target ?: return clearAimSolution()
@@ -328,12 +434,25 @@ object I4Solver : Module(
         if (!isAimedAtCurrentAimPoint()) return
 
         if (speculativeDoneBlocks.add(current)) {
-            speculativeAgeTicks[current] = 0
+            // Timeout only applies when useItem predicts the Emerald that currently exists.
+            // Guessed future positions have nothing on the server to time out against yet.
+            if (current == target) speculativeAgeTicks[current] = 0
         }
+        advanceToNextPredictedTarget()
+    }
+
+    /**
+     * The server-confirmed Emerald disappeared before its successor appeared.
+     * Predict a successor even when no useItem prediction happened for that Emerald.
+     */
+    private fun advancePredictionAfterDisappearance() {
+        advanceToNextPredictedTarget()
+    }
+
+    private fun advanceToNextPredictedTarget() {
         val remainingTargets = deviceBlocks.filterNot {
             it in doneBlocks || it in speculativeDoneBlocks
         }
-
         solverTarget = remainingTargets.randomOrNull()
         if (solverTarget == null) clearAimSolution() else updateAimSolution()
     }
@@ -399,10 +518,14 @@ object I4Solver : Module(
     private fun clearAimSolution() {
         spreadTarget = null
         aimPoint = null
+        //#if PRIVATE
+        resetOvershootGuard()
+        //#endif
     }
 
     private fun reset() {
         resetI4State()
+        isI4Complete = false
         stopShotTimer()
     }
 
@@ -428,6 +551,7 @@ object I4Solver : Module(
     }
 
     private const val GOLDOR_START_MESSAGE = "[BOSS] Goldor: Who dares trespass into my domain?"
+    private const val ACTIVE_ENTITY_NAME = "Active"
     private const val TERMINATOR_ID = "TERMINATOR"
     private const val PASSIVE_MODE = 0
     private const val ACTIVE_MODE = 1
@@ -436,4 +560,10 @@ object I4Solver : Module(
     private const val TERROR_STACK_THRESHOLD = 10
     private const val TERROR_CENTER_X = 66.5
     private const val PREFIRE_RAY_LENGTH = 64.0
+    //#if PRIVATE
+    private const val PLAYER_TURN_SCALE = 0.15
+    private const val TERROR_CENTER_YAW_EPSILON = 1.0E-3
+    private val I4_GRID_BOUNDS = AABB(64.0, 126.0, 49.9, 69.0, 131.0, 50.1)
+    //#endif
+    private val I4_ROOM_BOUNDING_BOX = AABB(20.0, 100.0, 30.0, 89.0, 151.0, 51.0)
 }

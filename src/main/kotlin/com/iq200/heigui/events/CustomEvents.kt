@@ -39,6 +39,7 @@ class BlockInteractEvent(val pos: BlockPos) : CancellableEvent()
 class EntityInteractEvent(val pos: Vec3, val entity: Entity) : CancellableEvent()
 
 class EntityLoadEvent(val entity: Entity, val world: ClientLevel) : Event
+class EntityDataUpdateEvent(val entity: Entity) : Event
 
 class CameraSetupEvent : Event
 

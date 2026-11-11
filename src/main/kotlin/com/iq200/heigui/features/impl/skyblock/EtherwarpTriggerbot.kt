@@ -104,7 +104,7 @@ object EtherwarpTriggerbot : Module(
                 return@on
             }
 
-            val origin = TeleportOptimization.activeZpcmPosition ?: player.position()
+            val origin = ZeropingCamera.activeZpcmPosition ?: player.position()
             val eyePosition = origin.add(0.0, EtherUtils.getEyeHeight().toDouble(), 0.0)
             val (target, canEtherwarp) = EtherUtils.getEtherPosFromOrigin(
                 eyePosition,
