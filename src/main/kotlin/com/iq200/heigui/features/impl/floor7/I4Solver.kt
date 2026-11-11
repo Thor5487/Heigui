@@ -383,7 +383,7 @@ object I4Solver : Module(
     private fun isPlayerInI4Room(): Boolean =
         mc.player?.let { I4_ROOM_BOUNDING_BOX.contains(it.position()) } == true
 
-    private fun updateAimSolution() {
+    private fun updateAimSolution(preferredSpreadTarget: BlockPos? = null) {
         val current = solverTarget ?: target ?: return clearAimSolution()
         if (isTerrorAimActive()) {
             spreadTarget = null
@@ -401,7 +401,9 @@ object I4Solver : Module(
         }
         val candidates = unfinishedTargets.ifEmpty { adjacentTargets }
 
-        spreadTarget = selectGeneralSpreadTarget(current, candidates)
+        spreadTarget = preferredSpreadTarget
+            ?.takeIf { it in candidates }
+            ?: selectGeneralSpreadTarget(current, candidates)
         aimPoint = calculateGeneralAimPoint(current, spreadTarget)
         aimPoint?.let { previousGeneralAimX = it.x }
     }
@@ -453,8 +455,59 @@ object I4Solver : Module(
         val remainingTargets = deviceBlocks.filterNot {
             it in doneBlocks || it in speculativeDoneBlocks
         }
-        solverTarget = remainingTargets.randomOrNull()
-        if (solverTarget == null) clearAimSolution() else updateAimSolution()
+        if (remainingTargets.isEmpty()) {
+            solverTarget = null
+            clearAimSolution()
+            return
+        }
+
+        if (isTerrorAimActive()) {
+            solverTarget = selectBestTerrorPrediction(remainingTargets)
+            updateAimSolution()
+            return
+        }
+
+        val choice = selectBestGeneralPrediction(remainingTargets)
+        solverTarget = choice?.target
+        if (choice == null) clearAimSolution() else updateAimSolution(choice.spreadTarget)
+    }
+
+    /** Terror covers an entire row, so prefer the row containing the most unfinished positions. */
+    private fun selectBestTerrorPrediction(remainingTargets: List<BlockPos>): BlockPos? {
+        val rows = remainingTargets.groupBy { it.y }
+        val highestCoverage = rows.maxOfOrNull { it.value.size } ?: return null
+        return rows.values
+            .filter { it.size == highestCoverage }
+            .randomOrNull()
+            ?.randomOrNull()
+    }
+
+    /**
+     * General Terminator spread covers one horizontal gap. Score every gap by how many of its
+     * two positions remain unfinished, then keep the previous side when multiple gaps tie.
+     */
+    private fun selectBestGeneralPrediction(remainingTargets: List<BlockPos>): GeneralPredictionChoice? {
+        val remaining = remainingTargets.toSet()
+        val scoredPairs = deviceBlocks.flatMap { first ->
+            deviceBlocks.mapNotNull { second ->
+                if (first.y != second.y || second.x - first.x != DEVICE_COLUMN_SPACING) return@mapNotNull null
+                val coverage = listOf(first, second).count { it in remaining }
+                if (coverage == 0) null else ScoredAimPair(first, second, coverage)
+            }
+        }
+        val highestCoverage = scoredPairs.maxOfOrNull { it.coverage } ?: return null
+        val bestPairs = scoredPairs.filter { it.coverage == highestCoverage }
+        val previousX = previousGeneralAimX
+        val selectedPair = previousX?.let { x ->
+            bestPairs.firstOrNull { calculateGeneralAimPoint(it.first, it.second)?.x == x }
+        } ?: bestPairs.randomOrNull() ?: return null
+
+        val target = listOf(selectedPair.first, selectedPair.second)
+            .filter { it in remaining }
+            .randomOrNull()
+            ?: return null
+        val spreadTarget = if (target == selectedPair.first) selectedPair.second else selectedPair.first
+        return GeneralPredictionChoice(target, spreadTarget)
     }
 
     private fun checkSpeculativeTimeouts() {
@@ -539,6 +592,17 @@ object I4Solver : Module(
         previousGeneralAimX = null
         lastTerrorAimState = null
     }
+
+    private data class ScoredAimPair(
+        val first: BlockPos,
+        val second: BlockPos,
+        val coverage: Int
+    )
+
+    private data class GeneralPredictionChoice(
+        val target: BlockPos,
+        val spreadTarget: BlockPos
+    )
 
     override fun onEnable() {
         reset()
