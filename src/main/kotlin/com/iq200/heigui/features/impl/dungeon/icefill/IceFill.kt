@@ -3,6 +3,7 @@ package com.iq200.heigui.features.impl.dungeon.icefill
 import com.iq200.heigui.clickgui.settings.Setting.Companion.withDependency
 import com.iq200.heigui.clickgui.settings.impl.BooleanSetting
 import com.iq200.heigui.clickgui.settings.impl.NumberSetting
+import com.iq200.heigui.clickgui.settings.impl.SelectorSetting
 import com.iq200.heigui.events.RenderEvent
 import com.iq200.heigui.events.TickEvent
 import com.iq200.heigui.events.WorldEvent
@@ -21,9 +22,15 @@ object IceFill : Module(
 ) {
     private val renderSolution by BooleanSetting("Render Solution", true, desc = "Render the Ice Fill solution path.")
     private val autoWalk by BooleanSetting("Auto Walk", false, desc = "Automatically walk the Ice Fill solution path.")
-    private val turnWaitTicks by NumberSetting("Turn Wait Ticks", 1, 0, 5, 1, "How many ticks to wait at sprint-related turns before entering the next segment.").withDependency { autoWalk }
+    private val walkMode by SelectorSetting(
+        "Mode",
+        "Current",
+        listOf("Current", "Legacy"),
+        "Current uses segment-based sneaking; Legacy uses Icemilker's turn-distance sneaking."
+    )
+    private val turnWaitTicks by NumberSetting("Turn Wait Ticks", 1, 0, 5, 1, "How many ticks to wait at sprint-related turns before entering the next segment.").withDependency { autoWalk && walkMode == CURRENT_MODE }
     private val sprintBlocks by NumberSetting("Sprint Blocks", 3, 2, 8, 1, "Minimum number of blocks in a segment required to sprint. The segment still needs a polished andesite stop.").withDependency { autoWalk }
-    private val sneakUntilStopBlocks by NumberSetting("Sneak Until Stop Blocks", 5, 0, 8, 1, "On sprint segments, sneak while farther than this many blocks from the polished andesite stop. 0 disables this.").withDependency { autoWalk }
+    private val sneakUntilStopBlocks by NumberSetting("Sneak Until Stop Blocks", 5, 0, 8, 1, "On sprint segments, sneak while farther than this many blocks from the polished andesite stop. 0 disables this.").withDependency { autoWalk && walkMode == CURRENT_MODE }
     private val disableSprintWhileNotSneaking by BooleanSetting("Disable Sprint", true, desc = "Prevent sprinting when Ice Fill is moving without sneak.").withDependency { autoWalk }
 
     private var path: List<BlockPos> = emptyList()
@@ -75,7 +82,15 @@ object IceFill : Module(
 
             if (!walking && isStandingOnIce()) walking = true
 
-            if (walking && IceFillWalker.walk(path, turnWaitTicks, sprintBlocks, sneakUntilStopBlocks, disableSprintWhileNotSneaking)) {
+            if (walking && IceFillWalker.walk(
+                    path,
+                    turnWaitTicks,
+                    sprintBlocks,
+                    sneakUntilStopBlocks,
+                    disableSprintWhileNotSneaking,
+                    walkMode == LEGACY_MODE
+                )
+            ) {
                 walking = false
                 IceFillWalker.reset()
             }
@@ -108,4 +123,7 @@ object IceFill : Module(
         reset()
         super.onDisable()
     }
+
+    private const val CURRENT_MODE = 0
+    private const val LEGACY_MODE = 1
 }

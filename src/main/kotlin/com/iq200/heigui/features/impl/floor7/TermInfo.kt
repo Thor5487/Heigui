@@ -28,7 +28,7 @@ data class TermRulesData(
 
 object TermInfo : Module(
     name = "Term Info",
-    description = "Shows the current Goldor section's terminal, lever, device, and gate progress.",
+    description = "Shows the current Goldor section's terminal, lever, device, and gate progress. Check /hg termrules for full command usage.",
     category = Category.FLOOR7
 ) {
     private var deviceNotificationText = ""

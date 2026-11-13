@@ -65,7 +65,7 @@ data class ChestData(val cost: Double, val totalValue: Double, val profit: Doubl
 
 object AutoCroesus : Module(
     name = "Auto Croesus",
-    description = "Automatically opens and claims rare or profitable loot from Croesus.",
+    description = "Automatically opens and claims rare or profitable loot from Croesus. Check /hg ac for full command usage.",
     category = Category.DUNGEON
 ) {
     private val clickDelay by NumberSetting("Click Delay", 150, 50, 1000, 50, "minimum delay between each click", "ms")

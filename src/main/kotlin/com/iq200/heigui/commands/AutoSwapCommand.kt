@@ -29,6 +29,19 @@ fun LiteralNode.setupAutoSwapCommand() {
                     AutoSwap.addChatRule(hotbarSlot, text.toString())
                 }
             }
+
+            literal("chatposition") {
+                runs { showChatPositionUsage() }
+                runs { slot: Int -> showChatPositionUsage() }
+                runs { slot: Int, radius: Double -> showChatPositionUsage() }
+                runs { slot: Int, radius: Double, text: GreedyString ->
+                    val hotbarSlot = parseHotbarSlot(slot) ?: return@runs showChatPositionUsage()
+                    if (!radius.isFinite() || radius <= 0.0) {
+                        return@runs modMessage("§cRadius must be greater than 0.")
+                    }
+                    AutoSwap.addChatPositionRule(hotbarSlot, radius, text.toString())
+                }
+            }
         }
 
         literal("list") {
@@ -74,6 +87,7 @@ private fun showAutoSwapHelp() {
     modMessage("§aAuto Swap commands:")
     modMessage("§e/hg autoswap add position <1-9> <radius> §8- §7Use the held item and current position.", prefix = "")
     modMessage("§e/hg autoswap add chat <1-9> <text> §8- §7Use the held item and matching chat text.", prefix = "")
+    modMessage("§e/hg autoswap add chatposition <1-9> <radius> <text> §8- §7Require matching chat and position.", prefix = "")
     modMessage("§e/hg autoswap list §8- §7List configured rules.", prefix = "")
     modMessage("§e/hg autoswap remove <index> §8- §7Remove a rule.", prefix = "")
     modMessage("§e/hg autoswap clear §8- §7Clear all rules.", prefix = "")
@@ -87,4 +101,9 @@ private fun showPositionUsage() {
 private fun showChatUsage() {
     modMessage("§cUsage: /hg autoswap add chat <hotbar slot 1-9> <text>")
     modMessage("§7Hold the item to swap before running the command.", prefix = "")
+}
+
+private fun showChatPositionUsage() {
+    modMessage("§cUsage: /hg autoswap add chatposition <hotbar slot 1-9> <radius> <text>")
+    modMessage("§7Hold the item to swap at the target position before running the command.", prefix = "")
 }

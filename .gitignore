@@ -116,7 +116,7 @@ run/
 runs/
 
 # Local source archives for optional mod integrations
-/libs/sources/
+/libs/*
 
 # Local Codex configuration
 /.codex/

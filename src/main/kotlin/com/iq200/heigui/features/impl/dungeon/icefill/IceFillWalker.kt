@@ -52,7 +52,8 @@ object IceFillWalker {
         turnWaitTicks: Int,
         sprintBlocks: Int,
         sneakUntilStopBlocks: Int,
-        disableSprintWhileNotSneaking: Boolean
+        disableSprintWhileNotSneaking: Boolean,
+        legacySneakMode: Boolean
     ): Boolean {
         val player = mc.player ?: return true
         if (player.y < 70.0) return true
@@ -81,7 +82,13 @@ object IceFillWalker {
             val previousDir = if (currentIndex > 0) calcDir(path[currentIndex - 1].to2d(), path[currentIndex].to2d()) else -1
             val previousSegmentSprint = isPreviousSegmentSprint(path, currentIndex, previousDir, sprintBlocks)
 
-            keyStates[InputKey.SNEAK] = shouldSneak(path, currentIndex, segment, sneakUntilStopBlocks)
+            keyStates[InputKey.SNEAK] = shouldSneak(
+                path,
+                currentIndex,
+                segment,
+                sneakUntilStopBlocks,
+                legacySneakMode
+            )
             suppressSprintIfNeeded(keyStates, disableSprintWhileNotSneaking)
 
             if (atTurn) {
@@ -107,9 +114,16 @@ object IceFillWalker {
                     completedSprintStopTurnIndex = currentIndex
                 }
 
-                if (canWaitAtTurn && (previousSegmentSprint || segment.sprint)) {
-                    val nextSegmentSneak = shouldSneak(path, currentIndex, segment, sneakUntilStopBlocks)
-                    val sneakWhileWaiting = nextSegmentSneak || (!previousSegmentSprint && segment.sprint)
+                if (!legacySneakMode && canWaitAtTurn && (previousSegmentSprint || segment.sprint)) {
+                    val nextSegmentSneak = shouldSneak(
+                        path,
+                        currentIndex,
+                        segment,
+                        sneakUntilStopBlocks,
+                        legacySneakMode
+                    )
+                    val sneakWhileWaiting = nextSegmentSneak ||
+                        (!legacySneakMode && !previousSegmentSprint && segment.sprint)
                     if (waitAtTurn(currentIndex, turnWaitTicks, sneakWhileWaiting, disableSprintWhileNotSneaking, keyStates)) {
                         return false
                     }
@@ -278,12 +292,43 @@ object IceFillWalker {
         return Segment(dir, startIndex, endIndex, hasAndesiteStop, isLastSegment || (blockCount >= sprintBlocks && hasAndesiteStop))
     }
 
-    private fun shouldSneak(path: List<BlockPos>, currentIndex: Int, segment: Segment, sneakUntilStopBlocks: Int): Boolean {
+    private fun shouldSneak(
+        path: List<BlockPos>,
+        currentIndex: Int,
+        segment: Segment,
+        sneakUntilStopBlocks: Int,
+        legacySneakMode: Boolean
+    ): Boolean {
+        if (legacySneakMode) return shouldLegacySneak(path, currentIndex)
+
         if (!segment.sprint) return true
         if (sneakUntilStopBlocks <= 0 || !segment.hasAndesiteStop) return false
 
         val blocksToStop = segment.endIndex - currentIndex + 1
         return blocksToStop > sneakUntilStopBlocks
+    }
+
+    /** Icemilker behavior: sneak only within three path indices of an unprotected turn. */
+    private fun shouldLegacySneak(path: List<BlockPos>, currentIndex: Int): Boolean {
+        if (currentIndex !in 0 until path.lastIndex) return false
+
+        val dir = calcDir(path[currentIndex].to2d(), path[currentIndex + 1].to2d())
+        if (dir == -1) return false
+
+        var turnIndex = -1
+        for (index in currentIndex + 1 until path.lastIndex) {
+            if (calcDir(path[index].to2d(), path[index + 1].to2d()) != dir) {
+                turnIndex = index
+                break
+            }
+        }
+
+        if (turnIndex == -1 || turnIndex - currentIndex - 1 > LEGACY_SNEAK_TURN_DISTANCE) return false
+
+        val stop = path[turnIndex].offset(dirOffsetX(dir), 0, dirOffsetZ(dir))
+        val playerY = floor(mc.player?.y ?: return false).toInt()
+        return !isLegacyStone(stop.x, playerY, stop.z) &&
+            !isLegacyStone(stop.x, playerY + 1, stop.z)
     }
 
     private fun isLastNormalSegment(path: List<BlockPos>, endIndex: Int): Boolean {
@@ -408,6 +453,18 @@ object IceFillWalker {
         return mc.level?.getBlockState(BlockPos(x, y, z))?.`is`(Blocks.POLISHED_ANDESITE) == true
     }
 
+    /** Blocks that shared numeric ID 1 in the Minecraft version used by Icemilker. */
+    private fun isLegacyStone(x: Int, y: Int, z: Int): Boolean {
+        val block = mc.level?.getBlockState(BlockPos(x, y, z))?.block ?: return false
+        return block == Blocks.STONE ||
+            block == Blocks.GRANITE ||
+            block == Blocks.POLISHED_GRANITE ||
+            block == Blocks.DIORITE ||
+            block == Blocks.POLISHED_DIORITE ||
+            block == Blocks.ANDESITE ||
+            block == Blocks.POLISHED_ANDESITE
+    }
+
     private fun isStair(pos: BlockPos): Boolean {
         return mc.level?.getBlockState(pos)?.`is`(BlockTags.STAIRS) == true
     }
@@ -426,4 +483,6 @@ object IceFillWalker {
             else -> InputConstants.isKeyDown(key.value)
         }
     }
+
+    private const val LEGACY_SNEAK_TURN_DISTANCE = 3
 }

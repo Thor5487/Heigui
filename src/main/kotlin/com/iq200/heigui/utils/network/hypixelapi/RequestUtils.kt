@@ -3,6 +3,7 @@ package com.iq200.heigui.utils.network.hypixelapi
 import com.iq200.heigui.Heigui.logger
 import com.iq200.heigui.features.impl.render.ClickGUIModule.hypixelApiUrl
 import com.iq200.heigui.utils.network.WebUtils.fetchJson
+import java.util.concurrent.ConcurrentHashMap
 
 object RequestUtils {
 
@@ -13,8 +14,8 @@ object RequestUtils {
         val timestamp: Long
     )
 
-    private val uuidCache = HashMap<String, CacheEntry<UuidData>>()
-    private val playerCache = HashMap<String, CacheEntry<HypixelData.PlayerInfo>>()
+    private val uuidCache = ConcurrentHashMap<String, CacheEntry<UuidData>>()
+    private val playerCache = ConcurrentHashMap<String, CacheEntry<HypixelData.PlayerInfo>>()
 
     private fun getServer(endpoint: EndPoint, uuid: String): String =
         hypixelApiUrl + endpoint.name.lowercase() + "/" + uuid
@@ -61,7 +62,25 @@ object RequestUtils {
 
         return fetchJson<UuidData>(
             "https://api.minecraftservices.com/minecraft/profile/lookup/name/$name"
-        ).onSuccess { uuidCache[key] = CacheEntry(it, System.currentTimeMillis()) }
+        ).onSuccess(::cacheUuidData)
+    }
+
+    suspend fun getName(uuid: String): Result<UuidData> {
+        val key = uuid.replace("-", "").lowercase()
+
+        uuidCache.evictExpired()
+
+        uuidCache[key]?.let { return Result.success(it.value) }
+
+        return fetchJson<UuidData>(
+            "https://sessionserver.mojang.com/session/minecraft/profile/$key"
+        ).onSuccess(::cacheUuidData)
+    }
+
+    private fun cacheUuidData(data: UuidData) {
+        val entry = CacheEntry(data, System.currentTimeMillis())
+        uuidCache[data.name.lowercase()] = entry
+        uuidCache[data.id.replace("-", "").lowercase()] = entry
     }
 
     enum class EndPoint { SECRETS, GET }

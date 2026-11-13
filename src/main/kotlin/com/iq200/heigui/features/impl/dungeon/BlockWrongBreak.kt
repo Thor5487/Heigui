@@ -38,7 +38,7 @@ data class BlockWrongBreakData(
 @AlwaysActive
 object BlockWrongBreak : Module(
     name = "Block Wrong Break",
-    description = "Prevents Dungeon Breaker from breaking configured blocks",
+    description = "Prevents Dungeon Breaker from breaking configured blocks. Check /hg bwb for full command usage.",
     category = Category.DUNGEON
 ) {
     private val highlightColor by ColorSetting(

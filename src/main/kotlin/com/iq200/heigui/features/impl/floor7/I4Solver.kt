@@ -31,6 +31,7 @@ import com.iq200.heigui.utils.skyblock.dungeon.DungeonUtils
 import com.iq200.heigui.utils.skyblock.dungeon.M7Phases
 import com.iq200.mixin.accessors.KeyMappingAccessor
 import net.minecraft.core.BlockPos
+import net.minecraft.world.entity.EquipmentSlot
 import net.minecraft.world.level.block.Blocks
 import net.minecraft.world.phys.AABB
 import net.minecraft.world.phys.Vec3
@@ -416,7 +417,13 @@ object I4Solver : Module(
         updateAimSolution()
     }
 
-    private fun isTerrorAimActive(): Boolean = ActionBarParser.stacks >= TERROR_STACK_THRESHOLD
+    private fun isTerrorAimActive(): Boolean =
+        ActionBarParser.stacks >= TERROR_STACK_THRESHOLD && isWearingTerrorArmor()
+
+    private fun isWearingTerrorArmor(): Boolean {
+        val player = mc.player ?: return false
+        return ARMOR_SLOTS.any { player.getItemBySlot(it).itemId in TERROR_ARMOR_IDS }
+    }
 
     private fun selectGeneralSpreadTarget(current: BlockPos, candidates: List<BlockPos>): BlockPos? {
         if (candidates.size <= 1) return candidates.firstOrNull()
@@ -630,4 +637,16 @@ object I4Solver : Module(
     private val I4_GRID_BOUNDS = AABB(64.0, 126.0, 49.9, 69.0, 131.0, 50.1)
     //#endif
     private val I4_ROOM_BOUNDING_BOX = AABB(20.0, 100.0, 30.0, 89.0, 151.0, 51.0)
+    private val ARMOR_SLOTS = listOf(
+        EquipmentSlot.HEAD,
+        EquipmentSlot.CHEST,
+        EquipmentSlot.LEGS,
+        EquipmentSlot.FEET
+    )
+    private val TERROR_ARMOR_IDS = setOf(
+        "TERROR_HELMET",
+        "TERROR_CHESTPLATE",
+        "TERROR_LEGGINGS",
+        "TERROR_BOOTS"
+    )
 }

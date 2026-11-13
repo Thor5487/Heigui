@@ -46,7 +46,7 @@ data class EtherwarpTriggerData(
 @AlwaysActive
 object EtherwarpTriggerbot : Module(
     name = "Etherwarp Triggerbot",
-    description = "Automatically Etherwarps when aiming at a saved target.",
+    description = "Automatically Etherwarps when aiming at a saved target. Check /hg et for full command usage.",
     category = Category.SKYBLOCK
 ) {
     private const val BASE_ETHERWARP_DISTANCE = 57

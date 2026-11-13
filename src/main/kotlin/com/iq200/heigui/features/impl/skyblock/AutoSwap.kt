@@ -19,7 +19,8 @@ import kotlin.math.abs
 
 enum class AutoSwapTriggerType {
     POSITION,
-    CHAT
+    CHAT,
+    CHAT_POSITION
 }
 
 data class AutoSwapRule(
@@ -43,7 +44,7 @@ data class AutoSwapData(
 @AlwaysActive
 object AutoSwap : Module(
     name = "Auto Swap",
-    description = "Moves configured items into a hotbar slot when a position or chat rule is triggered.",
+    description = "Moves configured items into a hotbar slot when a position, chat, or combined rule is triggered. Check /hg autoswap for full command usage.",
     category = Category.SKYBLOCK
 ) {
     private val config = JsonConfig(
@@ -79,10 +80,11 @@ object AutoSwap : Module(
 
             val rule = config.data.rules.firstOrNull { rule ->
                 rule.id !in triggeredRules &&
-                rule.triggerType == AutoSwapTriggerType.CHAT &&
+                    rule.triggerType in CHAT_TRIGGER_TYPES &&
                     !rule.itemUuid.isNullOrBlank() &&
                     !rule.chatText.isNullOrBlank() &&
-                    value.contains(rule.chatText, ignoreCase = true)
+                    value.contains(rule.chatText, ignoreCase = true) &&
+                    matchesChatPosition(rule)
             } ?: return@on
 
             val itemUuid = rule.itemUuid ?: return@on
@@ -170,6 +172,48 @@ object AutoSwap : Module(
         return true
     }
 
+    fun addChatPositionRule(hotbarSlot: Int, radius: Double, chatText: String): Boolean {
+        val player = mc.player ?: return false
+        val stack = player.mainHandItem
+        val targetItemUuid = stack.itemUUID
+        if (stack.isEmpty || targetItemUuid.isBlank()) {
+            modMessage("§cHold a SkyBlock item with a UUID before adding an Auto Swap rule.")
+            return false
+        }
+
+        val island = LocationUtils.currentArea
+        if (island == Island.Unknown) {
+            modMessage("§cWait for the current island to load before adding a chat-position rule.")
+            return false
+        }
+
+        val message = chatText.trim()
+        if (message.isEmpty()) {
+            modMessage("§cThe chat trigger text cannot be empty.")
+            return false
+        }
+
+        val rule = AutoSwapRule(
+            triggerType = AutoSwapTriggerType.CHAT_POSITION,
+            itemUuid = targetItemUuid,
+            itemName = stack.hoverName.string,
+            hotbarSlot = hotbarSlot,
+            island = island.name,
+            x = player.x,
+            y = player.y,
+            z = player.z,
+            radius = radius,
+            chatText = message
+        )
+        config.update { it.rules.add(rule) }
+        modMessage(
+            "§aAdded chat-position rule for §e${rule.itemName} §awhen §e\"$message\" §aappears within " +
+                "§e${formatPosition(rule)} §7(radius ${formatRadius(radius)}) §aon §e${island.displayName}§a " +
+                "to hotbar slot §e${hotbarSlot + 1}§a."
+        )
+        return true
+    }
+
     fun getRules(): List<AutoSwapRule> = config.data.rules.toList()
 
     fun removeRule(index: Int): AutoSwapRule? {
@@ -196,6 +240,12 @@ object AutoSwap : Module(
             }
 
             AutoSwapTriggerType.CHAT -> "Chat \"${rule.chatText.orEmpty()}\""
+
+            AutoSwapTriggerType.CHAT_POSITION -> {
+                val islandName = Island.entries.firstOrNull { it.name == rule.island }?.displayName ?: rule.island
+                "Chat \"${rule.chatText.orEmpty()}\" + position ${formatPosition(rule)} " +
+                    "radius ${formatRadius(rule.radius ?: 0.0)} on $islandName"
+            }
         }
         val uuid = rule.itemUuid
             ?.takeIf { it.isNotBlank() }
@@ -273,10 +323,19 @@ object AutoSwap : Module(
         return dx * dx + dy * dy + dz * dz <= radius * radius
     }
 
+    private fun matchesChatPosition(rule: AutoSwapRule): Boolean {
+        if (rule.triggerType == AutoSwapTriggerType.CHAT) return true
+        val player = mc.player ?: return false
+        return rule.triggerType == AutoSwapTriggerType.CHAT_POSITION &&
+            rule.island == LocationUtils.currentArea.name &&
+            isInsidePositionRule(rule, player.x, player.y, player.z)
+    }
+
     private fun formatPosition(rule: AutoSwapRule): String =
         "%.2f, %.2f, %.2f".format(rule.x, rule.y, rule.z)
 
     private fun formatRadius(radius: Double): String = "%.2f".format(radius)
 
     private const val MOVEMENT_EPSILON = 0.003
+    private val CHAT_TRIGGER_TYPES = setOf(AutoSwapTriggerType.CHAT, AutoSwapTriggerType.CHAT_POSITION)
 }

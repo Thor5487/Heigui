@@ -18,4 +18,5 @@ val mainCommand = Commodore("heigui", "hg") {
     setupBlockWrongBreakCommand()
     setupEtherwarpTriggerbotCommand()
     setupTermRulesCommand()
+    setupLeapCommand()
 }
