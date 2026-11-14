@@ -63,8 +63,8 @@ public class MixinMouseHandler {
                     target = "Lnet/minecraft/client/player/LocalPlayer;turn(DD)V"
             )
     )
-    private void heigui$preventI4AimOvershoot(Args args) {
-        double[] adjusted = I4Solver.adjustMouseTurnForOvershoot(args.get(0), args.get(1));
+    private void heigui$applyI4YawLock(Args args) {
+        double[] adjusted = I4Solver.adjustMouseTurnForYawLock(args.get(0), args.get(1));
         args.set(0, adjusted[0]);
         args.set(1, adjusted[1]);
     }

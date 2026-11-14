@@ -9,13 +9,13 @@ import com.iq200.heigui.events.WorldEvent
 import com.iq200.heigui.events.core.on
 import com.iq200.heigui.features.Category
 import com.iq200.heigui.features.Module
+import com.iq200.heigui.utils.PlayerUtils.hasMovementInput
 import com.iq200.heigui.utils.itemUUID
 import com.iq200.heigui.utils.modMessage
 import com.iq200.heigui.utils.skyblock.Island
 import com.iq200.heigui.utils.skyblock.LocationUtils
 import net.minecraft.world.inventory.ContainerInput
 import java.util.UUID
-import kotlin.math.abs
 
 enum class AutoSwapTriggerType {
     POSITION,
@@ -63,7 +63,8 @@ object AutoSwap : Module(
             if (!enabled) return@on
 
             pendingRule?.let { rule ->
-                if (mc.gui.screen() == null && !isPlayerMoving()) {
+                if (!isPendingPositionSatisfied(rule)) return@on
+                if (mc.gui.screen() == null && !hasMovementInput()) {
                     pendingRule = null
                     beginSwap(rule)
                 }
@@ -83,8 +84,7 @@ object AutoSwap : Module(
                     rule.triggerType in CHAT_TRIGGER_TYPES &&
                     !rule.itemUuid.isNullOrBlank() &&
                     !rule.chatText.isNullOrBlank() &&
-                    value.contains(rule.chatText, ignoreCase = true) &&
-                    matchesChatPosition(rule)
+                    value.contains(rule.chatText, ignoreCase = true)
             } ?: return@on
 
             val itemUuid = rule.itemUuid ?: return@on
@@ -262,7 +262,7 @@ object AutoSwap : Module(
                 rule.island == currentIsland &&
                 isInsidePositionRule(rule, player.x, player.y, player.z)
         }
-        if (isPlayerMoving()) return
+        if (hasMovementInput()) return
 
         for (rule in matchingRules) {
             if (rule.id in triggeredRules) continue
@@ -274,7 +274,7 @@ object AutoSwap : Module(
 
     private fun beginSwap(rule: AutoSwapRule): Boolean {
         val player = mc.player ?: return false
-        if (mc.gui.screen() != null || isPlayerMoving()) return false
+        if (mc.gui.screen() != null || hasMovementInput()) return false
         if (player.containerMenu !== player.inventoryMenu) return false
 
         val itemUuid = rule.itemUuid?.takeIf { it.isNotBlank() } ?: return false
@@ -307,11 +307,6 @@ object AutoSwap : Module(
         return (0 until 9).any { inventory.getItem(it).itemUUID == targetItemUuid }
     }
 
-    private fun isPlayerMoving(): Boolean {
-        val movement = mc.player?.deltaMovement ?: return true
-        return abs(movement.x) > MOVEMENT_EPSILON || abs(movement.z) > MOVEMENT_EPSILON
-    }
-
     private fun isInsidePositionRule(rule: AutoSwapRule, x: Double, y: Double, z: Double): Boolean {
         val targetX = rule.x ?: return false
         val targetY = rule.y ?: return false
@@ -323,11 +318,10 @@ object AutoSwap : Module(
         return dx * dx + dy * dy + dz * dz <= radius * radius
     }
 
-    private fun matchesChatPosition(rule: AutoSwapRule): Boolean {
-        if (rule.triggerType == AutoSwapTriggerType.CHAT) return true
+    private fun isPendingPositionSatisfied(rule: AutoSwapRule): Boolean {
+        if (rule.triggerType != AutoSwapTriggerType.CHAT_POSITION) return true
         val player = mc.player ?: return false
-        return rule.triggerType == AutoSwapTriggerType.CHAT_POSITION &&
-            rule.island == LocationUtils.currentArea.name &&
+        return rule.island == LocationUtils.currentArea.name &&
             isInsidePositionRule(rule, player.x, player.y, player.z)
     }
 
@@ -336,6 +330,5 @@ object AutoSwap : Module(
 
     private fun formatRadius(radius: Double): String = "%.2f".format(radius)
 
-    private const val MOVEMENT_EPSILON = 0.003
     private val CHAT_TRIGGER_TYPES = setOf(AutoSwapTriggerType.CHAT, AutoSwapTriggerType.CHAT_POSITION)
 }

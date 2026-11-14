@@ -137,14 +137,15 @@ object PlayerUtils {
         return 0
     }
 
-    fun isMovementKeysPressed(): Boolean {
+    fun hasMovementInput(): Boolean {
         val options = mc.options
 
         return options.keyUp.isDown ||
                 options.keyDown.isDown ||
                 options.keyLeft.isDown ||
                 options.keyRight.isDown ||
-                options.keyJump.isDown
+                options.keyJump.isDown ||
+                options.keyShift.isDown
     }
 
     fun getRotationsTo(start: Vec3, target: Vec3): Pair<Float, Float>{

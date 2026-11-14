@@ -2,17 +2,16 @@ package com.iq200.heigui.utils.skyblock.dungeon
 
 import com.iq200.heigui.Heigui.mc
 import com.iq200.heigui.events.ChatPacketEvent
+import com.iq200.heigui.events.EntityLoadEvent
 import com.iq200.heigui.events.TickEvent
 import com.iq200.heigui.events.WorldEvent
 import com.iq200.heigui.events.core.on
 import com.iq200.heigui.events.core.onReceive
 import com.iq200.heigui.utils.noControlCodes
-import net.minecraft.network.protocol.game.ClientboundAddEntityPacket
 import net.minecraft.network.protocol.game.ClientboundEntityEventPacket
 import net.minecraft.network.protocol.game.ClientboundPlayerInfoUpdatePacket
 import net.minecraft.network.protocol.game.ClientboundRemoveEntitiesPacket
 import net.minecraft.network.protocol.game.ClientboundSetPlayerTeamPacket
-import net.minecraft.world.entity.EntityTypes
 import net.minecraft.world.entity.monster.zombie.Zombie
 import net.minecraft.world.entity.player.Player
 import net.minecraft.world.level.Level
@@ -96,10 +95,11 @@ object DungeonListener {
             }
         }
 
-        onReceive<ClientboundAddEntityPacket> {
-            if (type == EntityTypes.PLAYER)
-                DungeonUtils.dungeonTeammates.find { it.entity == null && it.name == mc.level?.getEntity(id)?.name?.string }?.entity =
-                    mc.level?.getEntity(id) as? Player
+        on<EntityLoadEvent> {
+            val loadedPlayer = entity as? Player ?: return@on
+            DungeonUtils.dungeonTeammates
+                .firstOrNull { it.name.equals(loadedPlayer.name.string, ignoreCase = true) }
+                ?.entity = loadedPlayer
         }
 
         onReceive<ClientboundEntityEventPacket> {

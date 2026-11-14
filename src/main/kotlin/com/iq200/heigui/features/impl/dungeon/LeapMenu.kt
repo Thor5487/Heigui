@@ -4,16 +4,17 @@ import com.google.gson.reflect.TypeToken
 import com.iq200.heigui.Heigui
 import com.iq200.heigui.clickgui.settings.Setting.Companion.withDependency
 import com.iq200.heigui.clickgui.settings.impl.BooleanSetting
-import com.iq200.heigui.clickgui.settings.impl.ColorSetting
 import com.iq200.heigui.clickgui.settings.impl.KeybindSetting
 import com.iq200.heigui.clickgui.settings.impl.NumberSetting
 import com.iq200.heigui.clickgui.settings.impl.SelectorSetting
 import com.iq200.heigui.config.JsonConfig
 import com.iq200.heigui.events.ChatPacketEvent
 import com.iq200.heigui.events.ScreenEvent
+import com.iq200.heigui.events.WorldEvent
 import com.iq200.heigui.events.core.on
 import com.iq200.heigui.features.Category
 import com.iq200.heigui.features.Module
+import com.iq200.heigui.utils.Color
 import com.iq200.heigui.utils.Color.Companion.withAlpha
 import com.iq200.heigui.utils.Colors
 import com.iq200.heigui.utils.clickSlot
@@ -32,6 +33,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import net.minecraft.client.gui.components.PlayerFaceExtractor
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen
+import net.minecraft.world.phys.AABB
 import java.util.concurrent.ConcurrentHashMap
 
 data class LeapClassRule(
@@ -66,6 +68,7 @@ object LeapMenu : Module(
     )
     private val cachedRulesByUuid = ConcurrentHashMap<String, CachedLeapClassRule>()
     private val cachedRulesByName = ConcurrentHashMap<String, CachedLeapClassRule>()
+    private var goldorStarted = false
 
     private val sorting by SelectorSetting(
         "Sorting",
@@ -83,17 +86,11 @@ object LeapMenu : Module(
         true,
         "Close the leap menu immediately after selecting a teammate."
     )
-    private val classColorBackground by BooleanSetting(
-        "Class Color Background",
-        false,
-        "Use each teammate's class color as their menu background."
-    )
-    private val backgroundColor by ColorSetting(
-        "Background Color",
-        Colors.gray38.withAlpha(0.75f),
+    private val coreHighlight by BooleanSetting(
+        "Core Highlight",
         true,
-        "Color used for menu backgrounds."
-    ).withDependency { !classColorBackground }
+        "Highlight teammates inside the core with a green background after Goldor starts."
+    )
     private val scale by NumberSetting(
         "Render Scale",
         1f,
@@ -177,9 +174,14 @@ object LeapMenu : Module(
         }
 
         on<ChatPacketEvent> {
+            if (value == GOLDOR_START_MESSAGE) goldorStarted = true
             if (!leapAnnounce || !DungeonUtils.inDungeons) return@on
             val playerName = LEAPED_REGEX.find(value)?.groupValues?.get(1) ?: return@on
             sendCommand("pc Leaped to $playerName!")
+        }
+
+        on<WorldEvent.Load> {
+            goldorStarted = false
         }
     }
 
@@ -349,7 +351,7 @@ object LeapMenu : Module(
                     scale * (BOX_HEIGHT + grow * 2f) / BOX_HEIGHT
                 )
 
-                val panelColor = if (classColorBackground) player.clazz.color else backgroundColor
+                val panelColor = if (shouldHighlightCore(player)) CORE_BACKGROUND_COLOR else DEFAULT_BACKGROUND_COLOR
                 GuiRenderer.rect(
                     localX.toFloat(),
                     localY.toFloat(),
@@ -370,13 +372,12 @@ object LeapMenu : Module(
                     )
                 }
 
-                val primaryColor = if (classColorBackground) Colors.WHITE else player.clazz.color
                 GuiRenderer.text(
                     player.name,
                     (localX + 15 + faceSize).toFloat(),
                     (localY + 24).toFloat(),
                     16f,
-                    primaryColor.rgba
+                    player.clazz.color.rgba
                 )
 
                 GuiRenderer.text(
@@ -447,6 +448,12 @@ object LeapMenu : Module(
         return cachedRulesByName[player.name.lowercase()]?.fakeClass ?: player.clazz
     }
 
+    private fun shouldHighlightCore(player: DungeonPlayer): Boolean {
+        if (!coreHighlight || !goldorStarted) return false
+        val entity = player.entity ?: return false
+        return IN_CORE_BOX.contains(entity.x, entity.y, entity.z)
+    }
+
     private fun normalizeUuid(uuid: String): String = uuid.replace("-", "").lowercase()
 
     private fun formatClass(clazz: DungeonClass): String =
@@ -476,6 +483,10 @@ object LeapMenu : Module(
     private const val HOVER_GROW = 5f
     private const val LEAP_SLOT_START = 11
     private const val LEAP_SLOT_END = 16
+    private const val GOLDOR_START_MESSAGE = "[BOSS] Goldor: Who dares trespass into my domain?"
+    private val DEFAULT_BACKGROUND_COLOR = Colors.gray38.withAlpha(0.75f)
+    private val CORE_BACKGROUND_COLOR = Color(0, 120, 0).withAlpha(0.75f)
+    private val IN_CORE_BOX = AABB(42.0, 106.0, 54.0, 68.0, 155.0, 119.0)
     private val USERNAME_REGEX = Regex("^[A-Za-z0-9_]{1,16}$")
     private val LEAPED_REGEX = Regex("^You have teleported to (\\w{1,16})!$")
 }

@@ -52,12 +52,12 @@ object I4Solver : Module(
         "Shot Mode",
         "Passive",
         listOf("Passive", "Active"),
-        "Passive predicts shots from server ticks; Active changes vanilla's right-click delay and keeps startUseItem behavior."
+        "Passive times prefire shots from server ticks; Active changes vanilla's right-click delay and keeps startUseItem behavior."
     )
-    private val prediction by BooleanSetting(
-        "Prediction",
+    private val prefire by BooleanSetting(
+        "Prefire",
         true,
-        "Prefire the next assumed target before the server confirms the current target is complete."
+        "Change the current aim point color when a shot is expected to hit."
     )
     private val i4CompleteNotification by BooleanSetting(
         "I4 Complete Notification",
@@ -65,8 +65,8 @@ object I4Solver : Module(
         "Shows a chat message and title when the I4 device is confirmed complete."
     )
     //#if PRIVATE
-    private val preventOvershoot by BooleanSetting(
-        "Prevent Overshoot",
+    private val yawLock by BooleanSetting(
+        "Yaw Lock",
         true,
         "Locks Terror aim to the horizontal center until the view leaves the I4 grid vertically."
     )
@@ -83,6 +83,12 @@ object I4Solver : Module(
         allowAlpha = true,
         desc = "Color of the Terminator spread aim point."
     )
+    private val prefireColor by ColorSetting(
+        "Prefire Color",
+        Colors.MINECRAFT_GREEN,
+        allowAlpha = true,
+        desc = "Aim point color after Prefire expects the current shot to hit."
+    ).withDependency { prefire }
     private val aimPixelSize by NumberSetting(
         "Aim Pixel Size",
         0.25,
@@ -92,15 +98,15 @@ object I4Solver : Module(
         unit = "blocks",
         desc = "Full width, height, and depth of the aim pixel."
     )
-    private val predictionTimeoutTicks by NumberSetting(
-        "Prediction Timeout",
+    private val prefireTimeoutTicks by NumberSetting(
+        "Prefire Timeout",
         10,
         1,
         10,
         1,
         unit = "ticks",
-        desc = "Server ticks to wait for a use-item prediction to be confirmed by the current Emerald disappearing."
-    ).withDependency { prediction }
+        desc = "Server ticks to wait for a use-item prefire to be confirmed by the current Emerald disappearing."
+    ).withDependency { prefire }
     private val shotIntervalTicks by NumberSetting(
         "Shot Interval",
         5,
@@ -108,7 +114,7 @@ object I4Solver : Module(
         10,
         1,
         unit = "ticks",
-        desc = "Server ticks between predicted shots while holding right click."
+        desc = "Server ticks between prefire shots while holding right click."
     )
     private val deviceBlocks = setOf(
         BlockPos(68, 130, 50), BlockPos(66, 130, 50), BlockPos(64, 130, 50),
@@ -117,11 +123,9 @@ object I4Solver : Module(
     )
 
     private val doneBlocks = mutableSetOf<BlockPos>()
-    private val speculativeDoneBlocks = mutableSetOf<BlockPos>()
-    private val speculativeAgeTicks = mutableMapOf<BlockPos, Int>()
     private var target: BlockPos? = null
-    private var solverTarget: BlockPos? = null
-    private var spreadTarget: BlockPos? = null
+    private var prefireTarget: BlockPos? = null
+    private var prefireAgeTicks = 0
     private var aimPoint: Vec3? = null
     private var previousGeneralAimX: Double? = null
     private var lastTerrorAimState: Boolean? = null
@@ -151,15 +155,18 @@ object I4Solver : Module(
         }
 
         on<PlayerInputEvent.Use>(priority = 1_000) {
-            if (shotMode == ACTIVE_MODE && isShotControlEligible()) onPredictedShot()
+            if (shotMode != ACTIVE_MODE) return@on
+            val eligible = isShotControlEligible()
+            if (eligible) onPrefireShot()
         }
 
         on<TickEvent.Server> {
+            syncRightClickState()
             refreshTerrorAimState()
-            if (!prediction && speculativeDoneBlocks.isNotEmpty()) {
-                rollbackSpeculativePrediction()
+            if (!prefire && prefireTarget != null) {
+                clearPrefireState()
             }
-            checkSpeculativeTimeouts()
+            checkPrefireTimeout()
             if (!isHoldingRightClick) return@on
             if (mc.gui.screen() != null || mc.player == null) {
                 stopShotTimer()
@@ -194,18 +201,10 @@ object I4Solver : Module(
             if (DungeonUtils.getF7Phase() != M7Phases.P3 || isI4Complete || pos !in deviceBlocks) return@on
 
             if (old.block == Blocks.EMERALD_BLOCK && updated.block == Blocks.DYED_TERRACOTTA.blue()) {
-                val predictionAlreadyAdvanced = solverTarget != null && solverTarget != pos
                 doneBlocks.add(pos.immutable())
-                speculativeDoneBlocks.remove(pos)
-                speculativeAgeTicks.remove(pos)
-                if (target == pos) target = null
-
-                if (predictionAlreadyAdvanced) {
-                    updateAimSolution()
-                } else if (prediction) {
-                    advancePredictionAfterDisappearance()
-                } else {
-                    solverTarget = null
+                if (target == pos) {
+                    target = null
+                    clearPrefireState()
                     clearAimSolution()
                 }
                 return@on
@@ -213,22 +212,7 @@ object I4Solver : Module(
 
             if (updated.block == Blocks.EMERALD_BLOCK) {
                 target = pos.immutable()
-                val predictionMatched = solverTarget == pos || pos in speculativeDoneBlocks
-                val predictionCanHitTarget = solverTarget?.let { predicted ->
-                    predicted.y == pos.y && (
-                        isTerrorAimActive() || abs(predicted.x - pos.x) == DEVICE_COLUMN_SPACING
-                    )
-                } == true
-
-                // Terror covers the full row; the general three-arrow aim covers adjacent positions.
-                // Keep it stable instead of snapping to the newly confirmed target.
-                if (!predictionMatched && predictionCanHitTarget) return@on
-
-                if (!predictionMatched) {
-                    speculativeDoneBlocks.clear()
-                    speculativeAgeTicks.clear()
-                    solverTarget = pos.immutable()
-                }
+                clearPrefireState()
                 updateAimSolution()
             }
         }
@@ -242,8 +226,8 @@ object I4Solver : Module(
             aimPoint?.let { point ->
                 drawFilledBox(
                     aimPointBounds(point),
-                    aimPointColor,
-                    depth = true
+                    if (prefire && prefireTarget == target) prefireColor else aimPointColor,
+                    depth = false
                 )
             }
             doneBlocks.forEach { drawStyledBox(AABB(it), doneColor, renderMode, depth = true) }
@@ -254,7 +238,17 @@ object I4Solver : Module(
         }
 
         on<ChatPacketEvent> {
-            if (value == GOLDOR_START_MESSAGE) reset()
+            if (value == GOLDOR_START_MESSAGE) {
+                reset()
+                return@on
+            }
+
+            if (isI4Complete || DungeonUtils.getF7Phase() != M7Phases.P3 || !isOnDevice()) return@on
+            val completedBy = I4_DEVICE_COMPLETE_REGEX.matchEntire(value)?.groupValues?.get(1) ?: return@on
+            val localName = mc.player?.name?.string ?: return@on
+            if (completedBy.equals(localName, ignoreCase = true) || completedBy.equals("You", ignoreCase = true)) {
+                onI4Complete()
+            }
         }
 
         on<EntityDataUpdateEvent> {
@@ -264,6 +258,7 @@ object I4Solver : Module(
     }
 
     private fun onI4Complete() {
+        if (isI4Complete) return
         isI4Complete = true
         resetI4State()
         stopShotTimer()
@@ -273,10 +268,10 @@ object I4Solver : Module(
         alert("§aI4 Complete")
     }
 
-    /** Future prediction/prefire behavior should be triggered from this single hook. */
-    private fun onPredictedShot() {
-        if (!prediction) return
-        tryAdvancePrefire()
+    /** All prefire behavior should be triggered from this single hook. */
+    private fun onPrefireShot() {
+        if (!prefire) return
+        tryMarkPrefire()
     }
 
     private fun startShotCycleIfEligible() {
@@ -294,7 +289,7 @@ object I4Solver : Module(
     }
 
     private fun triggerShot() {
-        if (shotMode == PASSIVE_MODE) onPredictedShot()
+        if (shotMode == PASSIVE_MODE) onPrefireShot()
     }
 
     /** Used by MixinMinecraft to preserve vanilla startUseItem while changing only its repeat delay. */
@@ -307,19 +302,18 @@ object I4Solver : Module(
     //#if PRIVATE
     /** Called after vanilla has applied sensitivity and mouse inversion, immediately before LocalPlayer.turn. */
     @JvmStatic
-    fun adjustMouseTurnForOvershoot(yawInput: Double, pitchInput: Double): DoubleArray {
+    fun adjustMouseTurnForYawLock(yawInput: Double, pitchInput: Double): DoubleArray {
         val player = mc.player
-        val point = aimPoint
         if (
-            !enabled || !preventOvershoot || mc.gui.screen() != null || player == null || point == null ||
+            !enabled || !yawLock || mc.gui.screen() != null || player == null || isI4Complete ||
             DungeonUtils.getF7Phase() != M7Phases.P3 || !isOnDevice() || !isTerrorAimActive()
         ) {
-            resetOvershootGuard()
+            resetYawLock()
             return doubleArrayOf(yawInput, pitchInput)
         }
 
         if (!isLookingAtI4Grid()) {
-            resetOvershootGuard()
+            resetYawLock()
             return doubleArrayOf(yawInput, pitchInput)
         }
 
@@ -352,7 +346,7 @@ object I4Solver : Module(
         return I4_GRID_BOUNDS.clip(start, end).isPresent
     }
 
-    private fun resetOvershootGuard() {
+    private fun resetYawLock() {
         terrorCenterYawLocked = false
     }
     //#endif
@@ -376,6 +370,18 @@ object I4Solver : Module(
         tickTimer = 0
     }
 
+    private fun syncRightClickState() {
+        val useKeyHeld = mc.player != null && mc.gui.screen() == null && mc.options.keyUse.isDown
+        if (useKeyHeld == isHoldingRightClick) return
+
+        if (useKeyHeld) {
+            isHoldingRightClick = true
+            startShotCycleIfEligible()
+        } else {
+            stopShotTimer()
+        }
+    }
+
     private fun isOnDevice(): Boolean {
         val player = mc.player ?: return false
         return abs(player.y - 127.0) < 0.5 && player.x in 62.0..65.0 && player.z in 34.0..37.0
@@ -384,10 +390,9 @@ object I4Solver : Module(
     private fun isPlayerInI4Room(): Boolean =
         mc.player?.let { I4_ROOM_BOUNDING_BOX.contains(it.position()) } == true
 
-    private fun updateAimSolution(preferredSpreadTarget: BlockPos? = null) {
-        val current = solverTarget ?: target ?: return clearAimSolution()
+    private fun updateAimSolution() {
+        val current = target ?: return clearAimSolution()
         if (isTerrorAimActive()) {
-            spreadTarget = null
             aimPoint = calculateTerrorAimPoint(current)
             return
         }
@@ -397,14 +402,10 @@ object I4Solver : Module(
                 candidate.y == current.y &&
                     abs(candidate.x - current.x) == DEVICE_COLUMN_SPACING
             }
-        val unfinishedTargets = adjacentTargets.filterNot {
-            it in doneBlocks || it in speculativeDoneBlocks
-        }
+        val unfinishedTargets = adjacentTargets.filterNot { it in doneBlocks }
         val candidates = unfinishedTargets.ifEmpty { adjacentTargets }
 
-        spreadTarget = preferredSpreadTarget
-            ?.takeIf { it in candidates }
-            ?: selectGeneralSpreadTarget(current, candidates)
+        val spreadTarget = selectGeneralSpreadTarget(current, candidates)
         aimPoint = calculateGeneralAimPoint(current, spreadTarget)
         aimPoint?.let { previousGeneralAimX = it.x }
     }
@@ -422,7 +423,7 @@ object I4Solver : Module(
 
     private fun isWearingTerrorArmor(): Boolean {
         val player = mc.player ?: return false
-        return ARMOR_SLOTS.any { player.getItemBySlot(it).itemId in TERROR_ARMOR_IDS }
+        return ARMOR_SLOTS.count { player.getItemBySlot(it).itemId in TERROR_ARMOR_IDS } >= MIN_TERROR_ARMOR_PIECES
     }
 
     private fun selectGeneralSpreadTarget(current: BlockPos, candidates: List<BlockPos>): BlockPos? {
@@ -438,104 +439,24 @@ object I4Solver : Module(
         return candidates.random()
     }
 
-    private fun tryAdvancePrefire() {
-        val current = solverTarget ?: target ?: return
+    private fun tryMarkPrefire() {
+        val current = target ?: return
+        if (prefireTarget == current) return
         if (!isAimedAtCurrentAimPoint()) return
 
-        if (speculativeDoneBlocks.add(current)) {
-            // Timeout only applies when useItem predicts the Emerald that currently exists.
-            // Guessed future positions have nothing on the server to time out against yet.
-            if (current == target) speculativeAgeTicks[current] = 0
-        }
-        advanceToNextPredictedTarget()
+        prefireTarget = current
+        prefireAgeTicks = 0
     }
 
-    /**
-     * The server-confirmed Emerald disappeared before its successor appeared.
-     * Predict a successor even when no useItem prediction happened for that Emerald.
-     */
-    private fun advancePredictionAfterDisappearance() {
-        advanceToNextPredictedTarget()
+    private fun checkPrefireTimeout() {
+        if (prefireTarget == null) return
+        prefireAgeTicks++
+        if (prefireAgeTicks >= prefireTimeoutTicks) clearPrefireState()
     }
 
-    private fun advanceToNextPredictedTarget() {
-        val remainingTargets = deviceBlocks.filterNot {
-            it in doneBlocks || it in speculativeDoneBlocks
-        }
-        if (remainingTargets.isEmpty()) {
-            solverTarget = null
-            clearAimSolution()
-            return
-        }
-
-        if (isTerrorAimActive()) {
-            solverTarget = selectBestTerrorPrediction(remainingTargets)
-            updateAimSolution()
-            return
-        }
-
-        val choice = selectBestGeneralPrediction(remainingTargets)
-        solverTarget = choice?.target
-        if (choice == null) clearAimSolution() else updateAimSolution(choice.spreadTarget)
-    }
-
-    /** Terror covers an entire row, so prefer the row containing the most unfinished positions. */
-    private fun selectBestTerrorPrediction(remainingTargets: List<BlockPos>): BlockPos? {
-        val rows = remainingTargets.groupBy { it.y }
-        val highestCoverage = rows.maxOfOrNull { it.value.size } ?: return null
-        return rows.values
-            .filter { it.size == highestCoverage }
-            .randomOrNull()
-            ?.randomOrNull()
-    }
-
-    /**
-     * General Terminator spread covers one horizontal gap. Score every gap by how many of its
-     * two positions remain unfinished, then keep the previous side when multiple gaps tie.
-     */
-    private fun selectBestGeneralPrediction(remainingTargets: List<BlockPos>): GeneralPredictionChoice? {
-        val remaining = remainingTargets.toSet()
-        val scoredPairs = deviceBlocks.flatMap { first ->
-            deviceBlocks.mapNotNull { second ->
-                if (first.y != second.y || second.x - first.x != DEVICE_COLUMN_SPACING) return@mapNotNull null
-                val coverage = listOf(first, second).count { it in remaining }
-                if (coverage == 0) null else ScoredAimPair(first, second, coverage)
-            }
-        }
-        val highestCoverage = scoredPairs.maxOfOrNull { it.coverage } ?: return null
-        val bestPairs = scoredPairs.filter { it.coverage == highestCoverage }
-        val previousX = previousGeneralAimX
-        val selectedPair = previousX?.let { x ->
-            bestPairs.firstOrNull { calculateGeneralAimPoint(it.first, it.second)?.x == x }
-        } ?: bestPairs.randomOrNull() ?: return null
-
-        val target = listOf(selectedPair.first, selectedPair.second)
-            .filter { it in remaining }
-            .randomOrNull()
-            ?: return null
-        val spreadTarget = if (target == selectedPair.first) selectedPair.second else selectedPair.first
-        return GeneralPredictionChoice(target, spreadTarget)
-    }
-
-    private fun checkSpeculativeTimeouts() {
-        if (speculativeAgeTicks.isEmpty()) return
-
-        var timedOut = false
-        speculativeAgeTicks.replaceAll { _, age ->
-            val updatedAge = age + 1
-            if (updatedAge >= predictionTimeoutTicks) timedOut = true
-            updatedAge
-        }
-        if (!timedOut) return
-
-        rollbackSpeculativePrediction()
-    }
-
-    private fun rollbackSpeculativePrediction() {
-        speculativeDoneBlocks.clear()
-        speculativeAgeTicks.clear()
-        solverTarget = target?.takeIf { it !in doneBlocks }
-        if (solverTarget == null) clearAimSolution() else updateAimSolution()
+    private fun clearPrefireState() {
+        prefireTarget = null
+        prefireAgeTicks = 0
     }
 
     private fun isAimedAtCurrentAimPoint(): Boolean {
@@ -576,11 +497,7 @@ object I4Solver : Module(
     )
 
     private fun clearAimSolution() {
-        spreadTarget = null
         aimPoint = null
-        //#if PRIVATE
-        resetOvershootGuard()
-        //#endif
     }
 
     private fun reset() {
@@ -591,25 +508,15 @@ object I4Solver : Module(
 
     private fun resetI4State() {
         doneBlocks.clear()
-        speculativeDoneBlocks.clear()
-        speculativeAgeTicks.clear()
         target = null
-        solverTarget = null
+        clearPrefireState()
         clearAimSolution()
         previousGeneralAimX = null
         lastTerrorAimState = null
+        //#if PRIVATE
+        resetYawLock()
+        //#endif
     }
-
-    private data class ScoredAimPair(
-        val first: BlockPos,
-        val second: BlockPos,
-        val coverage: Int
-    )
-
-    private data class GeneralPredictionChoice(
-        val target: BlockPos,
-        val spreadTarget: BlockPos
-    )
 
     override fun onEnable() {
         reset()
@@ -623,18 +530,20 @@ object I4Solver : Module(
 
     private const val GOLDOR_START_MESSAGE = "[BOSS] Goldor: Who dares trespass into my domain?"
     private const val ACTIVE_ENTITY_NAME = "Active"
+    private val I4_DEVICE_COMPLETE_REGEX = Regex("^([A-Za-z0-9_]{1,16}) completed a device! \\(\\d+/\\d+\\)$")
     private const val TERMINATOR_ID = "TERMINATOR"
     private const val PASSIVE_MODE = 0
     private const val ACTIVE_MODE = 1
     private const val DEVICE_COLUMN_SPACING = 2
     private const val DEVICE_FRONT_Z = 49.95
     private const val TERROR_STACK_THRESHOLD = 10
+    private const val MIN_TERROR_ARMOR_PIECES = 2
     private const val TERROR_CENTER_X = 66.5
     private const val PREFIRE_RAY_LENGTH = 64.0
     //#if PRIVATE
     private const val PLAYER_TURN_SCALE = 0.15
     private const val TERROR_CENTER_YAW_EPSILON = 1.0E-3
-    private val I4_GRID_BOUNDS = AABB(64.0, 126.0, 49.9, 69.0, 131.0, 50.1)
+    private val I4_GRID_BOUNDS = AABB(64.0, 126.0, 49.9, 69.0, 133.0, 50.1)
     //#endif
     private val I4_ROOM_BOUNDING_BOX = AABB(20.0, 100.0, 30.0, 89.0, 151.0, 51.0)
     private val ARMOR_SLOTS = listOf(
