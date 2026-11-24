@@ -95,5 +95,6 @@ object WebUtils {
         return mayor.get("name")?.asString == "Paul" && mayor.getAsJsonArray("perks")?.any { it.asJsonObject.get("name")?.asString == "EZPZ" } == true
     }
 
-    class InputStreamException(code: Int, url: String) : Exception("Failed to get input stream from $url: HTTP $code")
+    class InputStreamException(val statusCode: Int, url: String) :
+        Exception("Failed to get input stream from $url: HTTP $statusCode")
 }

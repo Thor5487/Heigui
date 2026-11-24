@@ -43,7 +43,7 @@ object HoverTerm : Module(
         name = "Click Delay",
         default = 0,
         min = 0,
-        max = 100,
+        max = 200,
         increment = 10,
         desc = "Minimum delay between each Hover Term click.",
         unit = "ms"

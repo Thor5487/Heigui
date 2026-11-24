@@ -27,9 +27,11 @@ import com.iq200.heigui.utils.skyblock.dungeon.DungeonListener
 import com.iq200.heigui.utils.skyblock.dungeon.DungeonPlayer
 import com.iq200.heigui.utils.skyblock.dungeon.DungeonUtils
 import com.iq200.heigui.utils.network.hypixelapi.RequestUtils
+import com.iq200.heigui.utils.network.WebUtils
 import com.iq200.heigui.utils.ui.rendering.GuiRenderer
 import com.mojang.blaze3d.platform.InputConstants
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import net.minecraft.client.gui.components.PlayerFaceExtractor
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen
@@ -138,7 +140,7 @@ object LeapMenu : Module(
         rulesConfig.load()
         refreshRuleCache()
 
-        on<ScreenEvent.Render> {
+        on<ScreenEvent.Render>(ignoreCancelled = true) {
             val leapScreen = currentLeapScreen() ?: return@on
             val teammates = sortedLeapTeammates()
             renderMenu(guiGraphics, mouseX, mouseY, teammates)
@@ -258,19 +260,39 @@ object LeapMenu : Module(
 
         Heigui.scope.launch(Dispatchers.IO) {
             rules.forEach { savedRule ->
-                RequestUtils.getName(savedRule.uuid)
-                    .onSuccess { profile ->
-                        mc.execute {
-                            val currentRule = rulesConfig.data.rules.firstOrNull {
-                                normalizeUuid(it.uuid) == normalizeUuid(savedRule.uuid)
-                            } ?: return@execute
-                            cacheResolvedRule(currentRule, profile.name)
-                        }
-                    }
-                    .onFailure {
-                        Heigui.logger.warn("Failed to resolve leap rule UUID ${savedRule.uuid}: ${it.message}")
-                    }
+                resolveRuleName(savedRule)
             }
+        }
+    }
+
+    private suspend fun resolveRuleName(savedRule: LeapClassRule) {
+        var retryDelayMs = INITIAL_RATE_LIMIT_RETRY_MS
+
+        while (true) {
+            val result = RequestUtils.getName(savedRule.uuid)
+            val profile = result.getOrNull()
+            if (profile != null) {
+                mc.execute {
+                    val currentRule = rulesConfig.data.rules.firstOrNull {
+                        normalizeUuid(it.uuid) == normalizeUuid(savedRule.uuid)
+                    } ?: return@execute
+                    cacheResolvedRule(currentRule, profile.name)
+                }
+                return
+            }
+
+            val error = result.exceptionOrNull()
+            if (error !is WebUtils.InputStreamException || error.statusCode != HTTP_TOO_MANY_REQUESTS) {
+                Heigui.logger.warn("Failed to resolve leap rule UUID ${savedRule.uuid}: ${error?.message}")
+                return
+            }
+
+            Heigui.logger.warn(
+                "Rate limited while resolving leap rule UUID ${savedRule.uuid}; " +
+                    "retrying in ${retryDelayMs / 1000}s."
+            )
+            delay(retryDelayMs)
+            retryDelayMs = (retryDelayMs * 2).coerceAtMost(MAX_RATE_LIMIT_RETRY_MS)
         }
     }
 
@@ -293,8 +315,12 @@ object LeapMenu : Module(
     }
 
     private fun triggerMouseQuadrant(screen: AbstractContainerScreen<*>, mouseX: Int, mouseY: Int) {
-        val quadrant = (if (mouseY >= screen.height / 2) 2 else 0) +
-            (if (mouseX >= screen.width / 2) 1 else 0)
+        val halfWidth = screen.width / 2
+        val halfHeight = screen.height / 2
+        if (mouseX == halfWidth || mouseY == halfHeight) return
+
+        val quadrant = (if (mouseY > halfHeight) 2 else 0) +
+            (if (mouseX > halfWidth) 1 else 0)
         val player = sortedLeapTeammates().getOrNull(quadrant) ?: return
         triggerLeap(player, screen)
     }
@@ -340,8 +366,9 @@ object LeapMenu : Module(
                 val nearY = if (row == 0) halfHeight - QUADRANT_GAP else halfHeight + QUADRANT_GAP
                 val localX = if (column == 0) -BOX_WIDTH else 0
                 val localY = if (row == 0) -BOX_HEIGHT else 0
-                val hovered = (if (column == 0) mouseX < halfWidth else mouseX >= halfWidth) &&
-                    (if (row == 0) mouseY < halfHeight else mouseY >= halfHeight)
+                val hovered = mouseX != halfWidth && mouseY != halfHeight &&
+                    (if (column == 0) mouseX < halfWidth else mouseX > halfWidth) &&
+                    (if (row == 0) mouseY < halfHeight else mouseY > halfHeight)
                 val grow = if (hovered) HOVER_GROW else 0f
 
                 GuiRenderer.push()
@@ -440,6 +467,9 @@ object LeapMenu : Module(
         .filterValues { it > 1 }
         .keys
 
+    internal fun effectiveClass(player: DungeonPlayer): DungeonClass =
+        effectiveClass(player, duplicatedClasses())
+
     private fun effectiveClass(
         player: DungeonPlayer,
         duplicatedClasses: Set<DungeonClass>
@@ -483,6 +513,9 @@ object LeapMenu : Module(
     private const val HOVER_GROW = 5f
     private const val LEAP_SLOT_START = 11
     private const val LEAP_SLOT_END = 16
+    private const val HTTP_TOO_MANY_REQUESTS = 429
+    private const val INITIAL_RATE_LIMIT_RETRY_MS = 5_000L
+    private const val MAX_RATE_LIMIT_RETRY_MS = 60_000L
     private const val GOLDOR_START_MESSAGE = "[BOSS] Goldor: Who dares trespass into my domain?"
     private val DEFAULT_BACKGROUND_COLOR = Colors.gray38.withAlpha(0.75f)
     private val CORE_BACKGROUND_COLOR = Color(0, 120, 0).withAlpha(0.75f)

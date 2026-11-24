@@ -2,6 +2,7 @@ package com.iq200.heigui.features.impl.skyblock
 
 import com.google.gson.reflect.TypeToken
 import com.iq200.heigui.clickgui.settings.AlwaysActive
+import com.iq200.heigui.clickgui.settings.impl.NumberSetting
 import com.iq200.heigui.config.JsonConfig
 import com.iq200.heigui.events.ChatPacketEvent
 import com.iq200.heigui.events.TickEvent
@@ -47,6 +48,16 @@ object AutoSwap : Module(
     description = "Moves configured items into a hotbar slot when a position, chat, or combined rule is triggered. Check /hg autoswap for full command usage.",
     category = Category.SKYBLOCK
 ) {
+    private val retryCheckDelayTicks by NumberSetting(
+        "Retry Check Delay",
+        2,
+        1,
+        20,
+        1,
+        desc = "Ticks to wait before checking whether a swap succeeded and retrying it",
+        unit = "tick"
+    )
+
     private val config = JsonConfig(
         fileName = "auto_swap.json",
         typeToken = object : TypeToken<AutoSwapData>() {}.type,
@@ -54,7 +65,14 @@ object AutoSwap : Module(
     )
 
     private var pendingRule: AutoSwapRule? = null
+    private var pendingPositionSatisfied = false
+    private var swapAttempt: SwapAttempt? = null
     private val triggeredRules = mutableSetOf<String>()
+
+    private data class SwapAttempt(
+        val rule: AutoSwapRule,
+        var ticksUntilCheck: Int
+    )
 
     init {
         config.load()
@@ -62,12 +80,20 @@ object AutoSwap : Module(
         on<TickEvent.Start> {
             if (!enabled) return@on
 
+            swapAttempt?.let {
+                processSwapAttempt(it)
+                return@on
+            }
+
             pendingRule?.let { rule ->
-                if (!isPendingPositionSatisfied(rule)) return@on
-                if (mc.gui.screen() == null && !hasMovementInput()) {
-                    pendingRule = null
-                    beginSwap(rule)
+                if (!pendingPositionSatisfied) {
+                    if (!isPendingPositionSatisfied(rule)) return@on
+                    pendingPositionSatisfied = true
                 }
+                val player = mc.player ?: return@on
+                if (mc.gui.screen() != null || hasMovementInput()) return@on
+                if (player.containerMenu !== player.inventoryMenu) return@on
+                if (beginSwap(rule)) clearPendingRule()
                 return@on
             }
 
@@ -76,24 +102,13 @@ object AutoSwap : Module(
         }
 
         on<ChatPacketEvent> {
-            if (!enabled) return@on
-            if (pendingRule != null) return@on
-
-            val rule = config.data.rules.firstOrNull { rule ->
-                rule.id !in triggeredRules &&
-                    rule.triggerType in CHAT_TRIGGER_TYPES &&
-                    !rule.itemUuid.isNullOrBlank() &&
-                    !rule.chatText.isNullOrBlank() &&
-                    value.contains(rule.chatText, ignoreCase = true)
-            } ?: return@on
-
-            val itemUuid = rule.itemUuid ?: return@on
-            if (isInHotbar(itemUuid) || findMainInventorySlot(itemUuid) == null) return@on
-            pendingRule = rule
+            val message = value
+            mc.execute { handleChatTrigger(message) }
         }
 
         on<WorldEvent.Load> {
-            pendingRule = null
+            clearPendingRule()
+            swapAttempt = null
             triggeredRules.clear()
         }
     }
@@ -104,8 +119,31 @@ object AutoSwap : Module(
     }
 
     override fun onDisable() {
-        pendingRule = null
+        clearPendingRule()
+        swapAttempt = null
         super.onDisable()
+    }
+
+    private fun handleChatTrigger(message: String) {
+        if (!enabled || pendingRule != null || swapAttempt != null) return
+
+        val rule = config.data.rules.firstOrNull { rule ->
+            rule.id !in triggeredRules &&
+                rule.triggerType in CHAT_TRIGGER_TYPES &&
+                !rule.itemUuid.isNullOrBlank() &&
+                !rule.chatText.isNullOrBlank() &&
+                message.contains(rule.chatText, ignoreCase = true)
+        } ?: return
+
+        val itemUuid = rule.itemUuid ?: return
+        if (isInHotbar(itemUuid) || findMainInventorySlot(itemUuid) == null) return
+        pendingRule = rule
+        pendingPositionSatisfied = rule.triggerType != AutoSwapTriggerType.CHAT_POSITION
+    }
+
+    private fun clearPendingRule() {
+        pendingRule = null
+        pendingPositionSatisfied = false
     }
 
     fun addPositionRule(hotbarSlot: Int, radius: Double): Boolean {
@@ -273,12 +311,37 @@ object AutoSwap : Module(
     }
 
     private fun beginSwap(rule: AutoSwapRule): Boolean {
+        if (rule.id in triggeredRules) return false
+        if (!sendSwap(rule)) return false
+
+        swapAttempt = SwapAttempt(rule, retryCheckDelayTicks)
+        return true
+    }
+
+    private fun processSwapAttempt(attempt: SwapAttempt) {
+        if (attempt.ticksUntilCheck > 0) {
+            attempt.ticksUntilCheck--
+            if (attempt.ticksUntilCheck > 0) return
+        }
+
+        if (isRuleItemInHotbar(attempt.rule)) {
+            triggeredRules.add(attempt.rule.id)
+            swapAttempt = null
+            return
+        }
+
+        if (sendSwap(attempt.rule)) {
+            attempt.ticksUntilCheck = retryCheckDelayTicks
+        }
+    }
+
+    private fun sendSwap(rule: AutoSwapRule): Boolean {
         val player = mc.player ?: return false
         if (mc.gui.screen() != null || hasMovementInput()) return false
         if (player.containerMenu !== player.inventoryMenu) return false
 
         val itemUuid = rule.itemUuid?.takeIf { it.isNotBlank() } ?: return false
-        if (rule.id in triggeredRules || isInHotbar(itemUuid)) return false
+        if (isInHotbar(itemUuid)) return false
 
         val sourceInventorySlot = findMainInventorySlot(itemUuid) ?: return false
         val sourceMenuSlot = player.inventoryMenu.findSlot(player.inventory, sourceInventorySlot)
@@ -292,7 +355,6 @@ object AutoSwap : Module(
             ContainerInput.SWAP,
             player
         )
-        triggeredRules.add(rule.id)
         player.closeContainer()
         return true
     }
@@ -305,6 +367,11 @@ object AutoSwap : Module(
     private fun isInHotbar(targetItemUuid: String): Boolean {
         val inventory = mc.player?.inventory ?: return false
         return (0 until 9).any { inventory.getItem(it).itemUUID == targetItemUuid }
+    }
+
+    private fun isRuleItemInHotbar(rule: AutoSwapRule): Boolean {
+        val itemUuid = rule.itemUuid?.takeIf { it.isNotBlank() } ?: return false
+        return isInHotbar(itemUuid)
     }
 
     private fun isInsidePositionRule(rule: AutoSwapRule, x: Double, y: Double, z: Double): Boolean {

@@ -423,7 +423,10 @@ object I4Solver : Module(
 
     private fun isWearingTerrorArmor(): Boolean {
         val player = mc.player ?: return false
-        return ARMOR_SLOTS.count { player.getItemBySlot(it).itemId in TERROR_ARMOR_IDS } >= MIN_TERROR_ARMOR_PIECES
+        return ARMOR_SLOTS.count { slot ->
+            val itemId = player.getItemBySlot(slot).itemId
+            TERROR_ARMOR_IDS.any(itemId::contains)
+        } >= MIN_TERROR_ARMOR_PIECES
     }
 
     private fun selectGeneralSpreadTarget(current: BlockPos, candidates: List<BlockPos>): BlockPos? {
