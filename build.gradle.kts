@@ -13,6 +13,11 @@ group = property("maven_group") as String
 val modId = property("mod_id") as String
 val isPrivateBuild = (project.findProperty("isPrivate") as? String)?.toBoolean() ?: false
 val sourceVariant = if (isPrivateBuild) "private" else "public"
+val managedZpbwVersion = property("zpbw_managed_version").toString()
+val managedZpbwJar = providers.gradleProperty("zpbwManagedJar")
+    .orNull
+    ?.let(::file)
+    ?: rootDir.resolve("nested-jars/zpbw-mc26.3-heigui-$managedZpbwVersion.jar")
 val preprocessSources = registerSourcePreprocessor(sourceVariant)
 val preprocessedKotlin = layout.buildDirectory.dir("preprocessed/$sourceVariant/kotlin")
 val preprocessedJava = layout.buildDirectory.dir("preprocessed/$sourceVariant/java")
@@ -164,6 +169,12 @@ repositories {
     maven("https://pkgs.dev.azure.com/djtheredstoner/DevAuth/_packaging/public/maven/v1")
     maven("https://maven.terraformersmc.com/")
     maven("https://api.modrinth.com/maven")
+    if (isPrivateBuild) {
+        flatDir {
+            name = "managedZpbw"
+            dirs(managedZpbwJar.parentFile)
+        }
+    }
 }
 
 val shade = configurations.create("shade")
@@ -192,6 +203,18 @@ dependencies {
         isTransitive = false
     }
     compileOnly("maven.modrinth:noammaddons:${property("noammaddons_version")}")
+
+    if (isPrivateBuild) {
+        if (!managedZpbwJar.isFile) {
+            throw GradleException(
+                "Private builds require the managed ZPBW JAR at $managedZpbwJar. " +
+                    "Commit the managed JAR under nested-jars/ or pass -PzpbwManagedJar=<path>."
+            )
+        }
+        include("com.hawkslol.zpbw:zpbw-mc26.3-heigui:$managedZpbwVersion") {
+            isTransitive = false
+        }
+    }
 }
 // ====================================================
 
@@ -297,6 +320,13 @@ tasks.named("assemble") {
 val shadowJarTask = tasks.named<ShadowJar>("shadowJar") {
     configurations = listOf(shade)
     archiveClassifier.set("")
+
+    if (isPrivateBuild) {
+        dependsOn("processIncludeJars")
+        from(layout.buildDirectory.dir("processIncludeJars")) {
+            into("META-INF/jars")
+        }
+    }
 
 }
 

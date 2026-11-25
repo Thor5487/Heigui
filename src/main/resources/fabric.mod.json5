@@ -23,6 +23,13 @@
   "mixins": [
     "heigui.mixins.json"
   ],
+  //#if PRIVATE
+  "jars": [
+    {
+      "file": "META-INF/jars/zpbw-mc26.3-heigui-${zpbw_managed_version}.jar"
+    }
+  ],
+  //#endif
   "depends": {
     "fabricloader": ">=${loader_version}",
     "fabric-api": ">=${fabric_api_version}",

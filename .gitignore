@@ -123,6 +123,10 @@ runs/
 
 # Avoid ignoring Gradle wrapper jar file (.jar files are usually ignored)
 !gradle-wrapper.jar
+
+# Private-build nested dependencies are intentionally versioned with the project.
+!/nested-jars/
+!/nested-jars/zpbw-mc26.3-heigui-*.jar
 /.claude/
 
 AGENTS.md
