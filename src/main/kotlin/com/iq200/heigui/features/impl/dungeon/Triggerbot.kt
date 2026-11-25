@@ -7,6 +7,7 @@ import com.iq200.heigui.events.WorldEvent
 import com.iq200.heigui.events.core.on
 import com.iq200.heigui.features.Category
 import com.iq200.heigui.features.Module
+import com.iq200.heigui.utils.itemId
 import com.iq200.heigui.utils.skyblock.dungeon.DungeonUtils
 import com.iq200.heigui.utils.skyblock.dungeon.ScanUtils
 import net.minecraft.core.BlockPos
@@ -40,6 +41,11 @@ object Triggerbot : Module (
     private val lever by BooleanSetting("Lever", false, "lever triggerbot")
     private val chest by BooleanSetting("Chest", false, "chest triggerbot")
     private val skull by BooleanSetting("Skull", false, "skull triggerbot")
+    private val disableOnAotv by BooleanSetting(
+        "Disable on AOTV",
+        false,
+        "Prevents Triggerbot from clicking while holding an Aspect of the Void"
+    )
     private val cd by NumberSetting("CD for Click", 200, 50, 1000, 10, "CD between clicking same block")
 
     private val clickedBlocks = mutableMapOf<BlockPos, Long>()
@@ -73,6 +79,8 @@ object Triggerbot : Module (
     }
 
     fun handleTriggerBot(hitResult: BlockHitResult) {
+        if (disableOnAotv && mc.player?.mainHandItem?.itemId == AOTV_ID) return
+
         val pos = hitResult.blockPos
 
         if (blacklistedRegions.any{pos in it}) return
@@ -129,4 +137,6 @@ object Triggerbot : Module (
         gameMode.useItemOn(player, InteractionHand.MAIN_HAND, hitResult)
         player.swing(InteractionHand.MAIN_HAND, player.mainHandItem.interactAnimation, false)
     }
+
+    private const val AOTV_ID = "ASPECT_OF_THE_VOID"
 }
