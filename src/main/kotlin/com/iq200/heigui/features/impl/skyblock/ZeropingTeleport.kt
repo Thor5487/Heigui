@@ -1,7 +1,10 @@
 package com.iq200.heigui.features.impl.skyblock
 
+import com.iq200.heigui.clickgui.settings.Setting.Companion.withDependency
 import com.iq200.heigui.clickgui.settings.impl.BooleanSetting
+import com.iq200.heigui.clickgui.settings.impl.DropdownSetting
 import com.iq200.heigui.clickgui.settings.impl.NumberSetting
+import com.iq200.heigui.clickgui.settings.impl.SelectorSetting
 import com.iq200.heigui.events.PacketEvent
 import com.iq200.heigui.events.PlayerInputEvent
 import com.iq200.heigui.events.TickEvent
@@ -23,20 +26,86 @@ import net.minecraft.world.item.ItemStack
 import net.minecraft.world.level.block.*
 import net.minecraft.world.phys.BlockHitResult
 import net.minecraft.world.phys.Vec3
+//#if PRIVATE
+import java.lang.reflect.Method
+//#endif
 
 
 
-object ZeropingCamera : Module (
-    name = "Zeroping Camera",
-    description = "Visually removes teleport latency for selected teleport abilities.",
+object ZeropingTeleport : Module (
+    name = "Zeroping Teleport",
+    description = "Zero-ping teleport prediction for supported teleport abilities.",
     category = Category.SKYBLOCK
 ), CameraPositionProvider {
 
     private val etherwarpEnabled by BooleanSetting("Etherwarp", true, "Predict Etherwarp teleports")
+    private val etherwarpType by SelectorSetting(
+        name = "Etherwarp Type",
+        default = "ZPCM",
+        options = listOf(
+            "ZPCM",
+            //#if PRIVATE
+            "ZPBW"
+            //#endif
+        ),
+        desc = "Select whether Etherwarp uses camera prediction or Blinkwarp."
+    ).withDependency { etherwarpEnabled }
     private val instantTransmissionEnabled by BooleanSetting("Instant Transmission", true, "Predict AOTE/AOTV Instant Transmission teleports")
     private val witherImpactEnabled by BooleanSetting("Wither Impact", false, "Predict Wither Impact teleports")
     private val manaCheckEnabled by BooleanSetting("Mana Check", true, "Only predict teleports when you have enough mana")
     private val timeOutMs by NumberSetting("Timeout", 500, 100, 1000, 50, unit = "ms", desc = "Time before an unconfirmed camera prediction is cleared")
+
+    //#if PRIVATE
+    private val zpbwSettingsDropdown by DropdownSetting(
+        "ZPBW Settings",
+        desc = "Advanced settings for Zero Ping Blinkwarp."
+    ).withDependency(::usesZpbw)
+    private val noSneakDelay by BooleanSetting(
+        "No Sneak Delay",
+        false,
+        "Removes the sneak delay before Etherwarp."
+    ).withDependency(::showZpbwSettings)
+    private val blinkwarpTimeoutTicks by NumberSetting(
+        "Blinkwarp Timeout",
+        20,
+        2,
+        20,
+        1,
+        "Ticks before an unconfirmed Blinkwarp times out.",
+        " ticks"
+    ).withDependency(::showZpbwSettings)
+    private val chainMaximum by NumberSetting(
+        "Chain Maximum",
+        5,
+        1,
+        5,
+        1,
+        "Maximum number of queued Blinkwarps."
+    ).withDependency(::showZpbwSettings)
+    private val disableInRestrictedLocations by BooleanSetting(
+        "Restricted Locations",
+        true,
+        "Disables ZPBW in locations where prediction is unsafe."
+    ).withDependency(::showZpbwSettings)
+    private val smoothLandings by BooleanSetting(
+        "Smooth Landings",
+        false,
+        "Smooths movement after a confirmed Blinkwarp landing."
+    ).withDependency(::showZpbwSettings)
+    private val serverLagCompensation by BooleanSetting(
+        "Server Lag Compensation",
+        true,
+        "Enables ZPBW's experimental recovery and lag compensation."
+    ).withDependency(::showZpbwSettings)
+    private val failureNotification by BooleanSetting(
+        "Failure Notification",
+        false,
+        "Shows a short chat message when Blinkwarp's predicted destination differs from the server result."
+    ).withDependency(::showZpbwSettings)
+
+    private var lastAppliedZpbwSettings: ManagedZpbwSettings? = null
+    private var zpbwActive = false
+    //#endif
 
     private var renderPos: Vec3? = null
     private val zpcmSent = mutableListOf<Vec3>()
@@ -56,6 +125,9 @@ object ZeropingCamera : Module (
     init {
         on<TickEvent.Start> {
             if (renderPos != null && System.currentTimeMillis() - lastZpcmPredictionAt >= timeOutMs) clearZpcm()
+            //#if PRIVATE
+            applyZpbwSettings()
+            //#endif
         }
 
         on<PlayerInputEvent.Use> {
@@ -156,7 +228,7 @@ object ZeropingCamera : Module (
         val eyePos = currentPos.add(0.0, EtherUtils.getEyeHeight().toDouble(), 0.0)
 
         if (sneaking && stack.isEtherwarpItem()) {
-            if (!etherwarpEnabled) return
+            if (!etherwarpEnabled || etherwarpType != 0) return
             val ether = EtherUtils.getEtherPosFromOrigin(eyePos, yaw, pitch, 57 + stack.getTunerDistance())
             val targetBlock = ether.first ?: return
             if (!ether.second) return
@@ -288,8 +360,113 @@ object ZeropingCamera : Module (
         }
     }
 
+    //#if PRIVATE
+    private fun usesZpbw(): Boolean = etherwarpEnabled && etherwarpType == 1
+    private fun showZpbwSettings(): Boolean = usesZpbw() && zpbwSettingsDropdown
+
+    private fun applyZpbwSettings(force: Boolean = false) {
+        if (!usesZpbw()) {
+            if (zpbwActive) ZpbwManagedBridge.disable()
+            zpbwActive = false
+            lastAppliedZpbwSettings = null
+            return
+        }
+
+        val settings = ManagedZpbwSettings(
+            noSneakDelay = noSneakDelay,
+            timeoutTicks = blinkwarpTimeoutTicks,
+            chainMaximum = chainMaximum,
+            disableInRestrictedLocations = disableInRestrictedLocations,
+            smoothLandings = smoothLandings,
+            serverLagCompensation = serverLagCompensation,
+            failureNotification = failureNotification
+        )
+        if (!force && zpbwActive && settings == lastAppliedZpbwSettings) return
+        if (ZpbwManagedBridge.apply(settings)) {
+            zpbwActive = true
+            lastAppliedZpbwSettings = settings
+        }
+    }
+
+    private data class ManagedZpbwSettings(
+        val noSneakDelay: Boolean,
+        val timeoutTicks: Int,
+        val chainMaximum: Int,
+        val disableInRestrictedLocations: Boolean,
+        val smoothLandings: Boolean,
+        val serverLagCompensation: Boolean,
+        val failureNotification: Boolean
+    )
+
+    private object ZpbwManagedBridge {
+        private const val API_CLASS = "com.hawkslol.zpbw.api.HeiguiZpbwApi"
+        private const val LOOKUP_RETRY_NANOS = 1_000_000_000L
+        private var configureMethod: Method? = null
+        private var disableMethod: Method? = null
+        private var nextLookupAtNanos = 0L
+
+        fun apply(settings: ManagedZpbwSettings): Boolean {
+            val method = configureMethod ?: findMethod(
+                "configureCore",
+                Boolean::class.javaPrimitiveType!!,
+                Boolean::class.javaPrimitiveType!!,
+                Int::class.javaPrimitiveType!!,
+                Int::class.javaPrimitiveType!!,
+                Boolean::class.javaPrimitiveType!!,
+                Boolean::class.javaPrimitiveType!!,
+                Boolean::class.javaPrimitiveType!!,
+                Boolean::class.javaPrimitiveType!!
+            )?.also { configureMethod = it } ?: return false
+
+            return runCatching {
+                method.invoke(
+                    null,
+                    true,
+                    settings.noSneakDelay,
+                    settings.timeoutTicks,
+                    settings.chainMaximum,
+                    settings.disableInRestrictedLocations,
+                    settings.smoothLandings,
+                    settings.serverLagCompensation,
+                    settings.failureNotification
+                ) == true
+            }.getOrDefault(false)
+        }
+
+        fun disable() {
+            val method = disableMethod ?: findMethod("disable")?.also { disableMethod = it } ?: return
+            runCatching { method.invoke(null) }
+        }
+
+        private fun findMethod(name: String, vararg parameterTypes: Class<*>): Method? {
+            val now = System.nanoTime()
+            if (now < nextLookupAtNanos) return null
+
+            return runCatching {
+                Class.forName(API_CLASS).getMethod(name, *parameterTypes)
+            }.onSuccess {
+                nextLookupAtNanos = 0L
+            }.onFailure {
+                nextLookupAtNanos = now + LOOKUP_RETRY_NANOS
+            }.getOrNull()
+        }
+    }
+    //#endif
+
+    override fun onEnable() {
+        super.onEnable()
+        //#if PRIVATE
+        applyZpbwSettings(force = true)
+        //#endif
+    }
+
     override fun onDisable() {
         clearZpcm()
+        //#if PRIVATE
+        ZpbwManagedBridge.disable()
+        zpbwActive = false
+        lastAppliedZpbwSettings = null
+        //#endif
         super.onDisable()
     }
 

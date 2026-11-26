@@ -40,7 +40,7 @@ class DropdownSetting(
 
         GuiRenderer.push()
         GuiRenderer.translate(x + width - 18f, y + height / 2f - 4f)
-        GuiRenderer.rotate(toggleAnimation.get(0f, Math.PI.toFloat() / 2f, enabled))
+        GuiRenderer.rotate(toggleAnimation.get(Math.PI.toFloat() / 2f, 0f, enabled))
         GuiRenderer.translate(-(12f + offset), -(12f + offset))
         GuiRenderer.image(ClickGUI.chevronImage, 0f, 0f, imageSize, imageSize)
         GuiRenderer.pop()
