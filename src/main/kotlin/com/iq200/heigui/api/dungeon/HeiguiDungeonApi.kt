@@ -2,6 +2,7 @@ package com.iq200.heigui.api.dungeon
 
 import com.iq200.heigui.utils.skyblock.dungeon.DungeonUtils
 import com.iq200.heigui.utils.skyblock.dungeon.ScanUtils
+import com.iq200.heigui.utils.skyblock.dungeon.tiles.RoomType
 
 /**
  * Stable, read-only dungeon state exposed to integrations such as ZPBW.
@@ -11,7 +12,7 @@ import com.iq200.heigui.utils.skyblock.dungeon.ScanUtils
  */
 object HeiguiDungeonApi {
     @JvmStatic
-    fun protocolVersion(): Int = 1
+    fun protocolVersion(): Int = 2
 
     @JvmStatic
     fun isInDungeon(): Boolean = DungeonUtils.inDungeons
@@ -40,4 +41,15 @@ object HeiguiDungeonApi {
     @JvmStatic
     fun isCurrentRoom(name: String): Boolean =
         getCurrentRoomName()?.equals(name, ignoreCase = true) == true
+
+    /** Shared admission rule for Heigui teleport prediction and dependent ZPBW. */
+    @JvmStatic
+    fun isTeleportPredictionAllowed(): Boolean {
+        val room = ScanUtils.currentRoom
+        val roomAllowed = room == null ||
+            (!room.data.name.contains("Boulder", ignoreCase = true) &&
+                !room.data.name.contains("Teleport Maze", ignoreCase = true) &&
+                room.data.type !== RoomType.TRAP)
+        return roomAllowed && !(DungeonUtils.isFloor(7) && DungeonUtils.inBoss)
+    }
 }

@@ -12,19 +12,18 @@ import com.iq200.heigui.events.WorldEvent
 import com.iq200.heigui.events.core.on
 import com.iq200.heigui.features.Category
 import com.iq200.heigui.features.Module
+import com.iq200.heigui.api.dungeon.HeiguiDungeonApi
 import com.iq200.heigui.utils.*
 import com.iq200.heigui.utils.camera.CameraHandler
 import com.iq200.heigui.utils.camera.CameraPositionProvider
 import com.iq200.heigui.utils.skyblock.ActionBarParser
 import com.iq200.heigui.utils.skyblock.EtherUtils
-import com.iq200.heigui.utils.skyblock.dungeon.DungeonUtils
-import com.iq200.heigui.utils.skyblock.dungeon.ScanUtils
-import com.iq200.heigui.utils.skyblock.dungeon.tiles.RoomType
 import net.minecraft.network.protocol.game.ClientboundPlayerPositionPacket
 import net.minecraft.world.entity.PositionMoveRotation
 import net.minecraft.world.item.ItemStack
 import net.minecraft.world.level.block.*
 import net.minecraft.world.phys.BlockHitResult
+import net.minecraft.world.phys.EntityHitResult
 import net.minecraft.world.phys.Vec3
 //#if PRIVATE
 import java.lang.reflect.Method
@@ -53,7 +52,7 @@ object ZeropingTeleport : Module (
     private val instantTransmissionEnabled by BooleanSetting("Instant Transmission", true, "Predict AOTE/AOTV Instant Transmission teleports")
     private val witherImpactEnabled by BooleanSetting("Wither Impact", false, "Predict Wither Impact teleports")
     private val manaCheckEnabled by BooleanSetting("Mana Check", true, "Only predict teleports when you have enough mana")
-    private val timeOutMs by NumberSetting("Timeout", 500, 100, 1000, 50, unit = "ms", desc = "Time before an unconfirmed camera prediction is cleared")
+    private val timeOutMs by NumberSetting("Timeout", 500, 100, 1000, 50, unit = "ms", desc = "Time before an unconfirmed teleport prediction times out")
 
     //#if PRIVATE
     private val zpbwSettingsDropdown by DropdownSetting(
@@ -65,15 +64,6 @@ object ZeropingTeleport : Module (
         false,
         "Removes the sneak delay before Etherwarp."
     ).withDependency(::showZpbwSettings)
-    private val blinkwarpTimeoutTicks by NumberSetting(
-        "Blinkwarp Timeout",
-        20,
-        2,
-        20,
-        1,
-        "Ticks before an unconfirmed Blinkwarp times out.",
-        " ticks"
-    ).withDependency(::showZpbwSettings)
     private val chainMaximum by NumberSetting(
         "Chain Maximum",
         5,
@@ -81,11 +71,6 @@ object ZeropingTeleport : Module (
         5,
         1,
         "Maximum number of queued Blinkwarps."
-    ).withDependency(::showZpbwSettings)
-    private val disableInRestrictedLocations by BooleanSetting(
-        "Restricted Locations",
-        true,
-        "Disables ZPBW in locations where prediction is unsafe."
     ).withDependency(::showZpbwSettings)
     private val smoothLandings by BooleanSetting(
         "Smooth Landings",
@@ -107,13 +92,21 @@ object ZeropingTeleport : Module (
     private var zpbwActive = false
     //#endif
 
+    private data class PassiveZpcmPrediction(val ability: Int, val source: Vec3, val target: Vec3)
+
     private var renderPos: Vec3? = null
-    private val zpcmSent = mutableListOf<Vec3>()
+    private val zpcmSent = mutableListOf<PassiveZpcmPrediction>()
     private var lastZpcmPredictionAt = 0L
     private var lastWIMP: Long = 0
 
     internal val activeZpcmPosition: Vec3?
-        get() = if (enabled) renderPos else null
+        get() {
+            if (!enabled) return null
+            //#if PRIVATE
+            if (usesZpbw() && ZpbwManagedBridge.ownsPacketChain()) return ZpbwManagedBridge.cameraPosition()
+            //#endif
+            return renderPos
+        }
 
     private val ignoredBlocks = listOf(
         ChestBlock::class.java, EnderChestBlock::class.java, TrappedChestBlock::class.java,
@@ -124,17 +117,24 @@ object ZeropingTeleport : Module (
 
     init {
         on<TickEvent.Start> {
-            if (renderPos != null && System.currentTimeMillis() - lastZpcmPredictionAt >= timeOutMs) clearZpcm()
             //#if PRIVATE
             applyZpbwSettings()
+            if ((!usesZpbw() || !ZpbwManagedBridge.ownsPacketChain()) && renderPos != null &&
+                System.currentTimeMillis() - lastZpcmPredictionAt >= timeOutMs) clearZpcm()
+            //#else
+            //$if (renderPos != null && System.currentTimeMillis() - lastZpcmPredictionAt >= timeOutMs) clearZpcm()
             //#endif
         }
 
         on<PlayerInputEvent.Use> {
-            if (!isRoomAllowed() || (DungeonUtils.isFloor(7) && DungeonUtils.inBoss)) return@on
+            if (!isRoomAllowed()) return@on
             val stack = mc.player?.mainHandItem ?: return@on
 
             if (!isTpItem(stack)) return@on
+
+            //#if PRIVATE
+            if (usesZpbw() && ZpbwManagedBridge.ownsPacketChain()) return@on
+            //#endif
 
             if (result is BlockHitResult) {
                 val hitBlock = mc.level?.getBlockState(result.blockPos)?.block
@@ -148,6 +148,9 @@ object ZeropingTeleport : Module (
 
         // Passive observation only: vanilla still applies and acknowledges the teleport packet.
         on<PacketEvent.Receive> {
+            //#if PRIVATE
+            if (usesZpbw() && ZpbwManagedBridge.ownsPacketChain()) return@on
+            //#endif
             if (renderPos == null || packet !is ClientboundPlayerPositionPacket) return@on
             val player = mc.player ?: return@on
             val newPos = PositionMoveRotation.calculateAbsolute(
@@ -169,7 +172,7 @@ object ZeropingTeleport : Module (
             return
         }
 
-        val old : Vec3 = zpcmSent.removeFirst()
+        val old = zpcmSent.removeFirst().target
         val correct =
             old.x() == newPos.position().x() && old.y() == newPos.position().y() && old.z() == newPos.position().z()
         if (!correct || zpcmSent.isEmpty()) {
@@ -177,11 +180,33 @@ object ZeropingTeleport : Module (
         }
     }
 
-    private fun setZpcmPosition(position: Vec3) {
-        renderPos = position
+    private fun setZpcmPosition(source: Vec3, target: Vec3, ability: Int) {
+        renderPos = target
         lastZpcmPredictionAt = System.currentTimeMillis()
-        zpcmSent.add(position)
+        zpcmSent.add(PassiveZpcmPrediction(ability, source, target))
         CameraHandler.registerProvider(this)
+    }
+
+    private fun submitZpcmPrediction(source: Vec3, target: Vec3, ability: Int): Boolean {
+        //#if PRIVATE
+        if (usesZpbw() && ZpbwManagedBridge.ownsPacketChain()) {
+            if (!ZpbwManagedBridge.prepareExternalTeleport(source, target)) return false
+            renderPos = target
+            lastZpcmPredictionAt = System.currentTimeMillis()
+            zpcmSent.clear()
+            CameraHandler.registerProvider(this)
+            return true
+        }
+        //#endif
+        setZpcmPosition(source, target, ability)
+        return true
+    }
+
+    private fun predictionOrigin(playerPosition: Vec3): Vec3 {
+        //#if PRIVATE
+        if (usesZpbw() && ZpbwManagedBridge.ownsPacketChain()) return ZpbwManagedBridge.sharedOrigin() ?: playerPosition
+        //#endif
+        return renderPos ?: playerPosition
     }
 
     private fun clearZpcm() {
@@ -224,7 +249,7 @@ object ZeropingTeleport : Module (
         val sneaking = player.isShiftKeyDown
         // Continue chained predictions from the pending ZPCM destination; otherwise use
         // the player's current client position as the teleport origin.
-        val currentPos = renderPos ?: player.position()
+        val currentPos = predictionOrigin(player.position())
         val eyePos = currentPos.add(0.0, EtherUtils.getEyeHeight().toDouble(), 0.0)
 
         if (sneaking && stack.isEtherwarpItem()) {
@@ -233,7 +258,7 @@ object ZeropingTeleport : Module (
             val targetBlock = ether.first ?: return
             if (!ether.second) return
 
-            setZpcmPosition(Vec3(targetBlock.x + 0.5, targetBlock.y + 1.05, targetBlock.z + 0.5))
+            submitZpcmPrediction(currentPos, Vec3(targetBlock.x + 0.5, targetBlock.y + 1.05, targetBlock.z + 0.5), 3)
         } else if (!sneaking) {
             val wimp = isWitherImpactItem(stack)
             if (wimp && !witherImpactEnabled) return
@@ -256,9 +281,7 @@ object ZeropingTeleport : Module (
 
             if (target.toBlockPos() == currentPos.toBlockPos()) return
 
-            setZpcmPosition(target)
-
-            if (wimp) lastWIMP = now
+            if (submitZpcmPrediction(currentPos, target, if (wimp) 2 else 1) && wimp) lastWIMP = now
         }
 
     }
@@ -330,17 +353,11 @@ object ZeropingTeleport : Module (
     }
 
     private fun isRoomAllowedZPEW(): Boolean {
-        val room: String? = if (ScanUtils.currentRoom == null) null else ScanUtils.currentRoom!!.data.name
-        return room == null || !room.containsOneOf("Boulder", "Teleport Maze") && ScanUtils.currentRoom!!.data
-            .type !== RoomType.TRAP
+        return HeiguiDungeonApi.isTeleportPredictionAllowed()
     }
 
     private fun isRoomAllowed(): Boolean {
-        val room = ScanUtils.currentRoom
-        return room == null || !room.data.name.containsOneOf(
-            "Boulder",
-            "Teleport Maze"
-        ) && room.data.type !== RoomType.TRAP
+        return HeiguiDungeonApi.isTeleportPredictionAllowed()
     }
 
     private fun hasEnoughMana(stack: ItemStack): Boolean {
@@ -360,13 +377,93 @@ object ZeropingTeleport : Module (
         }
     }
 
+    /**
+     * Live, side-effect-free ZPCM prediction queried by managed ZPBW immediately before a
+     * real use is admitted. Layout: ability, source xyz, target xyz.
+     */
+    internal fun predictManagedTeleport(): DoubleArray? {
+        //#if PRIVATE
+        if (!enabled || !usesZpbw() || !isRoomAllowed()) return null
+        val player = mc.player ?: return null
+        val level = mc.level ?: return null
+        val stack = player.mainHandItem
+        if (!isTpItem(stack) || player.isShiftKeyDown || mc.options.keyShift.isDown) return null
+        if (mc.hitResult is EntityHitResult) return null
+        (mc.hitResult as? BlockHitResult)?.let { hit ->
+            if (isIgnored(level.getBlockState(hit.blockPos).block)) return null
+        }
+
+        val witherImpact = isWitherImpactItem(stack)
+        if (witherImpact && !witherImpactEnabled) return null
+        if (!witherImpact && !instantTransmissionEnabled) return null
+        if (witherImpact && System.currentTimeMillis() - lastWIMP < 125L) return null
+        if (manaCheckEnabled && !hasEnoughMana(stack)) return null
+        val distance = getTpDistance(stack)
+        if (distance == 0) return null
+
+        val source = predictionOrigin(player.position())
+        val target = EtherUtils.predictTeleportCandidates(distance, source, player.yRot, player.xRot)
+            .firstNotNullOfOrNull { prediction ->
+                resolveZptpTarget(prediction.subtract(0.0, 1.0, 0.0))
+            } ?: return null
+        if (target.toBlockPos() == source.toBlockPos()) return null
+
+        return doubleArrayOf(
+            if (witherImpact) 2.0 else 1.0,
+            source.x, source.y, source.z,
+            target.x, target.y, target.z
+        )
+        //#else
+        //$return null
+        //#endif
+    }
+
+    internal fun managedTeleportAccepted(ability: Int) {
+        //#if PRIVATE
+        if (ability == 2) lastWIMP = System.currentTimeMillis()
+        CameraHandler.registerProvider(this)
+        //#endif
+    }
+
+    /** Already-issued passive ZPCM uses that ZPBW must adopt before an immediate EW. */
+    internal fun pendingPassiveTeleports(): DoubleArray {
+        //#if PRIVATE
+        return zpcmSent.flatMap { prediction ->
+            listOf(
+                prediction.ability.toDouble(),
+                prediction.source.x, prediction.source.y, prediction.source.z,
+                prediction.target.x, prediction.target.y, prediction.target.z
+            )
+        }.toDoubleArray()
+        //#else
+        //$return doubleArrayOf()
+        //#endif
+    }
+
+    /** Completes a handoff only if the passive queue did not change after it was inspected. */
+    internal fun acceptPassiveTeleportHandoff(count: Int): Boolean {
+        //#if PRIVATE
+        if (count <= 0 || zpcmSent.size != count) return false
+        renderPos = null
+        zpcmSent.clear()
+        lastZpcmPredictionAt = 0L
+        CameraHandler.registerProvider(this)
+        return true
+        //#else
+        //$return false
+        //#endif
+    }
+
     //#if PRIVATE
     private fun usesZpbw(): Boolean = etherwarpEnabled && etherwarpType == 1
     private fun showZpbwSettings(): Boolean = usesZpbw() && zpbwSettingsDropdown
 
     private fun applyZpbwSettings(force: Boolean = false) {
         if (!usesZpbw()) {
-            if (zpbwActive) ZpbwManagedBridge.disable()
+            if (zpbwActive) {
+                ZpbwManagedBridge.disable()
+                clearZpcm()
+            }
             zpbwActive = false
             lastAppliedZpbwSettings = null
             return
@@ -374,15 +471,15 @@ object ZeropingTeleport : Module (
 
         val settings = ManagedZpbwSettings(
             noSneakDelay = noSneakDelay,
-            timeoutTicks = blinkwarpTimeoutTicks,
+            timeoutTicks = (timeOutMs / 50).coerceIn(2, 20),
             chainMaximum = chainMaximum,
-            disableInRestrictedLocations = disableInRestrictedLocations,
             smoothLandings = smoothLandings,
             serverLagCompensation = serverLagCompensation,
             failureNotification = failureNotification
         )
         if (!force && zpbwActive && settings == lastAppliedZpbwSettings) return
         if (ZpbwManagedBridge.apply(settings)) {
+            if (!zpbwActive) clearZpcm()
             zpbwActive = true
             lastAppliedZpbwSettings = settings
         }
@@ -392,7 +489,6 @@ object ZeropingTeleport : Module (
         val noSneakDelay: Boolean,
         val timeoutTicks: Int,
         val chainMaximum: Int,
-        val disableInRestrictedLocations: Boolean,
         val smoothLandings: Boolean,
         val serverLagCompensation: Boolean,
         val failureNotification: Boolean
@@ -403,6 +499,10 @@ object ZeropingTeleport : Module (
         private const val LOOKUP_RETRY_NANOS = 1_000_000_000L
         private var configureMethod: Method? = null
         private var disableMethod: Method? = null
+        private var prepareExternalTeleportMethod: Method? = null
+        private var sharedOriginMethod: Method? = null
+        private var cameraPositionMethod: Method? = null
+        private var ownsPacketChainMethod: Method? = null
         private var nextLookupAtNanos = 0L
 
         fun apply(settings: ManagedZpbwSettings): Boolean {
@@ -412,7 +512,6 @@ object ZeropingTeleport : Module (
                 Boolean::class.javaPrimitiveType!!,
                 Int::class.javaPrimitiveType!!,
                 Int::class.javaPrimitiveType!!,
-                Boolean::class.javaPrimitiveType!!,
                 Boolean::class.javaPrimitiveType!!,
                 Boolean::class.javaPrimitiveType!!,
                 Boolean::class.javaPrimitiveType!!
@@ -425,7 +524,6 @@ object ZeropingTeleport : Module (
                     settings.noSneakDelay,
                     settings.timeoutTicks,
                     settings.chainMaximum,
-                    settings.disableInRestrictedLocations,
                     settings.smoothLandings,
                     settings.serverLagCompensation,
                     settings.failureNotification
@@ -437,6 +535,37 @@ object ZeropingTeleport : Module (
             val method = disableMethod ?: findMethod("disable")?.also { disableMethod = it } ?: return
             runCatching { method.invoke(null) }
         }
+
+        fun prepareExternalTeleport(source: Vec3, target: Vec3): Boolean {
+            val double = Double::class.javaPrimitiveType!!
+            val method = prepareExternalTeleportMethod ?: findMethod(
+                "prepareExternalTeleport",
+                double, double, double,
+                double, double, double
+            )?.also { prepareExternalTeleportMethod = it } ?: return false
+            return runCatching {
+                method.invoke(null, source.x, source.y, source.z, target.x, target.y, target.z) == true
+            }.getOrDefault(false)
+        }
+
+        fun sharedOrigin(): Vec3? {
+            val method = sharedOriginMethod ?: findMethod("sharedOrigin")?.also { sharedOriginMethod = it } ?: return null
+            return runCatching { (method.invoke(null) as? DoubleArray)?.toVec3() }.getOrNull()
+        }
+
+        fun cameraPosition(): Vec3? {
+            val method = cameraPositionMethod ?: findMethod("cameraPosition")?.also { cameraPositionMethod = it } ?: return null
+            return runCatching { (method.invoke(null) as? DoubleArray)?.toVec3() }.getOrNull()
+        }
+
+        fun ownsPacketChain(): Boolean {
+            val method = ownsPacketChainMethod ?: findMethod("ownsPacketChain")?.also { ownsPacketChainMethod = it }
+                ?: return false
+            return runCatching { method.invoke(null) == true }.getOrDefault(false)
+        }
+
+        private fun DoubleArray.toVec3(): Vec3? =
+            takeIf { it.size == 3 && it.all(Double::isFinite) }?.let { Vec3(it[0], it[1], it[2]) }
 
         private fun findMethod(name: String, vararg parameterTypes: Class<*>): Method? {
             val now = System.nanoTime()
@@ -471,12 +600,11 @@ object ZeropingTeleport : Module (
     }
 
     override fun shouldOverridePosition(): Boolean {
-
-        return enabled && renderPos != null
+        return activeZpcmPosition != null
     }
 
     override fun getCameraPosition(): Vec3? {
-        return renderPos
+        return activeZpcmPosition
     }
 
     override fun shouldOverrideHitPos(): Boolean {
@@ -493,7 +621,7 @@ object ZeropingTeleport : Module (
     }
 
     override fun getPosForHit(): Vec3? {
-        return renderPos
+        return activeZpcmPosition
     }
 
     override fun getRotForHit(): Vec3 {
