@@ -191,6 +191,10 @@ object ZeropingTeleport : Module (
     }
 
     private fun submitZpcmPrediction(source: Vec3, target: Vec3, ability: Int): Boolean {
+        // For Zero Ping Sound
+        if (zpSoundEnabled) {
+            playSoundSettings(Etherwarp.soundSettings())
+        }
         //#if PRIVATE
         if (usesZpbw() && ZpbwManagedBridge.ownsPacketChain()) {
             if (!ZpbwManagedBridge.prepareExternalTeleport(source, target)) return false
@@ -202,11 +206,6 @@ object ZeropingTeleport : Module (
         }
         //#endif
         setZpcmPosition(source, target, ability)
-
-        // For Zero Ping Sound
-        if (zpSoundEnabled) {
-            playSoundSettings(Etherwarp.soundSettings())
-        }
         return true
     }
 
@@ -222,8 +221,6 @@ object ZeropingTeleport : Module (
         zpcmSent.clear()
         lastZpcmPredictionAt = 0L
     }
-
-
 
     private fun isIgnored(block: Block): Boolean {
         return ignoredBlocks.any { it.isInstance(block) }
