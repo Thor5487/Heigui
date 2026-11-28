@@ -54,6 +54,9 @@ object ZeropingTeleport : Module (
     private val manaCheckEnabled by BooleanSetting("Mana Check", true, "Only predict teleports when you have enough mana")
     private val timeOutMs by NumberSetting("Timeout", 500, 100, 1000, 50, unit = "ms", desc = "Time before an unconfirmed teleport prediction times out")
 
+    // Added by Muyu
+    val zpSoundEnabled by BooleanSetting("Zero Ping Sound", false, "Plays etherwarp sound once you teleported")
+
     //#if PRIVATE
     private val zpbwSettingsDropdown by DropdownSetting(
         "ZPBW Settings",
@@ -215,8 +218,6 @@ object ZeropingTeleport : Module (
         lastZpcmPredictionAt = 0L
     }
 
-
-
     private fun isIgnored(block: Block): Boolean {
         return ignoredBlocks.any { it.isInstance(block) }
     }
@@ -258,6 +259,11 @@ object ZeropingTeleport : Module (
             val targetBlock = ether.first ?: return
             if (!ether.second) return
 
+            // For Zero Ping Sound
+            if (zpSoundEnabled) {
+                playSoundSettings(Etherwarp.soundSettings())
+            }
+            
             submitZpcmPrediction(currentPos, Vec3(targetBlock.x + 0.5, targetBlock.y + 1.05, targetBlock.z + 0.5), 3)
         } else if (!sneaking) {
             val wimp = isWitherImpactItem(stack)
