@@ -54,6 +54,9 @@ object ZeropingTeleport : Module (
     private val manaCheckEnabled by BooleanSetting("Mana Check", true, "Only predict teleports when you have enough mana")
     private val timeOutMs by NumberSetting("Timeout", 500, 100, 1000, 50, unit = "ms", desc = "Time before an unconfirmed teleport prediction times out")
 
+    // Added by Muyu
+    val zpSoundEnabled by BooleanSetting("Zero Ping Sound", false, "Plays etherwarp sound once you teleported")
+
     //#if PRIVATE
     private val zpbwSettingsDropdown by DropdownSetting(
         "ZPBW Settings",
@@ -199,6 +202,11 @@ object ZeropingTeleport : Module (
         }
         //#endif
         setZpcmPosition(source, target, ability)
+
+        // For Zero Ping Sound
+        if (zpSoundEnabled) {
+            playSoundSettings(Etherwarp.soundSettings())
+        }
         return true
     }
 

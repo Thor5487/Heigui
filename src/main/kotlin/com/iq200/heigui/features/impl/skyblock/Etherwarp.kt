@@ -68,7 +68,7 @@ object Etherwarp : Module(
         true,
         desc = "Replaces the Etherwarp sound with the selected sound."
     )
-    private val soundSettings = createSoundSettings(
+    val soundSettings = createSoundSettings(
         "Etherwarp Sound",
         "entity.experience_orb.pickup"
     ) { customSound }
@@ -110,7 +110,9 @@ object Etherwarp : Module(
                 volume != ETHERWARP_VOLUME || pitch != ETHERWARP_PITCH
             ) return@onReceive
 
-            playSoundSettings(soundSettings())
+            if (!ZeropingTeleport.zpSoundEnabled) {
+                playSoundSettings(soundSettings())
+            }
             it.cancel()
         }
     }
