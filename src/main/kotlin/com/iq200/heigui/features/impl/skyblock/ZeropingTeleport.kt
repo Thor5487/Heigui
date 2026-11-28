@@ -191,10 +191,6 @@ object ZeropingTeleport : Module (
     }
 
     private fun submitZpcmPrediction(source: Vec3, target: Vec3, ability: Int): Boolean {
-        // For Zero Ping Sound
-        if (zpSoundEnabled) {
-            playSoundSettings(Etherwarp.soundSettings())
-        }
         //#if PRIVATE
         if (usesZpbw() && ZpbwManagedBridge.ownsPacketChain()) {
             if (!ZpbwManagedBridge.prepareExternalTeleport(source, target)) return false
@@ -263,6 +259,11 @@ object ZeropingTeleport : Module (
             val targetBlock = ether.first ?: return
             if (!ether.second) return
 
+            // For Zero Ping Sound
+            if (zpSoundEnabled) {
+                playSoundSettings(Etherwarp.soundSettings())
+            }
+            
             submitZpcmPrediction(currentPos, Vec3(targetBlock.x + 0.5, targetBlock.y + 1.05, targetBlock.z + 0.5), 3)
         } else if (!sneaking) {
             val wimp = isWitherImpactItem(stack)
